@@ -261,25 +261,8 @@ function InfluencerDashboard() {
                     <div>
                         <h1 className="text-2xl font-bold">Задания</h1>
                         <p className="text-sm opacity-90">Привет, {user?.first_name}! 📸</p>
-                        <div className="text-xs mt-1 bg-yellow-200 text-black p-2 rounded">
-                            Debug: User ID: {user?.id} | isAdmin: {user && isAdmin(user.id) ? 'ДА' : 'НЕТ'} | activeTab: {activeTab}
-                        </div>
                     </div>
                     <div className="flex gap-2">
-                        {/* Принудительная админ кнопка для теста */}
-                        <button
-                            onClick={() => {
-                                console.log('FORCED Admin button clicked!')
-                                console.log('Current user:', user)
-                                console.log('User ID:', user?.id)
-                                console.log('Is admin?', isAdmin(user?.id))
-                                console.log('Setting activeTab to admin')
-                                setActiveTab('admin')
-                            }}
-                            className="bg-purple-500/20 px-3 py-1 rounded-full text-xs text-purple-200 hover:bg-purple-500/30"
-                        >
-                            🔨 ТЕСТ АДМИН
-                        </button>
                         {user && isAdmin(user.id) && (
                             <button
                                 onClick={() => {
@@ -293,12 +276,6 @@ function InfluencerDashboard() {
                                 🔧 Админ
                             </button>
                         )}
-                        <button
-                            onClick={() => navigate('/debug')}
-                            className="bg-yellow-500/20 px-3 py-1 rounded-full text-xs text-yellow-200 hover:bg-yellow-500/30"
-                        >
-                            🔍 Debug
-                        </button>
                         <button
                             onClick={() => navigate('/influencer/profile')}
                             className="bg-white/20 px-4 py-2 rounded-full text-sm"
@@ -600,12 +577,6 @@ function InfluencerDashboard() {
                         ))
                     )) : activeTab === 'admin' && user && isAdmin(user.id) ? (
                         <div className="space-y-4">
-                            <div className="bg-yellow-100 p-3 rounded mb-4">
-                                <p>Админ панель загружена!</p>
-                                <p>User ID: {user?.id}</p>
-                                <p>Is Admin: {isAdmin(user?.id) ? 'Да' : 'Нет'}</p>
-                                <p>Active Tab: {activeTab}</p>
-                            </div>
                             {/* Пополнение баланса */}
                             <div className="bg-white dark:bg-gray-800 rounded-xl p-4 shadow-md">
                                 <h3 className="font-semibold text-lg mb-4">💰 Пополнение баланса</h3>
