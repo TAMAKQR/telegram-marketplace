@@ -159,7 +159,7 @@ function BalancePage() {
     return (
         <div className="min-h-screen pb-20">
             {/* Header */}
-            <div className="bg-tg-button text-tg-button-text p-4 sticky top-0 z-10">
+            <div className="bg-tg-button text-tg-button-text p-4 pt-8">
                 <div className="flex items-center gap-3 mb-4">
                     <button onClick={() => navigate(-1)} className="text-2xl">←</button>
                     <h1 className="text-2xl font-bold">Баланс</h1>

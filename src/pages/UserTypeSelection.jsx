@@ -35,12 +35,12 @@ function UserTypeSelection() {
         }
     }
 
-    const handleSelectType = async (type) => {
+    const handleSelectType = async () => {
         if (!user?.id) return
 
         setLoading(true)
         try {
-            // Создаем пользователя в БД
+            // Создаем пользователя в БД как инфлюенсера по умолчанию
             const { data, error } = await supabase
                 .from('users')
                 .insert([
@@ -49,7 +49,7 @@ function UserTypeSelection() {
                         username: user.username,
                         first_name: user.first_name,
                         last_name: user.last_name,
-                        user_type: type
+                        user_type: 'influencer' // Все по умолчанию инфлюенсеры
                     }
                 ])
                 .select()
@@ -57,9 +57,9 @@ function UserTypeSelection() {
 
             if (error) throw error
 
-            setUserType(type)
+            setUserType('influencer')
             setProfile(data)
-            navigate(type === 'client' ? '/client' : '/influencer')
+            navigate('/influencer')
         } catch (error) {
             console.error('Ошибка при создании пользователя:', error)
             alert('Произошла ошибка. Попробуйте снова.')
@@ -69,37 +69,32 @@ function UserTypeSelection() {
     }
 
     return (
-        <div className="min-h-screen flex items-center justify-center p-4">
+        <div className="min-h-screen flex items-center justify-center p-4 pt-8">
             <div className="max-w-md w-full space-y-6">
                 <div className="text-center">
                     <h1 className="text-3xl font-bold mb-2">Добро пожаловать!</h1>
-                    <p className="text-tg-hint">Выберите тип аккаунта</p>
+                    <p className="text-tg-hint">Присоединяйтесь к нашей платформе инфлюенсеров</p>
                 </div>
 
                 <div className="space-y-4">
                     <button
-                        onClick={() => handleSelectType('client')}
+                        onClick={() => handleSelectType()}
                         disabled={loading}
-                        className="w-full p-6 bg-white dark:bg-gray-800 rounded-2xl shadow-lg hover:shadow-xl transition-all border-2 border-transparent hover:border-tg-button disabled:opacity-50"
+                        className="w-full p-6 bg-gradient-to-r from-purple-500 to-pink-500 text-white rounded-2xl shadow-lg hover:shadow-xl transition-all disabled:opacity-50"
                     >
-                        <div className="text-4xl mb-3">💼</div>
-                        <h2 className="text-xl font-semibold mb-2">Я заказчик</h2>
-                        <p className="text-tg-hint text-sm">
-                            Создавайте задания для инфлюенсеров и получайте результаты
+                        <div className="text-4xl mb-3">📸</div>
+                        <h2 className="text-xl font-semibold mb-2">Стать инфлюенсером</h2>
+                        <p className="text-sm opacity-90">
+                            Монетизируйте свой Instagram контент и зарабатывайте
                         </p>
                     </button>
 
-                    <button
-                        onClick={() => handleSelectType('influencer')}
-                        disabled={loading}
-                        className="w-full p-6 bg-white dark:bg-gray-800 rounded-2xl shadow-lg hover:shadow-xl transition-all border-2 border-transparent hover:border-tg-button disabled:opacity-50"
-                    >
-                        <div className="text-4xl mb-3">📸</div>
-                        <h2 className="text-xl font-semibold mb-2">Я инфлюенсер</h2>
-                        <p className="text-tg-hint text-sm">
-                            Находите заказы от брендов и зарабатывайте на своем контенте
+                    <div className="text-center p-4 bg-blue-50 dark:bg-blue-900/20 rounded-xl">
+                        <p className="text-sm text-blue-700 dark:text-blue-300">
+                            💡 <strong>Хотите стать заказчиком?</strong><br />
+                            Обратитесь к администратору для получения статуса
                         </p>
-                    </button>
+                    </div>
                 </div>
 
                 {loading && (

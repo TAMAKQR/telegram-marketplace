@@ -6,6 +6,9 @@ export default {
     ],
     theme: {
         extend: {
+            fontFamily: {
+                'sans': ['system-ui', '-apple-system', 'BlinkMacSystemFont', 'sans-serif'],
+            },
             colors: {
                 'tg-bg': 'var(--tg-theme-bg-color)',
                 'tg-text': 'var(--tg-theme-text-color)',

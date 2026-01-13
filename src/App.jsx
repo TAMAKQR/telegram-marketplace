@@ -8,6 +8,8 @@ import CreateTask from './pages/CreateTask'
 import TaskDetails from './pages/TaskDetails'
 import InfluencerProfile from './pages/InfluencerProfile'
 import BalancePage from './pages/BalancePage'
+import AdminPanel from './pages/AdminPanel'
+import DebugPage from './pages/DebugPage'
 
 function App() {
     const { user } = useTelegram()
@@ -50,6 +52,12 @@ function App() {
 
                     {/* Общие маршруты */}
                     <Route path="/balance" element={<BalancePage />} />
+
+                    {/* Админская панель */}
+                    <Route path="/admin" element={<AdminPanel />} />
+
+                    {/* Отладочная страница */}
+                    <Route path="/debug" element={<DebugPage />} />
 
                     <Route path="*" element={<Navigate to="/" replace />} />
                 </Routes>

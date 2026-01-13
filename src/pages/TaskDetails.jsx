@@ -3,6 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import { useUserStore } from '../store/userStore'
 import { useTelegram } from '../hooks/useTelegram'
+import { sendTelegramNotification, formatCompletedTaskMessage } from '../lib/telegramBot'
 
 function TaskDetails() {
     const { taskId } = useParams()
@@ -161,14 +162,22 @@ function TaskDetails() {
         if (!confirmed) return
 
         try {
+            console.log('Starting approval process for submission:', submissionId)
+            console.log('Task:', task)
+            console.log('Applications:', applications)
+            console.log('Profile balance:', profile.balance)
+
             // Находим принятый отклик для получения цены
             const acceptedApp = applications.find(app => app.status === 'accepted')
+            console.log('Accepted application:', acceptedApp)
+
             if (!acceptedApp) {
                 showAlert?.('Не найден принятый отклик')
                 return
             }
 
             const paymentAmount = acceptedApp.proposed_price || task.budget
+            console.log('Payment amount:', paymentAmount)
 
             // Проверяем баланс заказчика
             if (profile.balance < paymentAmount) {
@@ -177,6 +186,7 @@ function TaskDetails() {
             }
 
             // Обновляем статус отчета
+            console.log('Updating submission status...')
             const { error: submissionError } = await supabase
                 .from('task_submissions')
                 .update({
@@ -185,17 +195,25 @@ function TaskDetails() {
                 })
                 .eq('id', submissionId)
 
-            if (submissionError) throw submissionError
+            if (submissionError) {
+                console.error('Submission update error:', submissionError)
+                throw submissionError
+            }
 
             // Обновляем баланс заказчика
+            console.log('Updating client balance...')
             const { error: clientError } = await supabase
                 .from('users')
                 .update({ balance: profile.balance - paymentAmount })
                 .eq('id', profile.id)
 
-            if (clientError) throw clientError
+            if (clientError) {
+                console.error('Client balance update error:', clientError)
+                throw clientError
+            }
 
             // Обновляем баланс исполнителя
+            console.log('Getting influencer data...')
             const influencer = applications.find(app => app.status === 'accepted')
             const { data: influencerData, error: influencerFetchError } = await supabase
                 .from('users')
@@ -203,16 +221,24 @@ function TaskDetails() {
                 .eq('id', influencer.influencer_id)
                 .single()
 
-            if (influencerFetchError) throw influencerFetchError
+            if (influencerFetchError) {
+                console.error('Influencer fetch error:', influencerFetchError)
+                throw influencerFetchError
+            }
 
+            console.log('Updating influencer balance...', influencerData)
             const { error: influencerUpdateError } = await supabase
                 .from('users')
                 .update({ balance: (influencerData.balance || 0) + paymentAmount })
                 .eq('id', influencer.influencer_id)
 
-            if (influencerUpdateError) throw influencerUpdateError
+            if (influencerUpdateError) {
+                console.error('Influencer balance update error:', influencerUpdateError)
+                throw influencerUpdateError
+            }
 
             // Создаем транзакцию
+            console.log('Creating transaction...')
             const { error: transactionError } = await supabase
                 .from('transactions')
                 .insert([
@@ -227,25 +253,41 @@ function TaskDetails() {
                     }
                 ])
 
-            if (transactionError) throw transactionError
+            if (transactionError) {
+                console.error('Transaction error:', transactionError)
+                throw transactionError
+            }
 
             // Обновляем статус задания
+            console.log('Updating task status...')
             const { error: taskError } = await supabase
                 .from('tasks')
                 .update({ status: 'completed' })
                 .eq('id', taskId)
 
-            if (taskError) throw taskError
+            if (taskError) {
+                console.error('Task update error:', taskError)
+                throw taskError
+            }
 
             // Обновляем локальный профиль
-            await updateProfile({ balance: profile.balance - paymentAmount })
+            updateProfile({ balance: profile.balance - paymentAmount })
+
+            // Отправляем уведомление о завершении в группу
+            try {
+                const influencerName = `${influencer.users?.first_name || ''} ${influencer.users?.last_name || ''}`.trim() || 'Инфлюенсер'
+                const completionMessage = formatCompletedTaskMessage(task, influencerName, paymentAmount)
+                await sendTelegramNotification(completionMessage)
+            } catch (notificationError) {
+                console.error('Ошибка отправки уведомления о завершении:', notificationError)
+            }
 
             showAlert?.(`Работа одобрена! Оплачено ${paymentAmount} сом`)
             await loadSubmissions()
             await loadTaskDetails()
         } catch (error) {
             console.error('Ошибка одобрения работы:', error)
-            showAlert?.('Ошибка при одобрении работы')
+            showAlert?.(`Ошибка при одобрении работы: ${error.message}`)
         }
     }
 
@@ -486,7 +528,7 @@ function TaskDetails() {
     return (
         <div className="min-h-screen pb-6">
             {/* Header */}
-            <div className="bg-tg-button text-tg-button-text p-4 sticky top-0 z-10">
+            <div className="bg-tg-button text-tg-button-text p-4 pt-8">
                 <div className="flex items-center gap-3">
                     <button onClick={() => navigate(-1)} className="text-2xl">←</button>
                     <h1 className="text-xl font-bold">Детали задания</h1>
@@ -800,17 +842,11 @@ function TaskDetails() {
 
                                         {/* Instagram Stats */}
                                         {app.users?.influencer_profiles?.[0] ? (
-                                            <div className="grid grid-cols-3 gap-2 mb-3 p-3 bg-gray-50 dark:bg-gray-700/50 rounded-lg">
+                                            <div className="grid grid-cols-2 gap-2 mb-3 p-3 bg-gray-50 dark:bg-gray-700/50 rounded-lg">
                                                 <div className="text-center">
                                                     <div className="text-xs text-tg-hint">Подписчики</div>
                                                     <div className="font-semibold">
                                                         {app.users.influencer_profiles[0].followers_count?.toLocaleString() || '-'}
-                                                    </div>
-                                                </div>
-                                                <div className="text-center">
-                                                    <div className="text-xs text-tg-hint">ER</div>
-                                                    <div className="font-semibold">
-                                                        {app.users.influencer_profiles[0].engagement_rate || '-'}%
                                                     </div>
                                                 </div>
                                                 <div className="text-center">

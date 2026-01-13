@@ -13,7 +13,6 @@ function InfluencerProfile() {
     const [formData, setFormData] = useState({
         instagram_username: '',
         followers_count: '',
-        engagement_rate: '',
         category: '',
         description: '',
         price_per_post: ''
@@ -49,7 +48,6 @@ function InfluencerProfile() {
                 setFormData({
                     instagram_username: data.instagram_username || '',
                     followers_count: data.followers_count || '',
-                    engagement_rate: data.engagement_rate || '',
                     category: data.category || '',
                     description: data.description || '',
                     price_per_post: data.price_per_post || ''
@@ -75,7 +73,6 @@ function InfluencerProfile() {
                 instagram_username: formData.instagram_username,
                 instagram_url: `https://instagram.com/${formData.instagram_username}`,
                 followers_count: parseInt(formData.followers_count) || 0,
-                engagement_rate: parseFloat(formData.engagement_rate) || 0,
                 category: formData.category || null,
                 description: formData.description || null,
                 price_per_post: parseFloat(formData.price_per_post) || null
@@ -114,7 +111,7 @@ function InfluencerProfile() {
     return (
         <div className="min-h-screen pb-6">
             {/* Header */}
-            <div className="bg-tg-button text-tg-button-text p-4 sticky top-0 z-10">
+            <div className="bg-tg-button text-tg-button-text p-4 pt-8">
                 <div className="flex items-center gap-3">
                     <button
                         onClick={() => navigate('/influencer')}
@@ -163,25 +160,6 @@ function InfluencerProfile() {
                         min="0"
                         className="w-full px-4 py-3 rounded-xl bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 focus:border-tg-button outline-none"
                     />
-                </div>
-
-                <div>
-                    <label className="block text-sm font-medium mb-1">
-                        Engagement Rate (%)
-                    </label>
-                    <input
-                        type="number"
-                        value={formData.engagement_rate}
-                        onChange={(e) => setFormData({ ...formData, engagement_rate: e.target.value })}
-                        placeholder="5.5"
-                        min="0"
-                        max="100"
-                        step="0.1"
-                        className="w-full px-4 py-3 rounded-xl bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 focus:border-tg-button outline-none"
-                    />
-                    <p className="text-xs text-tg-hint mt-1">
-                        Средний процент вовлеченности (лайки + комментарии / подписчики * 100)
-                    </p>
                 </div>
 
                 <div>

@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import { useUserStore } from '../store/userStore'
 import { useTelegram } from '../hooks/useTelegram'
+import { sendTelegramNotification, formatNewTaskMessage } from '../lib/telegramBot'
 
 function CreateTask() {
     const navigate = useNavigate()
@@ -63,6 +64,16 @@ function CreateTask() {
 
             if (error) throw error
 
+            // Отправляем уведомление в группу
+            try {
+                const clientName = `${profile.first_name || ''} ${profile.last_name || ''}`.trim() || 'Заказчик'
+                const message = formatNewTaskMessage(data, clientName)
+                await sendTelegramNotification(message)
+            } catch (notificationError) {
+                console.error('Ошибка отправки уведомления:', notificationError)
+                // Не показываем ошибку пользователю, задание создалось успешно
+            }
+
             showAlert?.('Задание успешно создано!')
             navigate('/client')
         } catch (error) {
@@ -76,7 +87,7 @@ function CreateTask() {
     return (
         <div className="min-h-screen pb-6">
             {/* Header */}
-            <div className="bg-tg-button text-tg-button-text p-4 sticky top-0 z-10">
+            <div className="bg-tg-button text-tg-button-text p-4 pt-8">
                 <div className="flex items-center gap-3">
                     <button
                         onClick={() => navigate('/client')}
@@ -160,7 +171,7 @@ function CreateTask() {
                         onChange={(e) => setFormData({ ...formData, minFollowers: e.target.value })}
                         placeholder="10000"
                         min="0"
-                        step="1000"
+                        step="1"
                         className="w-full px-4 py-3 rounded-xl bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 focus:border-tg-button outline-none"
                     />
                 </div>

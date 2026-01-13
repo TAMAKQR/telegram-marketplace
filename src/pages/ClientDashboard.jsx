@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import { useUserStore } from '../store/userStore'
 import { useTelegram } from '../hooks/useTelegram'
+import { isAdmin } from '../lib/telegramBot'
 
 function ClientDashboard() {
     const navigate = useNavigate()
@@ -10,13 +11,23 @@ function ClientDashboard() {
     const { profile } = useUserStore()
     const [tasks, setTasks] = useState([])
     const [loading, setLoading] = useState(true)
-    const [activeTab, setActiveTab] = useState('all') // all, open, in_progress, completed
+    const [activeTab, setActiveTab] = useState('all') // all, open, in_progress, completed, admin
+    const [allUsers, setAllUsers] = useState([])
+    const [usersLoading, setUsersLoading] = useState(false)
+    const [balanceAmount, setBalanceAmount] = useState('')
+    const [selectedUserId, setSelectedUserId] = useState('')
 
     useEffect(() => {
         if (profile?.id) {
             loadTasks()
         }
     }, [profile, activeTab])
+
+    useEffect(() => {
+        if (activeTab === 'admin' && user && isAdmin(user.id)) {
+            loadAllUsers()
+        }
+    }, [activeTab, user])
 
     const loadTasks = async () => {
         try {
@@ -41,6 +52,85 @@ function ClientDashboard() {
         }
     }
 
+    const loadAllUsers = async () => {
+        setUsersLoading(true)
+        try {
+            const { data, error } = await supabase
+                .from('users')
+                .select('*')
+                .order('created_at', { ascending: false })
+
+            if (error) throw error
+            setAllUsers(data || [])
+        } catch (error) {
+            console.error('Ошибка загрузки пользователей:', error)
+        } finally {
+            setUsersLoading(false)
+        }
+    }
+
+    const toggleUserType = async (userId, currentType) => {
+        const newType = currentType === 'client' ? 'influencer' : 'client'
+        try {
+            const { error } = await supabase
+                .from('users')
+                .update({ user_type: newType })
+                .eq('id', userId)
+
+            if (error) throw error
+            await loadAllUsers()
+            alert(`Тип пользователя изменен на ${newType === 'client' ? 'Заказчик' : 'Инфлюенсер'}`)
+        } catch (error) {
+            console.error('Ошибка изменения типа:', error)
+            alert('Ошибка изменения типа пользователя')
+        }
+    }
+
+    const toggleUserBlock = async (userId, currentBlocked) => {
+        try {
+            const { error } = await supabase
+                .from('users')
+                .update({ is_blocked: !currentBlocked })
+                .eq('id', userId)
+
+            if (error) throw error
+            await loadAllUsers()
+            alert(`Пользователь ${!currentBlocked ? 'заблокирован' : 'разблокирован'}`)
+        } catch (error) {
+            console.error('Ошибка блокировки:', error)
+            alert('Ошибка изменения статуса блокировки')
+        }
+    }
+
+    const addBalance = async () => {
+        if (!selectedUserId || !balanceAmount) {
+            alert('Выберите пользователя и введите сумму')
+            return
+        }
+
+        const amount = parseFloat(balanceAmount)
+        if (isNaN(amount) || amount <= 0) {
+            alert('Введите корректную сумму')
+            return
+        }
+
+        try {
+            const { error } = await supabase.rpc('increment_balance', {
+                user_id: selectedUserId,
+                amount: amount
+            })
+
+            if (error) throw error
+            await loadAllUsers()
+            setBalanceAmount('')
+            setSelectedUserId('')
+            alert(`Баланс пополнен на ${amount} сом`)
+        } catch (error) {
+            console.error('Ошибка пополнения:', error)
+            alert('Ошибка пополнения баланса')
+        }
+    }
+
     const getStatusText = (status) => {
         const statusMap = {
             open: '🟢 Открыто',
@@ -54,9 +144,29 @@ function ClientDashboard() {
     return (
         <div className="min-h-screen pb-20">
             {/* Header */}
-            <div className="bg-tg-button text-tg-button-text p-4 sticky top-0 z-10">
-                <h1 className="text-2xl font-bold">Мои задания</h1>
-                <p className="text-sm opacity-90">Привет, {user?.first_name}! 👋</p>
+            <div className="bg-tg-button text-tg-button-text p-4 pt-8">
+                <div className="flex justify-between items-start mb-2">
+                    <div>
+                        <h1 className="text-2xl font-bold">Мои задания</h1>
+                        <p className="text-sm opacity-90">Привет, {user?.first_name}! 👋</p>
+                    </div>
+                    <div className="flex gap-2">
+                        {user && isAdmin(user.id) && (
+                            <button
+                                onClick={() => setActiveTab('admin')}
+                                className="bg-red-500/20 px-3 py-1 rounded-lg text-xs text-red-200 hover:bg-red-500/30"
+                            >
+                                🔧 Админ
+                            </button>
+                        )}
+                        <button
+                            onClick={() => navigate('/balance')}
+                            className="bg-white/20 px-3 py-1 rounded-lg text-xs font-medium hover:bg-white/30 transition-colors"
+                        >
+                            👤 Профиль
+                        </button>
+                    </div>
+                </div>
 
                 {/* Balance */}
                 <div className="mt-3 bg-white/10 backdrop-blur-sm rounded-xl p-3 flex justify-between items-center">
@@ -92,11 +202,120 @@ function ClientDashboard() {
                         {tab.label}
                     </button>
                 ))}
+                {user && isAdmin(user.id) && (
+                    <button
+                        onClick={() => setActiveTab('admin')}
+                        className={`px-4 py-2 rounded-full whitespace-nowrap transition-colors ${activeTab === 'admin'
+                            ? 'bg-red-500 text-white'
+                            : 'bg-red-100 dark:bg-red-900 text-red-700 dark:text-red-300'
+                            }`}
+                    >
+                        🔧 Админ
+                    </button>
+                )}
             </div>
 
             {/* Tasks List */}
             <div className="p-4 space-y-3">
-                {loading ? (
+                {activeTab === 'admin' && user && isAdmin(user.id) ? (
+                    <div className="space-y-4">
+                        {/* Пополнение баланса */}
+                        <div className="bg-white dark:bg-gray-800 rounded-xl p-4 shadow-md">
+                            <h3 className="font-semibold text-lg mb-4">💰 Пополнение баланса</h3>
+                            <div className="space-y-3">
+                                <select
+                                    value={selectedUserId}
+                                    onChange={(e) => setSelectedUserId(e.target.value)}
+                                    className="w-full p-3 rounded-lg border border-gray-300 dark:border-gray-600 dark:bg-gray-700"
+                                >
+                                    <option value="">Выберите пользователя</option>
+                                    {allUsers.map(user => (
+                                        <option key={user.id} value={user.id}>
+                                            {user.first_name} {user.last_name} (Баланс: {user.balance || 0} сом)
+                                        </option>
+                                    ))}
+                                </select>
+                                <input
+                                    type="number"
+                                    placeholder="Сумма пополнения"
+                                    value={balanceAmount}
+                                    onChange={(e) => setBalanceAmount(e.target.value)}
+                                    className="w-full p-3 rounded-lg border border-gray-300 dark:border-gray-600 dark:bg-gray-700"
+                                />
+                                <button
+                                    onClick={addBalance}
+                                    className="w-full bg-green-500 hover:bg-green-600 text-white font-medium py-3 px-4 rounded-lg transition-colors"
+                                >
+                                    Пополнить баланс
+                                </button>
+                            </div>
+                        </div>
+
+                        {/* Список пользователей */}
+                        <div className="bg-white dark:bg-gray-800 rounded-xl p-4 shadow-md">
+                            <div className="flex justify-between items-center mb-4">
+                                <h3 className="font-semibold text-lg">👥 Все пользователи</h3>
+                                <button
+                                    onClick={loadAllUsers}
+                                    className="bg-blue-500 hover:bg-blue-600 text-white px-3 py-1 rounded text-sm"
+                                >
+                                    🔄 Обновить
+                                </button>
+                            </div>
+
+                            {usersLoading ? (
+                                <div className="text-center py-4">Загрузка...</div>
+                            ) : (
+                                <div className="space-y-2 max-h-96 overflow-y-auto">
+                                    {allUsers.map(user => (
+                                        <div key={user.id} className="border border-gray-200 dark:border-gray-600 rounded-lg p-3">
+                                            <div className="flex justify-between items-start mb-2">
+                                                <div>
+                                                    <div className="font-medium">
+                                                        {user.first_name} {user.last_name}
+                                                    </div>
+                                                    <div className="text-sm text-gray-500">
+                                                        ID: {user.id} | Баланс: {user.balance || 0} сом
+                                                    </div>
+                                                    <div className="flex gap-2 mt-1">
+                                                        <span className={`text-xs px-2 py-1 rounded ${user.user_type === 'client'
+                                                            ? 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200'
+                                                            : 'bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200'
+                                                            }`}>
+                                                            {user.user_type === 'client' ? '👔 Заказчик' : '📱 Инфлюенсер'}
+                                                        </span>
+                                                        {user.is_blocked && (
+                                                            <span className="text-xs px-2 py-1 rounded bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200">
+                                                                🚫 Заблокирован
+                                                            </span>
+                                                        )}
+                                                    </div>
+                                                </div>
+                                                <div className="flex gap-1">
+                                                    <button
+                                                        onClick={() => toggleUserType(user.id, user.user_type)}
+                                                        className="text-xs bg-gray-100 hover:bg-gray-200 dark:bg-gray-600 dark:hover:bg-gray-500 px-2 py-1 rounded transition-colors"
+                                                    >
+                                                        🔄
+                                                    </button>
+                                                    <button
+                                                        onClick={() => toggleUserBlock(user.id, user.is_blocked)}
+                                                        className={`text-xs px-2 py-1 rounded transition-colors ${user.is_blocked
+                                                            ? 'bg-green-100 hover:bg-green-200 text-green-800 dark:bg-green-900 dark:text-green-200'
+                                                            : 'bg-red-100 hover:bg-red-200 text-red-800 dark:bg-red-900 dark:text-red-200'
+                                                            }`}
+                                                    >
+                                                        {user.is_blocked ? '✅' : '🚫'}
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            )}
+                        </div>
+                    </div>
+                ) : loading ? (
                     <div className="text-center py-10">
                         <div className="text-tg-hint">Загрузка...</div>
                     </div>
