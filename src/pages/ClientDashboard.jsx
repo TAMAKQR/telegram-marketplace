@@ -16,6 +16,7 @@ function ClientDashboard() {
     const [usersLoading, setUsersLoading] = useState(false)
     const [balanceAmount, setBalanceAmount] = useState('')
     const [selectedUserId, setSelectedUserId] = useState('')
+    const [notificationTest, setNotificationTest] = useState(null)
 
     useEffect(() => {
         if (profile?.id) {

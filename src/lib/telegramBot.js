@@ -1,10 +1,15 @@
 // Telegram Bot API для отправки уведомлений
-const BOT_TOKEN = import.meta.env.VITE_TELEGRAM_BOT_TOKEN || '8494952537:AAFBHSK-2AAEiF1bHUTbYZ-GbVYhOv-_Wxw'
-const CHAT_ID = import.meta.env.VITE_TELEGRAM_GROUP_CHAT_ID || '@influencer_marketplace_channel' // Замените на ID вашей группы/канала
-const ADMIN_ID = 7737197594 // ID администратора (ваш правильный ID)
+const BOT_TOKEN = import.meta.env.VITE_TELEGRAM_BOT_TOKEN || '8422178973:AAHHVFvR2MsKsfjdJ2IUJcMqArmyQQ_mxXc'
+const CHAT_ID = import.meta.env.VITE_TELEGRAM_GROUP_CHAT_ID || '-1003528858514' // Используем правильный ID как fallback
+const ADMIN_ID = 7737197594 // ID администратора
 
 // Отправка сообщения в группу
 export const sendTelegramNotification = async (message) => {
+    console.log('=== SENDING TELEGRAM NOTIFICATION ===')
+    console.log('BOT_TOKEN:', BOT_TOKEN ? 'Loaded' : 'Missing')
+    console.log('CHAT_ID:', CHAT_ID)
+    console.log('Message:', message)
+
     try {
         const response = await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/sendMessage`, {
             method: 'POST',
@@ -20,6 +25,7 @@ export const sendTelegramNotification = async (message) => {
         })
 
         const result = await response.json()
+        console.log('Telegram API response:', result)
 
         if (!result.ok) {
             console.error('Ошибка отправки в Telegram:', result.description)
