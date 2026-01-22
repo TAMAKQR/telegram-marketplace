@@ -4,6 +4,7 @@ import { supabase } from '../lib/supabase'
 import { useUserStore } from '../store/userStore'
 import { useTelegram } from '../hooks/useTelegram'
 import { isAdmin } from '../lib/telegramBot'
+import Logo from '../components/Logo'
 
 function InfluencerDashboard() {
     const navigate = useNavigate()
@@ -256,11 +257,14 @@ function InfluencerDashboard() {
     return (
         <div className="min-h-screen pb-20">
             {/* Header */}
-            <div className="bg-tg-button text-tg-button-text p-4 pt-8">
+            <div className="bg-brand-gradient text-white p-4 pt-8">
                 <div className="flex justify-between items-start">
-                    <div>
-                        <h1 className="text-2xl font-bold">Задания</h1>
-                        <p className="text-sm opacity-90">Привет, {user?.first_name}! 📸</p>
+                    <div className="flex items-center gap-2">
+                        <Logo className="h-7 w-auto" />
+                        <div>
+                            <h1 className="text-2xl font-bold">Задания</h1>
+                            <p className="text-sm opacity-90">Привет, {user?.first_name}! 📸</p>
+                        </div>
                     </div>
                     <div className="flex gap-2">
                         {user && isAdmin(user.id) && (
@@ -314,7 +318,7 @@ function InfluencerDashboard() {
                 <button
                     onClick={() => setActiveTab('available')}
                     className={`px-3 py-2 rounded-full whitespace-nowrap text-sm transition-colors ${activeTab === 'available'
-                        ? 'bg-tg-button text-tg-button-text'
+                        ? 'bg-brand text-white'
                         : 'bg-gray-200 dark:bg-gray-700'
                         }`}
                 >
@@ -323,7 +327,7 @@ function InfluencerDashboard() {
                 <button
                     onClick={() => setActiveTab('my_applications')}
                     className={`px-3 py-2 rounded-full whitespace-nowrap text-sm transition-colors ${activeTab === 'my_applications'
-                        ? 'bg-tg-button text-tg-button-text'
+                        ? 'bg-brand text-white'
                         : 'bg-gray-200 dark:bg-gray-700'
                         }`}
                 >
@@ -332,7 +336,7 @@ function InfluencerDashboard() {
                 <button
                     onClick={() => setActiveTab('in_progress')}
                     className={`px-3 py-2 rounded-full whitespace-nowrap text-sm transition-colors ${activeTab === 'in_progress'
-                        ? 'bg-tg-button text-tg-button-text'
+                        ? 'bg-brand text-white'
                         : 'bg-gray-200 dark:bg-gray-700'
                         }`}
                 >
@@ -341,7 +345,7 @@ function InfluencerDashboard() {
                 <button
                     onClick={() => setActiveTab('revision')}
                     className={`px-3 py-2 rounded-full whitespace-nowrap text-sm transition-colors ${activeTab === 'revision'
-                        ? 'bg-tg-button text-tg-button-text'
+                        ? 'bg-brand text-white'
                         : 'bg-gray-200 dark:bg-gray-700'
                         }`}
                 >
@@ -350,7 +354,7 @@ function InfluencerDashboard() {
                 <button
                     onClick={() => setActiveTab('completed')}
                     className={`px-3 py-2 rounded-full whitespace-nowrap text-sm transition-colors ${activeTab === 'completed'
-                        ? 'bg-tg-button text-tg-button-text'
+                        ? 'bg-brand text-white'
                         : 'bg-gray-200 dark:bg-gray-700'
                         }`}
                 >

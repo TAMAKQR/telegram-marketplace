@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { sendTelegramNotification } from '../lib/telegramBot'
+import Logo from '../components/Logo'
 
 function TestNotification() {
     const [message, setMessage] = useState('Тестовое сообщение из приложения')
@@ -21,9 +22,14 @@ function TestNotification() {
     }
 
     return (
-        <div className="min-h-screen bg-tg-bg p-4">
-            <div className="max-w-md mx-auto">
-                <h1 className="text-2xl font-bold mb-4">Тест уведомлений Telegram</h1>
+        <div className="min-h-screen bg-tg-bg">
+            <div className="bg-brand-gradient text-white p-4 pt-8">
+                <div className="max-w-md mx-auto flex items-center gap-3">
+                    <Logo className="h-7 w-auto" />
+                    <h1 className="text-2xl font-bold">Тест уведомлений Telegram</h1>
+                </div>
+            </div>
+            <div className="max-w-md mx-auto p-4">
 
                 <div className="space-y-4">
                     <div>
@@ -39,7 +45,7 @@ function TestNotification() {
                     <button
                         onClick={testSendMessage}
                         disabled={loading}
-                        className="w-full bg-blue-500 hover:bg-blue-600 text-white font-medium py-3 px-4 rounded-lg disabled:opacity-50"
+                        className="w-full bg-brand hover:opacity-90 text-white font-medium py-3 px-4 rounded-lg disabled:opacity-50"
                     >
                         {loading ? 'Отправка...' : 'Отправить тестовое сообщение'}
                     </button>

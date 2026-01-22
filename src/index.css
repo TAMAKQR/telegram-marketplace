@@ -15,6 +15,12 @@
     --tg-theme-link-color: #2481cc;
     --tg-theme-button-color: #2481cc;
     --tg-theme-button-text-color: #ffffff;
+
+    /* Brand colors from design */
+    --brand-primary: #8806C0;
+    --brand-gradient-start: #8806C0;
+    --brand-gradient-end: #40035A;
+    --brand-dark: #1C1C1C;
 }
 
 * {
@@ -35,6 +41,34 @@ body {
     min-height: 100vh;
 }
 
+/* App-wide subtle brand background */
+.app-shell {
+    background:
+        radial-gradient(120% 60% at 50% 0%, rgba(136, 6, 192, 0.16) 0%, rgba(64, 3, 90, 0.12) 40%, rgba(0, 0, 0, 0) 70%),
+        var(--tg-theme-bg-color);
+}
+
+/* Safe bottom padding helper */
+.pb-safe {
+    padding-bottom: max(16px, env(safe-area-inset-bottom));
+}
+
+/* Fixed bottom fade to visually finish the screen */
+.bottom-fade {
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    height: 80px;
+    pointer-events: none;
+    z-index: 10;
+    background: linear-gradient(to bottom,
+            rgba(0, 0, 0, 0) 0%,
+            rgba(136, 6, 192, 0.05) 35%,
+            rgba(64, 3, 90, 0.10) 65%,
+            var(--tg-theme-bg-color) 100%);
+}
+
 /* Custom scrollbar */
 ::-webkit-scrollbar {
     width: 6px;
@@ -51,4 +85,17 @@ body {
 
 ::-webkit-scrollbar-thumb:hover {
     background: var(--tg-theme-link-color);
+}
+
+/* Brand utility classes */
+.text-brand {
+    color: var(--brand-primary);
+}
+
+.bg-brand {
+    background-color: var(--brand-primary);
+}
+
+.bg-brand-gradient {
+    background-image: linear-gradient(135deg, var(--brand-gradient-start), var(--brand-gradient-end));
 }

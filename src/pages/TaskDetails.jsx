@@ -4,6 +4,7 @@ import { supabase } from '../lib/supabase'
 import { useUserStore } from '../store/userStore'
 import { useTelegram } from '../hooks/useTelegram'
 import { sendTelegramNotification, formatCompletedTaskMessage } from '../lib/telegramBot'
+import Logo from '../components/Logo'
 
 function TaskDetails() {
     const { taskId } = useParams()
@@ -528,8 +529,9 @@ function TaskDetails() {
     return (
         <div className="min-h-screen pb-6">
             {/* Header */}
-            <div className="bg-tg-button text-tg-button-text p-4 pt-8">
+            <div className="bg-brand-gradient text-white p-4 pt-8">
                 <div className="flex items-center gap-3">
+                    <Logo className="h-7 w-auto" />
                     <button onClick={() => navigate(-1)} className="text-2xl">←</button>
                     <h1 className="text-xl font-bold">Детали задания</h1>
                 </div>

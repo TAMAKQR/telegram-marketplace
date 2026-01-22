@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import { useUserStore } from '../store/userStore'
 import { useTelegram } from '../hooks/useTelegram'
+import Logo from '../components/Logo'
 
 function InfluencerProfile() {
     const navigate = useNavigate()
@@ -111,8 +112,9 @@ function InfluencerProfile() {
     return (
         <div className="min-h-screen pb-6">
             {/* Header */}
-            <div className="bg-tg-button text-tg-button-text p-4 pt-8">
+            <div className="bg-brand-gradient text-white p-4 pt-8">
                 <div className="flex items-center gap-3">
+                    <Logo className="h-7 w-auto" />
                     <button
                         onClick={() => navigate('/influencer')}
                         className="text-2xl"
@@ -209,7 +211,7 @@ function InfluencerProfile() {
                 <button
                     type="submit"
                     disabled={loading}
-                    className="w-full bg-tg-button text-tg-button-text py-4 rounded-xl font-semibold hover:opacity-90 transition-opacity disabled:opacity-50"
+                    className="w-full bg-brand text-white py-4 rounded-xl font-semibold hover:opacity-90 transition-opacity disabled:opacity-50"
                 >
                     {loading ? 'Сохранение...' : influencerProfile ? 'Обновить профиль' : 'Создать профиль'}
                 </button>

@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import { useTelegram } from '../hooks/useTelegram'
 import { isAdmin, sendAdminNotification } from '../lib/telegramBot'
+import Logo from '../components/Logo'
 
 function AdminPanel() {
     const navigate = useNavigate()
@@ -132,8 +133,9 @@ function AdminPanel() {
     return (
         <div className="min-h-screen pb-20">
             {/* Header */}
-            <div className="bg-red-500 text-white p-4 pt-8">
+            <div className="bg-brand-gradient text-white p-4 pt-8">
                 <div className="flex items-center gap-3 mb-2">
+                    <Logo className="h-7 w-auto" />
                     <button onClick={() => navigate('/')} className="text-2xl">←</button>
                     <h1 className="text-2xl font-bold">🔧 Админ-панель</h1>
                 </div>
@@ -145,8 +147,8 @@ function AdminPanel() {
                 <button
                     onClick={() => setActiveTab('users')}
                     className={`px-4 py-2 rounded-full whitespace-nowrap transition-colors ${activeTab === 'users'
-                            ? 'bg-red-500 text-white'
-                            : 'bg-gray-200 dark:bg-gray-700'
+                        ? 'bg-brand text-white'
+                        : 'bg-gray-200 dark:bg-gray-700'
                         }`}
                 >
                     👥 Пользователи ({users.length})
@@ -177,8 +179,8 @@ function AdminPanel() {
                                     </div>
                                     <div className="text-right">
                                         <span className={`text-xs px-2 py-1 rounded-full ${user.user_type === 'client'
-                                                ? 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200'
-                                                : 'bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200'
+                                            ? 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200'
+                                            : 'bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200'
                                             }`}>
                                             {user.user_type === 'client' ? '💼 Заказчик' : '📸 Инфлюенсер'}
                                         </span>

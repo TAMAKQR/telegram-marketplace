@@ -4,6 +4,7 @@ import { supabase } from '../lib/supabase'
 import { useUserStore } from '../store/userStore'
 import { useTelegram } from '../hooks/useTelegram'
 import { isAdmin } from '../lib/telegramBot'
+import Logo from '../components/Logo'
 
 function ClientDashboard() {
     const navigate = useNavigate()
@@ -145,11 +146,14 @@ function ClientDashboard() {
     return (
         <div className="min-h-screen pb-20">
             {/* Header */}
-            <div className="bg-tg-button text-tg-button-text p-4 pt-8">
+            <div className="bg-brand-gradient text-white p-4 pt-8">
                 <div className="flex justify-between items-start mb-2">
-                    <div>
-                        <h1 className="text-2xl font-bold">Мои задания</h1>
-                        <p className="text-sm opacity-90">Привет, {user?.first_name}! 👋</p>
+                    <div className="flex items-center gap-2">
+                        <Logo className="h-7 w-auto" />
+                        <div>
+                            <h1 className="text-2xl font-bold">Мои задания</h1>
+                            <p className="text-sm opacity-90">Привет, {user?.first_name}! 👋</p>
+                        </div>
                     </div>
                     <div className="flex gap-2">
                         {user && isAdmin(user.id) && (
@@ -196,7 +200,7 @@ function ClientDashboard() {
                         key={tab.key}
                         onClick={() => setActiveTab(tab.key)}
                         className={`px-4 py-2 rounded-full whitespace-nowrap transition-colors ${activeTab === tab.key
-                            ? 'bg-tg-button text-tg-button-text'
+                            ? 'bg-brand text-white'
                             : 'bg-gray-200 dark:bg-gray-700'
                             }`}
                     >
@@ -332,7 +336,7 @@ function ClientDashboard() {
                         {activeTab === 'all' && (
                             <button
                                 onClick={() => navigate('/client/create-task')}
-                                className="bg-tg-button text-tg-button-text px-6 py-3 rounded-xl font-semibold"
+                                className="bg-brand text-white px-6 py-3 rounded-xl font-semibold"
                             >
                                 Создать первое задание
                             </button>
@@ -368,7 +372,7 @@ function ClientDashboard() {
             {/* Create Button */}
             <button
                 onClick={() => navigate('/client/create-task')}
-                className="fixed bottom-6 right-6 bg-tg-button text-tg-button-text w-14 h-14 rounded-full shadow-lg flex items-center justify-center text-2xl hover:scale-110 transition-transform"
+                className="fixed bottom-6 right-6 bg-brand text-white w-14 h-14 rounded-full shadow-lg flex items-center justify-center text-2xl hover:scale-110 transition-transform"
             >
                 +
             </button>

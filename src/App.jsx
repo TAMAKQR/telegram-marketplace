@@ -28,7 +28,7 @@ function App() {
 
     return (
         <BrowserRouter>
-            <div className="min-h-screen bg-tg-bg">
+            <div className="min-h-screen bg-tg-bg app-shell pb-safe">
                 <Routes>
                     <Route path="/" element={
                         userType ? (
@@ -61,6 +61,8 @@ function App() {
 
                     <Route path="*" element={<Navigate to="/" replace />} />
                 </Routes>
+                {/* Visual bottom fade overlay (non-interactive) */}
+                <div className="bottom-fade" aria-hidden="true" />
             </div>
         </BrowserRouter>
     )

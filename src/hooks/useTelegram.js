@@ -14,6 +14,17 @@ export const useTelegram = () => {
             setTg(telegram)
             setUser(telegram.initDataUnsafe?.user)
 
+            const setFavicon = (href) => {
+                let link = document.querySelector('link[rel="icon"][type="image/svg+xml"]') || document.querySelector('link[rel="icon"]')
+                if (!link) {
+                    link = document.createElement('link')
+                    link.rel = 'icon'
+                    link.type = 'image/svg+xml'
+                    document.head.appendChild(link)
+                }
+                link.href = href
+            }
+
             // Apply Telegram theme
             if (telegram.themeParams) {
                 document.documentElement.style.setProperty('--tg-theme-bg-color', telegram.themeParams.bg_color || '#ffffff')
@@ -23,6 +34,16 @@ export const useTelegram = () => {
                 document.documentElement.style.setProperty('--tg-theme-button-color', telegram.themeParams.button_color || '#2481cc')
                 document.documentElement.style.setProperty('--tg-theme-button-text-color', telegram.themeParams.button_text_color || '#ffffff')
             }
+
+            // Set favicon based on theme
+            const isDark = telegram.colorScheme === 'dark'
+            setFavicon(isDark ? '/logos/logo6.svg' : '/logos/logo4.svg')
+
+            // Update on theme change
+            telegram.onEvent?.('themeChanged', () => {
+                const dark = telegram.colorScheme === 'dark'
+                setFavicon(dark ? '/logos/logo6.svg' : '/logos/logo4.svg')
+            })
         }
     }, [])
 
