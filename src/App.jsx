@@ -29,7 +29,7 @@ function App() {
     console.log('App render:', { user, userType, telegram: window.Telegram?.WebApp })
 
     // Проверяем, находимся ли мы на странице без авторизации
-    const publicPaths = ['/instagram/callback', '/instagram/deauth', '/instagram/delete', '/terms', '/privacy']
+    const publicPaths = ['/instagram/callback', '/instagram/index.html', '/instagram/deauth', '/instagram/delete', '/terms', '/privacy']
     const isPublicPage = publicPaths.includes(window.location.pathname)
 
     if (!user && !isPublicPage) {
@@ -56,6 +56,7 @@ function App() {
 
                     {/* OAuth Callbacks - доступны без авторизации */}
                     <Route path="/instagram/callback" element={<InstagramCallback />} />
+                    <Route path="/instagram/index.html" element={<InstagramCallback />} />
                     <Route path="/instagram/deauth" element={<InstagramDeauth />} />
                     <Route path="/instagram/delete" element={<InstagramDelete />} />
 
