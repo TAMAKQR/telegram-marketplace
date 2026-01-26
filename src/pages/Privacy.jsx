@@ -1,16 +1,10 @@
-import { useNavigate } from 'react-router-dom'
-import Logo from '../components/Logo'
-
 function Privacy() {
-    const navigate = useNavigate()
-
     return (
         <div className="min-h-screen bg-tg-bg pb-20 overflow-x-hidden">
             <div className="max-w-4xl mx-auto p-6">
                 {/* Header */}
                 <div className="bg-brand-gradient text-white p-6 rounded-2xl mb-6">
                     <div className="flex items-center gap-3 mb-4">
-                        <Logo className="h-10 w-auto" />
                         <h1 className="text-3xl font-bold">Romashka</h1>
                     </div>
                     <p className="text-lg opacity-90">Политика конфиденциальности</p>
@@ -230,16 +224,6 @@ function Privacy() {
                             })}
                         </p>
                     </div>
-                </div>
-
-                {/* Back Button */}
-                <div className="mt-6 text-center">
-                    <button
-                        onClick={() => navigate(-1)}
-                        className="px-6 py-3 bg-gray-200 dark:bg-gray-700 rounded-xl font-semibold hover:bg-gray-300 dark:hover:bg-gray-600"
-                    >
-                        ← Назад
-                    </button>
                 </div>
             </div>
         </div>
