@@ -50,50 +50,64 @@ function App() {
         <BrowserRouter>
             <div className="min-h-screen bg-tg-bg app-shell pb-safe">
                 <Routes>
-                    <Route path="/" element={
-                        userType ? (
-                            userType === 'client' ?
-                                <Navigate to="/client" replace /> :
-                                <Navigate to="/influencer" replace />
-                        ) : (
-                            <UserTypeSelection />
-                        )
-                    } />
+                    {/* Юридические страницы - доступны без авторизации */}
+                    <Route path="/terms" element={<Terms />} />
+                    <Route path="/privacy" element={<Privacy />} />
 
-                    {/* Маршруты для заказчиков */}
-                    <Route path="/client" element={<ClientDashboard />} />
-                    <Route path="/client/create-task" element={<CreateTask />} />
-                    <Route path="/edit-task/:taskId" element={<EditTask />} />
-                    <Route path="/client/task/:taskId" element={<TaskDetails />} />
-                    <Route path="/client/task/:taskId/review" element={<ReviewSubmission />} />
-
-                    {/* Маршруты для инфлюенсеров */}
-                    <Route path="/influencer" element={<InfluencerDashboard />} />
-                    <Route path="/influencer/profile" element={<InfluencerProfile />} />
-                    <Route path="/influencer/task/:taskId" element={<TaskDetails />} />
-                    <Route path="/influencer/task/:taskId/submit" element={<SubmitTaskPost />} />
-
-                    {/* OAuth Callbacks */}
+                    {/* OAuth Callbacks - доступны без авторизации */}
                     <Route path="/instagram/callback" element={<InstagramCallback />} />
                     <Route path="/instagram/deauth" element={<InstagramDeauth />} />
                     <Route path="/instagram/delete" element={<InstagramDelete />} />
 
-                    {/* Общие маршруты */}
-                    <Route path="/balance" element={<BalancePage />} />
-                    <Route path="/withdrawal" element={<WithdrawalPage />} />
+                    {/* Все остальные маршруты требуют авторизации */}
+                    {user ? (
+                        <>
+                            <Route path="/" element={
+                                userType ? (
+                                    userType === 'client' ?
+                                        <Navigate to="/client" replace /> :
+                                        <Navigate to="/influencer" replace />
+                                ) : (
+                                    <UserTypeSelection />
+                                )
+                            } />
 
-                    {/* Админская панель */}
-                    <Route path="/admin" element={<AdminPanel />} />
-                    <Route path="/accountant" element={<AccountantPanel />} />
+                            {/* Маршруты для заказчиков */}
+                            <Route path="/client" element={<ClientDashboard />} />
+                            <Route path="/client/create-task" element={<CreateTask />} />
+                            <Route path="/edit-task/:taskId" element={<EditTask />} />
+                            <Route path="/client/task/:taskId" element={<TaskDetails />} />
+                            <Route path="/client/task/:taskId/review" element={<ReviewSubmission />} />
 
-                    {/* Юридические страницы */}
-                    <Route path="/terms" element={<Terms />} />
-                    <Route path="/privacy" element={<Privacy />} />
+                            {/* Маршруты для инфлюенсеров */}
+                            <Route path="/influencer" element={<InfluencerDashboard />} />
+                            <Route path="/influencer/profile" element={<InfluencerProfile />} />
+                            <Route path="/influencer/task/:taskId" element={<TaskDetails />} />
+                            <Route path="/influencer/task/:taskId/submit" element={<SubmitTaskPost />} />
 
-                    {/* Отладочная страница */}
-                    <Route path="/debug" element={<DebugPage />} />
+                            {/* Общие маршруты */}
+                            <Route path="/balance" element={<BalancePage />} />
+                            <Route path="/withdrawal" element={<WithdrawalPage />} />
 
-                    <Route path="*" element={<Navigate to="/" replace />} />
+                            {/* Админская панель */}
+                            <Route path="/admin" element={<AdminPanel />} />
+                            <Route path="/accountant" element={<AccountantPanel />} />
+
+                            {/* Отладочная страница */}
+                            <Route path="/debug" element={<DebugPage />} />
+
+                            <Route path="*" element={<Navigate to="/" replace />} />
+                        </>
+                    ) : (
+                        <Route path="*" element={
+                            <div className="flex items-center justify-center min-h-screen bg-tg-bg">
+                                <div className="text-center p-4">
+                                    <h2 className="text-xl font-semibold mb-2">Требуется авторизация</h2>
+                                    <p className="text-tg-hint">Откройте это приложение через Telegram</p>
+                                </div>
+                            </div>
+                        } />
+                    )}
                 </Routes>
                 {/* Visual bottom fade overlay (non-interactive) */}
                 <div className="bottom-fade" aria-hidden="true" />
