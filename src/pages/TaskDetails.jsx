@@ -5,6 +5,7 @@ import { useUserStore } from '../store/userStore'
 import { useTelegram } from '../hooks/useTelegram'
 import { sendTelegramNotification, formatCompletedTaskMessage } from '../lib/telegramBot'
 import Logo from '../components/Logo'
+import InstagramStats from '../components/InstagramStats'
 
 function TaskDetails() {
     const { taskId } = useParams()
@@ -16,15 +17,15 @@ function TaskDetails() {
     const [myApplication, setMyApplication] = useState(null)
     const [loading, setLoading] = useState(true)
     const [applyMessage, setApplyMessage] = useState('')
-    const [proposedPrice, setProposedPrice] = useState('')
     const [showApplyForm, setShowApplyForm] = useState(false)
+    const [meetsRequirements, setMeetsRequirements] = useState(true)
+    const [requirementDetails, setRequirementDetails] = useState(null)
 
     // Состояния для отчетов
     const [submissions, setSubmissions] = useState([])
     const [showSubmissionForm, setShowSubmissionForm] = useState(false)
     const [postUrl, setPostUrl] = useState('')
     const [workDescription, setWorkDescription] = useState('')
-    const [revisionComment, setRevisionComment] = useState('')
 
     useEffect(() => {
         if (taskId) {
@@ -56,6 +57,11 @@ function TaskDetails() {
 
             if (error) throw error
             setTask(data)
+
+            // Проверяем соответствие критериям для инфлюенсера
+            if (userType === 'influencer') {
+                await checkRequirements(data)
+            }
         } catch (error) {
             console.error('Ошибка загрузки задания:', error)
             showAlert?.('Задание не найдено')
@@ -100,10 +106,48 @@ function TaskDetails() {
             if (data) {
                 setMyApplication(data)
                 setApplyMessage(data.message || '')
-                setProposedPrice(data.proposed_price || '')
             }
         } catch (error) {
             console.log('Нет отклика на это задание')
+        }
+    }
+
+    const checkRequirements = async (taskData) => {
+        if (!taskData?.requirements || userType !== 'influencer') {
+            setMeetsRequirements(true)
+            return
+        }
+
+        try {
+            // Получаем профиль инфлюенсера
+            const { data: influencerProfile, error } = await supabase
+                .from('influencer_profiles')
+                .select('followers_count, engagement_rate')
+                .eq('user_id', profile.id)
+                .single()
+
+            if (error || !influencerProfile) {
+                setMeetsRequirements(false)
+                setRequirementDetails({ error: 'Профиль инфлюенсера не найден' })
+                return
+            }
+
+            const requirements = taskData.requirements
+            const meetsFollowers = !requirements.minFollowers || (influencerProfile.followers_count >= requirements.minFollowers)
+            const meetsEngagement = !requirements.minEngagementRate || (parseFloat(influencerProfile.engagement_rate) >= requirements.minEngagementRate)
+
+            setMeetsRequirements(meetsFollowers && meetsEngagement)
+            setRequirementDetails({
+                minFollowers: requirements.minFollowers,
+                currentFollowers: influencerProfile.followers_count,
+                meetsFollowers,
+                minEngagementRate: requirements.minEngagementRate,
+                currentEngagementRate: parseFloat(influencerProfile.engagement_rate),
+                meetsEngagement
+            })
+        } catch (error) {
+            console.error('Ошибка проверки критериев:', error)
+            setMeetsRequirements(false)
         }
     }
 
@@ -156,172 +200,15 @@ function TaskDetails() {
         }
     }
 
-    const handleApproveSubmission = async (submissionId) => {
-        const confirmed = await showConfirm?.(
-            'Одобрить работу и произвести оплату?'
-        )
-        if (!confirmed) return
-
-        try {
-            console.log('Starting approval process for submission:', submissionId)
-            console.log('Task:', task)
-            console.log('Applications:', applications)
-            console.log('Profile balance:', profile.balance)
-
-            // Находим принятый отклик для получения цены
-            const acceptedApp = applications.find(app => app.status === 'accepted')
-            console.log('Accepted application:', acceptedApp)
-
-            if (!acceptedApp) {
-                showAlert?.('Не найден принятый отклик')
-                return
-            }
-
-            const paymentAmount = acceptedApp.proposed_price || task.budget
-            console.log('Payment amount:', paymentAmount)
-
-            // Проверяем баланс заказчика
-            if (profile.balance < paymentAmount) {
-                showAlert?.(`Недостаточно средств на балансе. Необходимо: ${paymentAmount} сом, доступно: ${profile.balance} сом`)
-                return
-            }
-
-            // Обновляем статус отчета
-            console.log('Updating submission status...')
-            const { error: submissionError } = await supabase
-                .from('task_submissions')
-                .update({
-                    status: 'approved',
-                    reviewed_at: new Date().toISOString()
-                })
-                .eq('id', submissionId)
-
-            if (submissionError) {
-                console.error('Submission update error:', submissionError)
-                throw submissionError
-            }
-
-            // Обновляем баланс заказчика
-            console.log('Updating client balance...')
-            const { error: clientError } = await supabase
-                .from('users')
-                .update({ balance: profile.balance - paymentAmount })
-                .eq('id', profile.id)
-
-            if (clientError) {
-                console.error('Client balance update error:', clientError)
-                throw clientError
-            }
-
-            // Обновляем баланс исполнителя
-            console.log('Getting influencer data...')
-            const influencer = applications.find(app => app.status === 'accepted')
-            const { data: influencerData, error: influencerFetchError } = await supabase
-                .from('users')
-                .select('balance')
-                .eq('id', influencer.influencer_id)
-                .single()
-
-            if (influencerFetchError) {
-                console.error('Influencer fetch error:', influencerFetchError)
-                throw influencerFetchError
-            }
-
-            console.log('Updating influencer balance...', influencerData)
-            const { error: influencerUpdateError } = await supabase
-                .from('users')
-                .update({ balance: (influencerData.balance || 0) + paymentAmount })
-                .eq('id', influencer.influencer_id)
-
-            if (influencerUpdateError) {
-                console.error('Influencer balance update error:', influencerUpdateError)
-                throw influencerUpdateError
-            }
-
-            // Создаем транзакцию
-            console.log('Creating transaction...')
-            const { error: transactionError } = await supabase
-                .from('transactions')
-                .insert([
-                    {
-                        from_user_id: profile.id,
-                        to_user_id: influencer.influencer_id,
-                        task_id: taskId,
-                        amount: paymentAmount,
-                        type: 'task_payment',
-                        status: 'completed',
-                        description: `Оплата за выполнение задания: ${task.title}`
-                    }
-                ])
-
-            if (transactionError) {
-                console.error('Transaction error:', transactionError)
-                throw transactionError
-            }
-
-            // Обновляем статус задания
-            console.log('Updating task status...')
-            const { error: taskError } = await supabase
-                .from('tasks')
-                .update({ status: 'completed' })
-                .eq('id', taskId)
-
-            if (taskError) {
-                console.error('Task update error:', taskError)
-                throw taskError
-            }
-
-            // Обновляем локальный профиль
-            updateProfile({ balance: profile.balance - paymentAmount })
-
-            // Отправляем уведомление о завершении в группу
-            try {
-                const influencerName = `${influencer.users?.first_name || ''} ${influencer.users?.last_name || ''}`.trim() || 'Инфлюенсер'
-                const completionMessage = formatCompletedTaskMessage(task, influencerName, paymentAmount)
-                await sendTelegramNotification(completionMessage)
-            } catch (notificationError) {
-                console.error('Ошибка отправки уведомления о завершении:', notificationError)
-            }
-
-            showAlert?.(`Работа одобрена! Оплачено ${paymentAmount} сом`)
-            await loadSubmissions()
-            await loadTaskDetails()
-        } catch (error) {
-            console.error('Ошибка одобрения работы:', error)
-            showAlert?.(`Ошибка при одобрении работы: ${error.message}`)
-        }
-    }
-
-    const handleRequestRevision = async (submissionId) => {
-        if (!revisionComment.trim()) {
-            showAlert?.('Укажите что нужно доработать')
-            return
-        }
-
-        try {
-            const { error } = await supabase
-                .from('task_submissions')
-                .update({
-                    status: 'revision_requested',
-                    revision_comment: revisionComment,
-                    reviewed_at: new Date().toISOString()
-                })
-                .eq('id', submissionId)
-
-            if (error) throw error
-
-            showAlert?.('Отчет отправлен на доработку')
-            setRevisionComment('')
-            await loadSubmissions()
-        } catch (error) {
-            console.error('Ошибка отправки на доработку:', error)
-            showAlert?.('Ошибка при отправке на доработку')
-        }
-    }
-
     const handleApply = async () => {
         if (!applyMessage.trim()) {
             showAlert?.('Напишите сопроводительное сообщение')
+            return
+        }
+
+        // Проверка соответствия критериям
+        if (!meetsRequirements) {
+            showAlert?.('Вы не соответствуете требованиям заказчика')
             return
         }
 
@@ -333,7 +220,6 @@ function TaskDetails() {
                         task_id: taskId,
                         influencer_id: profile.id,
                         message: applyMessage,
-                        proposed_price: proposedPrice ? parseFloat(proposedPrice) : null,
                         status: 'pending'
                     }
                 ])
@@ -371,6 +257,12 @@ function TaskDetails() {
 
             console.log('Принимаем исполнителя:', application)
 
+            // Проверяем лимит инфлюенсеров если задан
+            if (task.max_influencers && task.accepted_count >= task.max_influencers) {
+                showAlert?.(`Достигнут лимит исполнителей (${task.max_influencers})`)
+                return
+            }
+
             // Принимаем выбранный отклик
             const { data: acceptData, error: acceptError } = await supabase
                 .from('task_applications')
@@ -381,36 +273,21 @@ function TaskDetails() {
             console.log('Результат принятия отклика:', { acceptData, acceptError })
             if (acceptError) throw acceptError
 
-            // Отклоняем остальные отклики
-            const { data: rejectData, error: rejectError } = await supabase
-                .from('task_applications')
-                .update({ status: 'rejected' })
-                .eq('task_id', taskId)
-                .neq('id', applicationId)
-                .select()
+            // НЕ отклоняем остальные отклики - один заказ могут брать много инфлюенсеров
 
-            console.log('Результат отклонения остальных:', { rejectData, rejectError })
-            if (rejectError) throw rejectError
+            // Обновляем задание - меняем статус на in_progress если это первый принятый
+            const updateData = { status: 'in_progress' }
 
-            // Устанавливаем дедлайн на выполнение работы (7 дней от сейчас)
-            const workDeadline = new Date()
-            workDeadline.setDate(workDeadline.getDate() + 7)
-
-            // Обновляем статус задания и записываем исполнителя
             const { data: taskData, error: taskError } = await supabase
                 .from('tasks')
-                .update({
-                    status: 'in_progress',
-                    accepted_influencer_id: application.influencer_id,
-                    work_deadline: workDeadline.toISOString()
-                })
+                .update(updateData)
                 .eq('id', taskId)
                 .select()
 
             console.log('Результат обновления задания:', { taskData, taskError })
             if (taskError) throw taskError
 
-            showAlert?.('Исполнитель принят! Работа должна быть выполнена до ' + workDeadline.toLocaleDateString('ru'))
+            showAlert?.('Исполнитель принят!')
 
             // Перезагружаем данные
             console.log('Перезагружаем данные...')
@@ -432,7 +309,7 @@ function TaskDetails() {
                 return
             }
 
-            const paymentAmount = acceptedApplication.proposed_price || task.budget
+            const paymentAmount = task.budget
 
             // Проверяем баланс заказчика
             if ((profile.balance || 0) < paymentAmount) {
@@ -527,20 +404,34 @@ function TaskDetails() {
     }
 
     return (
-        <div className="min-h-screen pb-6">
+        <div className="min-h-screen pb-6 overflow-x-hidden">
             {/* Header */}
             <div className="bg-brand-gradient text-white p-4 pt-8">
-                <div className="flex items-center gap-3">
+                <div className="flex items-center gap-3 mb-2">
                     <Logo className="h-7 w-auto" />
                     <button onClick={() => navigate(-1)} className="text-2xl">←</button>
-                    <h1 className="text-xl font-bold">Детали задания</h1>
+                    <h1 className="text-xl font-bold flex-1">Детали задания</h1>
+                    {(() => {
+                        // Показываем кнопку редактирования для всех статусов
+                        // На странице EditTask будет ограничение: редактировать можно только open/in_progress, удалять - любой
+                        const canEdit = userType === 'client' && profile?.id === task?.client_id
+                        console.log('Edit button check:', { userType, profileId: profile?.id, clientId: task?.client_id, status: task?.status, canEdit })
+                        return canEdit ? (
+                            <button
+                                onClick={() => navigate(`/edit-task/${taskId}`)}
+                                className="px-3 py-1 bg-white/20 hover:bg-white/30 rounded-lg text-sm"
+                            >
+                                ✏️ Редактировать
+                            </button>
+                        ) : null
+                    })()}
                 </div>
             </div>
 
             {/* Task Info */}
             <div className="p-4 space-y-4">
                 <div className="bg-white dark:bg-gray-800 rounded-xl p-4 shadow-md">
-                    <h2 className="text-2xl font-bold mb-3">{task.title}</h2>
+                    <h2 className="text-2xl font-bold mb-3 break-words">{task.title}</h2>
 
                     <div className="flex items-center gap-2 mb-3 text-sm text-tg-hint">
                         <span>👤 {task.users?.first_name} {task.users?.last_name}</span>
@@ -550,24 +441,26 @@ function TaskDetails() {
                         <p className="text-lg font-semibold text-tg-button mb-2">
                             💰 {task.budget} сом
                         </p>
-                        {task.category && (
-                            <span className="inline-block bg-gray-100 dark:bg-gray-700 px-3 py-1 rounded-full text-sm">
-                                {task.category}
-                            </span>
-                        )}
                     </div>
 
                     <div className="border-t pt-4">
                         <h3 className="font-semibold mb-2">Описание:</h3>
-                        <p className="text-tg-hint whitespace-pre-wrap">{task.description}</p>
+                        <p className="text-tg-hint whitespace-pre-wrap break-words">{task.description}</p>
                     </div>
 
-                    {task.requirements?.minFollowers && (
+                    {(task.requirements?.minFollowers || task.requirements?.minEngagementRate) && (
                         <div className="border-t pt-4 mt-4">
                             <h3 className="font-semibold mb-2">Требования:</h3>
-                            <p className="text-sm text-tg-hint">
-                                • Минимум подписчиков: {task.requirements.minFollowers.toLocaleString()}
-                            </p>
+                            {task.requirements.minFollowers && (
+                                <p className="text-sm text-tg-hint">
+                                    • Минимум подписчиков: {task.requirements.minFollowers.toLocaleString()}
+                                </p>
+                            )}
+                            {task.requirements.minEngagementRate && (
+                                <p className="text-sm text-tg-hint">
+                                    • Минимальная вовлеченность: {task.requirements.minEngagementRate}%
+                                </p>
+                            )}
                         </div>
                     )}
 
@@ -591,34 +484,57 @@ function TaskDetails() {
                                         {getStatusBadge(myApplication.status).text}
                                     </span>
                                 </div>
-                                <p className="text-sm text-tg-hint">{myApplication.message}</p>
-                                {myApplication.proposed_price && (
-                                    <p className="text-sm font-semibold mt-2">
-                                        Предложенная цена: {myApplication.proposed_price} сом
-                                    </p>
-                                )}
+                                <p className="text-sm text-tg-hint break-words">{myApplication.message}</p>
                             </div>
                         ) : showApplyForm ? (
                             <div className="bg-white dark:bg-gray-800 rounded-xl p-4 shadow-md space-y-3">
                                 <h3 className="font-semibold">Откликнуться на задание</h3>
+
+                                {!meetsRequirements && requirementDetails && (
+                                    <div className="bg-red-100 dark:bg-red-900/30 border border-red-500 rounded-lg p-3 text-sm">
+                                        <p className="font-semibold text-red-800 dark:text-red-200 mb-2">❌ Вы не соответствуете требованиям:</p>
+                                        {requirementDetails.minFollowers && !requirementDetails.meetsFollowers && (
+                                            <p className="text-red-700 dark:text-red-300">
+                                                • Подписчиков: {requirementDetails.currentFollowers} (нужно {requirementDetails.minFollowers})
+                                            </p>
+                                        )}
+                                        {requirementDetails.minEngagementRate && !requirementDetails.meetsEngagement && (
+                                            <p className="text-red-700 dark:text-red-300">
+                                                • Вовлеченность: {requirementDetails.currentEngagementRate}% (нужно {requirementDetails.minEngagementRate}%)
+                                            </p>
+                                        )}
+                                    </div>
+                                )}
+
+                                {meetsRequirements && requirementDetails && (requirementDetails.minFollowers || requirementDetails.minEngagementRate) && (
+                                    <div className="bg-green-100 dark:bg-green-900/30 border border-green-500 rounded-lg p-3 text-sm">
+                                        <p className="font-semibold text-green-800 dark:text-green-200 mb-2">✅ Вы соответствуете требованиям:</p>
+                                        {requirementDetails.minFollowers && (
+                                            <p className="text-green-700 dark:text-green-300">
+                                                • Подписчиков: {requirementDetails.currentFollowers} ≥ {requirementDetails.minFollowers}
+                                            </p>
+                                        )}
+                                        {requirementDetails.minEngagementRate && (
+                                            <p className="text-green-700 dark:text-green-300">
+                                                • Вовлеченность: {requirementDetails.currentEngagementRate}% ≥ {requirementDetails.minEngagementRate}%
+                                            </p>
+                                        )}
+                                    </div>
+                                )}
+
                                 <textarea
                                     value={applyMessage}
                                     onChange={(e) => setApplyMessage(e.target.value)}
                                     placeholder="Расскажите, почему вы подходите для этого проекта..."
                                     rows={4}
                                     className="w-full px-4 py-3 rounded-xl bg-gray-100 dark:bg-gray-700 outline-none resize-none"
-                                />
-                                <input
-                                    type="number"
-                                    value={proposedPrice}
-                                    onChange={(e) => setProposedPrice(e.target.value)}
-                                    placeholder="Предложите свою цену (опционально)"
-                                    className="w-full px-4 py-3 rounded-xl bg-gray-100 dark:bg-gray-700 outline-none"
+                                    disabled={!meetsRequirements}
                                 />
                                 <div className="flex gap-2">
                                     <button
                                         onClick={handleApply}
-                                        className="flex-1 bg-tg-button text-tg-button-text py-3 rounded-xl font-semibold"
+                                        disabled={!meetsRequirements}
+                                        className="flex-1 bg-tg-button text-tg-button-text py-3 rounded-xl font-semibold disabled:opacity-50 disabled:cursor-not-allowed"
                                     >
                                         Отправить отклик
                                     </button>
@@ -644,15 +560,23 @@ function TaskDetails() {
                 {/* For Influencers - Work in Progress */}
                 {userType === 'influencer' && task.status === 'in_progress' && myApplication?.status === 'accepted' && (
                     <div className="space-y-4">
+                        {/* Кнопка отправки публикации */}
+                        <button
+                            onClick={() => navigate(`/influencer/task/${task.id}/submit`)}
+                            className="w-full bg-gradient-to-r from-purple-500 to-pink-500 text-white py-4 rounded-xl font-semibold shadow-lg hover:opacity-90"
+                        >
+                            📤 Отправить публикацию
+                        </button>
+
                         {/* Дедлайн */}
-                        {task.work_deadline && (
+                        {task.deadline && (
                             <div className="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-xl p-4">
                                 <div className="flex items-center gap-2">
                                     <span className="text-2xl">⏰</span>
                                     <div>
                                         <p className="font-semibold text-yellow-800 dark:text-yellow-200">Срок выполнения</p>
                                         <p className="text-sm text-yellow-700 dark:text-yellow-300">
-                                            {new Date(task.work_deadline).toLocaleDateString('ru', {
+                                            {new Date(task.deadline).toLocaleDateString('ru', {
                                                 day: 'numeric',
                                                 month: 'long',
                                                 year: 'numeric',
@@ -755,55 +679,104 @@ function TaskDetails() {
                 {/* For Clients - Applications List */}
                 {userType === 'client' && (
                     <div>
-                        {/* Submissions Review for In Progress Tasks */}
-                        {task.status === 'in_progress' && submissions.length > 0 && (
-                            <div className="mb-4 space-y-4">
-                                <h3 className="text-lg font-semibold">Отчеты исполнителя</h3>
-                                {submissions.filter(sub => sub.status === 'pending').map(sub => (
+                        {/* Уведомление о публикации на проверке */}
+                        {submissions.some(sub => sub.status === 'pending_approval') && (
+                            <div className="mb-4 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-xl p-4">
+                                <div className="flex items-center justify-between mb-3">
+                                    <div className="flex items-center gap-2">
+                                        <span className="text-2xl">📤</span>
+                                        <div>
+                                            <h3 className="font-semibold text-yellow-900 dark:text-yellow-200">
+                                                Новая публикация на проверке
+                                            </h3>
+                                            <p className="text-sm text-yellow-700 dark:text-yellow-300">
+                                                Инфлюенсер отправил ссылку на публикацию
+                                            </p>
+                                        </div>
+                                    </div>
+                                </div>
+                                <button
+                                    onClick={() => navigate(`/client/task/${taskId}/review`)}
+                                    className="w-full bg-yellow-500 text-white py-3 rounded-xl font-semibold hover:bg-yellow-600"
+                                >
+                                    🔍 Проверить публикацию
+                                </button>
+                            </div>
+                        )}
+
+                        {/* Отображение прогресса отслеживания метрик */}
+                        {task.status === 'in_progress' && submissions.some(sub => sub.status === 'in_progress') && (
+                            <div className="mb-4">
+                                <h3 className="text-lg font-semibold mb-3">Прогресс выполнения</h3>
+                                {submissions.filter(sub => sub.status === 'in_progress').map(sub => (
                                     <div key={sub.id} className="bg-white dark:bg-gray-800 rounded-xl p-4 shadow-md">
                                         <div className="flex items-center justify-between mb-3">
-                                            <h4 className="font-semibold">Новый отчет на проверке</h4>
-                                            <span className="text-xs px-2 py-1 rounded-full bg-blue-100 text-blue-800">
-                                                {new Date(sub.submitted_at).toLocaleDateString('ru')}
+                                            <h4 className="font-semibold">Отслеживание метрик</h4>
+                                            <span className="text-xs px-2 py-1 rounded-full bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200">
+                                                В процессе
                                             </span>
                                         </div>
 
                                         <div className="mb-3">
-                                            <p className="text-sm text-tg-hint mb-2">Ссылка на пост:</p>
+                                            <p className="text-sm text-tg-hint mb-2">Ссылка на публикацию:</p>
                                             <a href={sub.post_url} target="_blank" rel="noopener noreferrer"
-                                                className="text-tg-link break-all">
+                                                className="text-tg-link break-all text-sm block">
                                                 {sub.post_url} →
                                             </a>
                                         </div>
 
-                                        <div className="mb-4">
-                                            <p className="text-sm text-tg-hint mb-2">Описание работы:</p>
-                                            <p className="text-sm whitespace-pre-wrap">{sub.description}</p>
-                                        </div>
+                                        {task.target_metrics && (
+                                            <div className="space-y-3">
+                                                {task.target_metrics.views && (
+                                                    <div>
+                                                        <div className="flex justify-between text-sm mb-1">
+                                                            <span>👁️ Просмотры</span>
+                                                            <span>{(sub.current_metrics?.views || 0).toLocaleString()} / {task.target_metrics.views.toLocaleString()}</span>
+                                                        </div>
+                                                        <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
+                                                            <div
+                                                                className="bg-blue-500 h-2 rounded-full transition-all"
+                                                                style={{ width: `${Math.min(((sub.current_metrics?.views || 0) / task.target_metrics.views) * 100, 100)}%` }}
+                                                            />
+                                                        </div>
+                                                    </div>
+                                                )}
 
-                                        <div className="space-y-2">
-                                            <button
-                                                onClick={() => handleApproveSubmission(sub.id)}
-                                                className="w-full bg-green-600 text-white py-3 rounded-xl font-semibold hover:bg-green-700 transition-colors"
-                                            >
-                                                ✅ Одобрить и оплатить
-                                            </button>
+                                                {task.target_metrics.likes && (
+                                                    <div>
+                                                        <div className="flex justify-between text-sm mb-1">
+                                                            <span>❤️ Лайки</span>
+                                                            <span>{(sub.current_metrics?.likes || 0).toLocaleString()} / {task.target_metrics.likes.toLocaleString()}</span>
+                                                        </div>
+                                                        <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
+                                                            <div
+                                                                className="bg-pink-500 h-2 rounded-full transition-all"
+                                                                style={{ width: `${Math.min(((sub.current_metrics?.likes || 0) / task.target_metrics.likes) * 100, 100)}%` }}
+                                                            />
+                                                        </div>
+                                                    </div>
+                                                )}
 
-                                            <textarea
-                                                value={revisionComment}
-                                                onChange={(e) => setRevisionComment(e.target.value)}
-                                                placeholder="Укажите что нужно доработать..."
-                                                rows={3}
-                                                className="w-full px-4 py-3 rounded-xl bg-gray-100 dark:bg-gray-700 outline-none resize-none text-sm"
-                                            />
+                                                {task.target_metrics.comments && (
+                                                    <div>
+                                                        <div className="flex justify-between text-sm mb-1">
+                                                            <span>💬 Комментарии</span>
+                                                            <span>{(sub.current_metrics?.comments || 0).toLocaleString()} / {task.target_metrics.comments.toLocaleString()}</span>
+                                                        </div>
+                                                        <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
+                                                            <div
+                                                                className="bg-green-500 h-2 rounded-full transition-all"
+                                                                style={{ width: `${Math.min(((sub.current_metrics?.comments || 0) / task.target_metrics.comments) * 100, 100)}%` }}
+                                                            />
+                                                        </div>
+                                                    </div>
+                                                )}
+                                            </div>
+                                        )}
 
-                                            <button
-                                                onClick={() => handleRequestRevision(sub.id)}
-                                                className="w-full bg-orange-500 text-white py-3 rounded-xl font-semibold hover:bg-orange-600 transition-colors"
-                                            >
-                                                🔄 Отправить на доработку
-                                            </button>
-                                        </div>
+                                        <p className="text-xs text-tg-hint mt-3">
+                                            Метрики обновляются автоматически каждый час
+                                        </p>
                                     </div>
                                 ))}
                             </div>
@@ -820,8 +793,8 @@ function TaskDetails() {
                                 {applications.map(app => (
                                     <div key={app.id} className="bg-white dark:bg-gray-800 rounded-xl p-4 shadow-md">
                                         <div className="flex items-start justify-between mb-3">
-                                            <div>
-                                                <h4 className="font-semibold">
+                                            <div className="flex-1 min-w-0">
+                                                <h4 className="font-semibold truncate">
                                                     {app.users?.first_name} {app.users?.last_name}
                                                 </h4>
                                                 {app.users?.influencer_profiles?.[0] ? (
@@ -829,7 +802,7 @@ function TaskDetails() {
                                                         href={app.users.influencer_profiles[0].instagram_url}
                                                         target="_blank"
                                                         rel="noopener noreferrer"
-                                                        className="text-tg-link text-sm"
+                                                        className="text-tg-link text-sm break-all"
                                                     >
                                                         @{app.users.influencer_profiles[0].instagram_username} →
                                                     </a>
@@ -844,17 +817,11 @@ function TaskDetails() {
 
                                         {/* Instagram Stats */}
                                         {app.users?.influencer_profiles?.[0] ? (
-                                            <div className="grid grid-cols-2 gap-2 mb-3 p-3 bg-gray-50 dark:bg-gray-700/50 rounded-lg">
+                                            <div className="mb-3 p-3 bg-gray-50 dark:bg-gray-700/50 rounded-lg">
                                                 <div className="text-center">
                                                     <div className="text-xs text-tg-hint">Подписчики</div>
                                                     <div className="font-semibold">
                                                         {app.users.influencer_profiles[0].followers_count?.toLocaleString() || '-'}
-                                                    </div>
-                                                </div>
-                                                <div className="text-center">
-                                                    <div className="text-xs text-tg-hint">Категория</div>
-                                                    <div className="font-semibold text-xs">
-                                                        {app.users.influencer_profiles[0].category || '-'}
                                                     </div>
                                                 </div>
                                             </div>
@@ -866,13 +833,16 @@ function TaskDetails() {
                                             </div>
                                         )}
 
-                                        <p className="text-sm text-tg-hint mb-3">{app.message}</p>
+                                        <p className="text-sm text-tg-hint mb-3 break-words">{app.message}</p>
 
-                                        {app.proposed_price && (
-                                            <p className="text-sm font-semibold mb-3">
-                                                Предложенная цена: {app.proposed_price} сом
-                                            </p>
+                                        {/* Реальная статистика Instagram */}
+                                        {app.users?.influencer_profiles?.[0] && (
+                                            <InstagramStats
+                                                influencerProfile={app.users.influencer_profiles[0]}
+                                                compact={true}
+                                            />
                                         )}
+
 
                                         {app.status === 'pending' && task.status === 'open' && (
                                             <button

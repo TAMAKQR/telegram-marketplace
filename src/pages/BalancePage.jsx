@@ -158,7 +158,7 @@ function BalancePage() {
     }
 
     return (
-        <div className="min-h-screen pb-20">
+        <div className="min-h-screen pb-6 overflow-x-hidden">
             {/* Header */}
             <div className="bg-brand-gradient text-white p-4 pt-8">
                 <div className="flex items-center gap-3 mb-4">

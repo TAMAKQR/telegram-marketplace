@@ -10,7 +10,9 @@ export default defineConfig({
         allowedHosts: [
             '.ngrok-free.app',
             '.ngrok.io',
-            '.ngrok.app'
+            '.ngrok.app',
+            '.serveousercontent.com',
+            '.loca.lt'
         ]
     },
     build: {

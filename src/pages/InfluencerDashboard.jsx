@@ -142,7 +142,7 @@ function InfluencerDashboard() {
                 .select(`
           *,
           users!tasks_client_id_fkey(first_name, last_name),
-          task_submissions!inner(amount_paid:amount, payment_date:reviewed_at)
+          task_submissions!inner(*)
         `)
                 .eq('status', 'completed')
                 .eq('accepted_influencer_id', profile.id)
@@ -255,7 +255,7 @@ function InfluencerDashboard() {
     }
 
     return (
-        <div className="min-h-screen pb-20">
+        <div className="min-h-screen pb-20 overflow-x-hidden">
             {/* Header */}
             <div className="bg-brand-gradient text-white p-4 pt-8">
                 <div className="flex justify-between items-start">
@@ -296,10 +296,10 @@ function InfluencerDashboard() {
                         <div className="text-xl font-bold">{(profile?.balance || 0).toLocaleString()} сом</div>
                     </div>
                     <button
-                        onClick={() => navigate('/balance')}
+                        onClick={() => navigate('/withdrawal')}
                         className="px-4 py-2 bg-white/20 rounded-lg text-sm font-medium hover:bg-white/30 transition-colors"
                     >
-                        Вывести
+                        💸 Вывести
                     </button>
                 </div>
             </div>
@@ -400,25 +400,20 @@ function InfluencerDashboard() {
                                         }`}
                                 >
                                     <div className="flex justify-between items-start mb-2">
-                                        <h3 className="font-semibold text-lg flex-1">{task.title}</h3>
+                                        <h3 className="font-semibold text-lg flex-1 break-words">{task.title}</h3>
                                         {alreadyApplied && (
                                             <span className="text-xs bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200 px-2 py-1 rounded-full ml-2">
                                                 Откликнулись
                                             </span>
                                         )}
                                     </div>
-                                    <p className="text-tg-hint text-sm mb-3 line-clamp-2">
+                                    <p className="text-tg-hint text-sm mb-3 line-clamp-2 break-words">
                                         {task.description}
                                     </p>
                                     <div className="flex justify-between items-center">
                                         <span className="font-semibold text-tg-button text-lg">
                                             {task.budget} сом
                                         </span>
-                                        {task.category && (
-                                            <span className="text-xs bg-gray-100 dark:bg-gray-700 px-2 py-1 rounded">
-                                                {task.category}
-                                            </span>
-                                        )}
                                     </div>
                                     {task.requirements?.minFollowers && (
                                         <p className="text-xs text-tg-hint mt-2">

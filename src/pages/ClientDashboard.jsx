@@ -104,6 +104,26 @@ function ClientDashboard() {
         }
     }
 
+    const deleteUser = async (userId, userName) => {
+        const confirmed = window.confirm(`Вы уверены, что хотите удалить пользователя ${userName}? Это действие необратимо!`)
+
+        if (!confirmed) return
+
+        try {
+            const { error } = await supabase
+                .from('users')
+                .delete()
+                .eq('id', userId)
+
+            if (error) throw error
+            await loadAllUsers()
+            alert('Пользователь успешно удален')
+        } catch (error) {
+            console.error('Ошибка удаления:', error)
+            alert('Ошибка удаления пользователя: ' + error.message)
+        }
+    }
+
     const addBalance = async () => {
         if (!selectedUserId || !balanceAmount) {
             alert('Выберите пользователя и введите сумму')
@@ -144,14 +164,14 @@ function ClientDashboard() {
     }
 
     return (
-        <div className="min-h-screen pb-20">
+        <div className="min-h-screen pb-20 overflow-x-hidden">
             {/* Header */}
-            <div className="bg-brand-gradient text-white p-4 pt-8">
-                <div className="flex justify-between items-start mb-2">
+            <div className="bg-brand-gradient text-white pt-8" style={{ padding: 'var(--spacing-xl) var(--spacing-lg)' }}>
+                <div className="flex justify-between items-start mb-3">
                     <div className="flex items-center gap-2">
-                        <Logo className="h-7 w-auto" />
+                        <Logo className="h-8 w-auto" />
                         <div>
-                            <h1 className="text-2xl font-bold">Мои задания</h1>
+                            <h1 className="text-2xl">Мои задания</h1>
                             <p className="text-sm opacity-90">Привет, {user?.first_name}! 👋</p>
                         </div>
                     </div>
@@ -174,14 +194,14 @@ function ClientDashboard() {
                 </div>
 
                 {/* Balance */}
-                <div className="mt-3 bg-white/10 backdrop-blur-sm rounded-xl p-3 flex justify-between items-center">
+                <div className="mt-4 bg-white/10 backdrop-blur-sm rounded-xl p-4 flex justify-between items-center">
                     <div>
                         <div className="text-xs opacity-75">Баланс</div>
                         <div className="text-xl font-bold">{(profile?.balance || 0).toLocaleString()} сом</div>
                     </div>
                     <button
                         onClick={() => navigate('/balance')}
-                        className="px-4 py-2 bg-white/20 rounded-lg text-sm font-medium hover:bg-white/30 transition-colors"
+                        className="btn-mobile px-6 py-2 bg-white/20 rounded-lg font-medium hover:bg-white/30 transition-colors"
                     >
                         Пополнить
                     </button>
@@ -189,7 +209,7 @@ function ClientDashboard() {
             </div>
 
             {/* Tabs */}
-            <div className="flex gap-2 p-4 overflow-x-auto">
+            <div className="flex gap-2 overflow-x-auto" style={{ padding: 'var(--spacing-md)' }}>
                 {[
                     { key: 'all', label: 'Все' },
                     { key: 'open', label: 'Открытые' },
@@ -209,19 +229,16 @@ function ClientDashboard() {
                 ))}
                 {user && isAdmin(user.id) && (
                     <button
-                        onClick={() => setActiveTab('admin')}
-                        className={`px-4 py-2 rounded-full whitespace-nowrap transition-colors ${activeTab === 'admin'
-                            ? 'bg-red-500 text-white'
-                            : 'bg-red-100 dark:bg-red-900 text-red-700 dark:text-red-300'
-                            }`}
+                        onClick={() => navigate('/admin')}
+                        className="px-4 py-2 rounded-full whitespace-nowrap transition-colors bg-red-500 text-white hover:bg-red-600"
                     >
-                        🔧 Админ
+                        🔧 Админ-панель
                     </button>
                 )}
             </div>
 
             {/* Tasks List */}
-            <div className="p-4 space-y-3">
+            <div style={{ padding: 'var(--spacing-md)', gap: 'var(--spacing-sm)' }} className="flex flex-col">
                 {activeTab === 'admin' && user && isAdmin(user.id) ? (
                     <div className="space-y-4">
                         {/* Пополнение баланса */}
@@ -300,6 +317,7 @@ function ClientDashboard() {
                                                     <button
                                                         onClick={() => toggleUserType(user.id, user.user_type)}
                                                         className="text-xs bg-gray-100 hover:bg-gray-200 dark:bg-gray-600 dark:hover:bg-gray-500 px-2 py-1 rounded transition-colors"
+                                                        title="Изменить тип пользователя"
                                                     >
                                                         🔄
                                                     </button>
@@ -309,8 +327,16 @@ function ClientDashboard() {
                                                             ? 'bg-green-100 hover:bg-green-200 text-green-800 dark:bg-green-900 dark:text-green-200'
                                                             : 'bg-red-100 hover:bg-red-200 text-red-800 dark:bg-red-900 dark:text-red-200'
                                                             }`}
+                                                        title={user.is_blocked ? 'Разблокировать' : 'Заблокировать'}
                                                     >
                                                         {user.is_blocked ? '✅' : '🚫'}
+                                                    </button>
+                                                    <button
+                                                        onClick={() => deleteUser(user.id, `${user.first_name} ${user.last_name}`)}
+                                                        className="text-xs bg-red-500 hover:bg-red-600 text-white px-2 py-1 rounded transition-colors"
+                                                        title="Удалить пользователя"
+                                                    >
+                                                        🗑️
                                                     </button>
                                                 </div>
                                             </div>
@@ -347,17 +373,17 @@ function ClientDashboard() {
                         <div
                             key={task.id}
                             onClick={() => navigate(`/client/task/${task.id}`)}
-                            className="bg-white dark:bg-gray-800 rounded-xl p-4 shadow-md hover:shadow-lg transition-shadow cursor-pointer"
+                            className="task-card bg-white dark:bg-gray-800 rounded-xl shadow-md hover:shadow-lg transition-shadow cursor-pointer"
                         >
-                            <div className="flex justify-between items-start mb-2">
-                                <h3 className="font-semibold text-lg flex-1">{task.title}</h3>
+                            <div className="flex justify-between items-start" style={{ marginBottom: 'var(--spacing-xs)' }}>
+                                <h3 className="task-title flex-1 break-words">{task.title}</h3>
                                 <span className="text-xs ml-2">{getStatusText(task.status)}</span>
                             </div>
-                            <p className="text-tg-hint text-sm mb-3 line-clamp-2">
+                            <p className="task-description line-clamp-2 break-words">
                                 {task.description}
                             </p>
                             <div className="flex justify-between items-center">
-                                <span className="font-semibold text-tg-button">
+                                <span className="task-price">
                                     {task.budget} сом
                                 </span>
                                 <span className="text-xs text-tg-hint">

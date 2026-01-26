@@ -71,26 +71,9 @@ export const getGroupId = async () => {
 
 // Форматирование сообщения о новом задании
 export const formatNewTaskMessage = (task, clientName) => {
-    const categoryEmoji = {
-        'Красота и уход': '💄',
-        'Мода': '👗',
-        'Технологии': '📱',
-        'Спорт и фитнес': '💪',
-        'Еда и кулинария': '🍳',
-        'Путешествия': '✈️',
-        'Lifestyle': '🌟',
-        'Другое': '📌'
-    }
-
-    const emoji = categoryEmoji[task.category] || '📌'
-
-    let message = `${emoji} <b>Новое задание!</b>\n\n`
+    let message = `📌 <b>Новое задание!</b>\n\n`
     message += `📋 <b>${task.title}</b>\n`
     message += `💰 Бюджет: <b>${task.budget.toLocaleString()} сом</b>\n`
-
-    if (task.category) {
-        message += `🏷 Категория: ${task.category}\n`
-    }
 
     if (task.requirements?.minFollowers) {
         message += `👥 Мин. подписчиков: ${task.requirements.minFollowers.toLocaleString()}\n`

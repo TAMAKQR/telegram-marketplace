@@ -28,7 +28,13 @@ function UserTypeSelection() {
             if (data) {
                 setUserType(data.user_type)
                 setProfile(data)
-                navigate(data.user_type === 'client' ? '/client' : '/influencer')
+
+                // Если бухгалтер - перенаправляем на его панель
+                if (data.role === 'accountant') {
+                    navigate('/accountant')
+                } else {
+                    navigate(data.user_type === 'client' ? '/client' : '/influencer')
+                }
             }
         } catch (error) {
             console.log('Пользователь не найден, показываем выбор типа')
