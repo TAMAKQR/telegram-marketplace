@@ -28,10 +28,11 @@ function App() {
     // Debug: показываем что происходит
     console.log('App render:', { user, userType, telegram: window.Telegram?.WebApp })
 
-    // Проверяем, находимся ли мы на странице Instagram callback
-    const isInstagramCallback = window.location.pathname === '/instagram/callback'
+    // Проверяем, находимся ли мы на странице без авторизации
+    const publicPaths = ['/instagram/callback', '/instagram/deauth', '/instagram/delete', '/terms', '/privacy']
+    const isPublicPage = publicPaths.includes(window.location.pathname)
 
-    if (!user && !isInstagramCallback) {
+    if (!user && !isPublicPage) {
         return (
             <div className="flex items-center justify-center min-h-screen bg-tg-bg">
                 <div className="text-center p-4">
