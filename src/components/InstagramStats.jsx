@@ -14,6 +14,11 @@ export default function InstagramStats({ influencerProfile, compact = false }) {
     }, [influencerProfile])
 
     const loadStats = async () => {
+        if (!influencerProfile) {
+            console.error('loadStats called but no influencerProfile')
+            return
+        }
+
         try {
             setLoading(true)
             setError(null)
