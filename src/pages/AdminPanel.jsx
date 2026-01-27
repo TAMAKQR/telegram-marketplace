@@ -44,6 +44,7 @@ function AdminPanel() {
             const { data, error } = await supabase
                 .from('users')
                 .select('*')
+                .eq('is_deleted', false)  // Загружаем только не удаленных
                 .order('created_at', { ascending: false })
 
             if (error) throw error
@@ -198,6 +199,42 @@ function AdminPanel() {
         } catch (error) {
             console.error('Ошибка изменения статуса:', error)
             showAlert?.('Ошибка при изменении статуса')
+        }
+    }
+
+    // Удалить пользователя (мягкое удаление)
+    const deleteUser = async (userId) => {
+        const user = users.find(u => u.id === userId)
+        const confirmed = window.confirm(
+            `Удалить пользователя ${user.first_name} ${user.last_name || ''}?\n\n` +
+            `Баланс: ${user.balance?.toLocaleString() || 0} сом\n\n` +
+            `Пользователь будет скрыт из списка, но его данные сохранятся в базе.`
+        )
+
+        if (!confirmed) return
+
+        try {
+            const { data, error } = await supabase
+                .rpc('admin_soft_delete_user', {
+                    p_user_id: userId,
+                    p_admin_reason: 'Удален администратором'
+                })
+
+            if (error) throw error
+
+            // Удаляем из списка
+            setUsers(users.filter(u => u.id !== userId))
+
+            const message = `🗑️ <b>Пользователь удален</b>\n\n` +
+                `Пользователь: ${user.first_name} ${user.last_name || ''}\n` +
+                `Telegram ID: <code>${user.telegram_id}</code>\n` +
+                `Баланс на момент удаления: ${user.balance?.toLocaleString() || 0} сом`
+
+            await sendAdminNotification(message)
+            showAlert?.('Пользователь удален')
+        } catch (error) {
+            console.error('Ошибка удаления пользователя:', error)
+            showAlert?.('Ошибка при удалении пользователя')
         }
     }
 
@@ -412,6 +449,13 @@ function AdminPanel() {
                                         className="text-xs px-3 py-1 bg-green-500 text-white rounded-lg hover:bg-green-600"
                                     >
                                         💰 Пополнить баланс
+                                    </button>
+
+                                    <button
+                                        onClick={() => deleteUser(user.id)}
+                                        className="text-xs px-3 py-1 bg-red-500 text-white rounded-lg hover:bg-red-600"
+                                    >
+                                        🗑️ Удалить
                                     </button>
                                 </div>
 

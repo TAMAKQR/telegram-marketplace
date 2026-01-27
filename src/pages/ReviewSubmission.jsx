@@ -194,7 +194,7 @@ function ReviewSubmission() {
                         </p>
                     </div>
 
-                    {submission.status === 'pending_approval' && (
+                    {submission.status === 'pending' && (
                         <div className="space-y-3">
                             <div className="bg-amber-50 dark:bg-amber-900/20 rounded-xl p-4 border border-amber-200 dark:border-amber-800 mb-4">
                                 <h4 className="font-semibold text-amber-900 dark:text-amber-200 mb-2">
@@ -226,27 +226,35 @@ function ReviewSubmission() {
                         </div>
                     )}
 
-                    {submission.status === 'approved' && (
-                        <div className="bg-green-100 dark:bg-green-900/30 rounded-xl p-4 text-center">
-                            <p className="text-green-800 dark:text-green-200 font-semibold">
-                                ✅ Публикация одобрена
+                    {submission.status === 'in_progress' && (
+                        <div className="bg-blue-100 dark:bg-blue-900/30 rounded-xl p-4 text-center">
+                            <p className="text-blue-800 dark:text-blue-200 font-semibold">
+                                📊 Отслеживание метрик активно
                             </p>
-                            <p className="text-sm text-green-700 dark:text-green-300 mt-1">
-                                Идет отслеживание метрик
+                            <p className="text-sm text-blue-700 dark:text-blue-300 mt-1">
+                                Система автоматически проверяет метрики каждый час
                             </p>
                         </div>
+                    )}
+                    <p className="text-green-800 dark:text-green-200 font-semibold">
+                        ✅ Публикация одобрена
+                    </p>
+                    <p className="text-sm text-green-700 dark:text-green-300 mt-1">
+                        Идет отслеживание метрик
+                    </p>
+                </div>
                     )}
 
-                    {submission.status === 'rejected' && (
-                        <div className="bg-red-100 dark:bg-red-900/30 rounded-xl p-4 text-center">
-                            <p className="text-red-800 dark:text-red-200 font-semibold">
-                                ❌ Публикация отклонена
-                            </p>
-                        </div>
-                    )}
-                </div>
+                {submission.status === 'rejected' && (
+                    <div className="bg-red-100 dark:bg-red-900/30 rounded-xl p-4 text-center">
+                        <p className="text-red-800 dark:text-red-200 font-semibold">
+                            ❌ Публикация отклонена
+                        </p>
+                    </div>
+                )}
             </div>
         </div>
+        </div >
     )
 }
 

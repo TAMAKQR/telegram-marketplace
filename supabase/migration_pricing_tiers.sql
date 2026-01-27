@@ -221,8 +221,8 @@ BEGIN
         RAISE EXCEPTION 'У вас нет прав для одобрения этой публикации';
     END IF;
 
-    -- Проверяем статус
-    IF v_submission.status != 'pending_approval' THEN
+    -- Проверяем статус (принимаем как 'pending' так и 'pending_approval')
+    IF v_submission.status NOT IN ('pending', 'pending_approval') THEN
         RAISE EXCEPTION 'Публикация уже проверена';
     END IF;
 

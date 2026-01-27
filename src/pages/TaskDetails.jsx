@@ -181,6 +181,23 @@ function TaskDetails() {
         }
 
         try {
+            // Проверяем, нет ли уже активного submission (на проверке или в работе)
+            const { data: existingSubmissions, error: checkError } = await supabase
+                .from('task_submissions')
+                .select('id, status')
+                .eq('task_id', taskId)
+                .eq('influencer_id', profile.id)
+                .in('status', ['pending', 'in_progress'])
+
+            if (checkError) throw checkError
+
+            if (existingSubmissions && existingSubmissions.length > 0) {
+                const status = existingSubmissions[0].status
+                const statusText = status === 'pending' ? 'на проверке' : 'в работе'
+                showAlert?.(`⚠️ У вас уже есть отчет ${statusText}\n\nМожно отправить новый только после одобрения или отклонения предыдущего.`)
+                return
+            }
+
             const { error } = await supabase
                 .from('task_submissions')
                 .insert([
@@ -662,43 +679,139 @@ function TaskDetails() {
                                 </div>
                             </div>
                         ) : (
-                            <button
-                                onClick={() => setShowSubmissionForm(true)}
-                                className="w-full bg-green-600 text-white py-4 rounded-xl font-semibold"
-                            >
-                                📤 Отправить отчет о выполнении
-                            </button>
+                            <>
+                                {/* Проверяем, есть ли активный submission */}
+                                {submissions.some(sub => ['pending', 'in_progress'].includes(sub.status)) ? (
+                                    <div className="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-xl p-4">
+                                        <div className="flex items-start gap-3">
+                                            <span className="text-2xl">⏳</span>
+                                            <div>
+                                                <h4 className="font-semibold text-yellow-800 dark:text-yellow-200 mb-1">
+                                                    Отчет на проверке
+                                                </h4>
+                                                <p className="text-sm text-yellow-700 dark:text-yellow-300">
+                                                    Вы уже отправили отчет. Дождитесь его проверки заказчиком, прежде чем отправлять новый.
+                                                </p>
+                                            </div>
+                                        </div>
+                                    </div>
+                                ) : (
+                                    <button
+                                        onClick={() => setShowSubmissionForm(true)}
+                                        className="w-full bg-green-600 text-white py-4 rounded-xl font-semibold"
+                                    >
+                                        📤 Отправить отчет о выполнении
+                                    </button>
+                                )}
+                            </>
                         )}
 
-                        {/* История отчетов */}
+                        {/* История отчетов и прогресс метрик */}
                         {submissions.length > 0 && (
-                            <div className="bg-white dark:bg-gray-800 rounded-xl p-4 shadow-md">
-                                <h4 className="font-semibold mb-3">История отчетов</h4>
-                                <div className="space-y-3">
-                                    {submissions.map(sub => (
-                                        <div key={sub.id} className="border-l-4 pl-3 py-2" style={{
-                                            borderColor: sub.status === 'approved' ? '#10b981' :
-                                                sub.status === 'revision_requested' ? '#f59e0b' : '#6b7280'
-                                        }}>
-                                            <div className="flex items-center justify-between mb-1">
-                                                <span className="text-xs text-tg-hint">
-                                                    {new Date(sub.submitted_at).toLocaleDateString('ru')}
-                                                </span>
-                                                <span className={`text-xs px-2 py-1 rounded-full ${sub.status === 'approved' ? 'bg-green-100 text-green-800' :
-                                                    sub.status === 'revision_requested' ? 'bg-orange-100 text-orange-800' :
-                                                        'bg-gray-100 text-gray-800'
-                                                    }`}>
-                                                    {sub.status === 'approved' ? '✅ Одобрено' :
-                                                        sub.status === 'revision_requested' ? '🔄 На доработке' :
-                                                            '⏳ На проверке'}
+                            <div className="space-y-4">
+                                {/* Прогресс метрик для активных submission */}
+                                {submissions.filter(sub => ['in_progress', 'approved'].includes(sub.status)).map(sub => (
+                                    task.target_metrics && (
+                                        <div key={`progress-${sub.id}`} className="bg-white dark:bg-gray-800 rounded-xl p-4 shadow-md">
+                                            <div className="flex items-center justify-between mb-3">
+                                                <h4 className="font-semibold">📊 Прогресс метрик</h4>
+                                                <span className="text-xs px-2 py-1 rounded-full bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200">
+                                                    В процессе
                                                 </span>
                                             </div>
-                                            <a href={sub.post_url} target="_blank" rel="noopener noreferrer"
-                                                className="text-sm text-tg-link">
-                                                Ссылка на пост →
-                                            </a>
+
+                                            <div className="mb-3">
+                                                <a href={sub.post_url} target="_blank" rel="noopener noreferrer"
+                                                    className="text-tg-link text-sm break-all block">
+                                                    {sub.post_url} →
+                                                </a>
+                                            </div>
+
+                                            <div className="space-y-3">
+                                                {task.target_metrics.views && (
+                                                    <div>
+                                                        <div className="flex justify-between text-sm mb-1">
+                                                            <span>👁️ Просмотры</span>
+                                                            <span>{(sub.current_metrics?.views || 0).toLocaleString()} / {task.target_metrics.views.toLocaleString()}</span>
+                                                        </div>
+                                                        <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
+                                                            <div
+                                                                className="bg-blue-500 h-2 rounded-full transition-all"
+                                                                style={{ width: `${Math.min(((sub.current_metrics?.views || 0) / task.target_metrics.views) * 100, 100)}%` }}
+                                                            />
+                                                        </div>
+                                                    </div>
+                                                )}
+
+                                                {task.target_metrics.likes && (
+                                                    <div>
+                                                        <div className="flex justify-between text-sm mb-1">
+                                                            <span>❤️ Лайки</span>
+                                                            <span>{(sub.current_metrics?.likes || 0).toLocaleString()} / {task.target_metrics.likes.toLocaleString()}</span>
+                                                        </div>
+                                                        <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
+                                                            <div
+                                                                className="bg-pink-500 h-2 rounded-full transition-all"
+                                                                style={{ width: `${Math.min(((sub.current_metrics?.likes || 0) / task.target_metrics.likes) * 100, 100)}%` }}
+                                                            />
+                                                        </div>
+                                                    </div>
+                                                )}
+
+                                                {task.target_metrics.comments && (
+                                                    <div>
+                                                        <div className="flex justify-between text-sm mb-1">
+                                                            <span>💬 Комментарии</span>
+                                                            <span>{(sub.current_metrics?.comments || 0).toLocaleString()} / {task.target_metrics.comments.toLocaleString()}</span>
+                                                        </div>
+                                                        <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
+                                                            <div
+                                                                className="bg-green-500 h-2 rounded-full transition-all"
+                                                                style={{ width: `${Math.min(((sub.current_metrics?.comments || 0) / task.target_metrics.comments) * 100, 100)}%` }}
+                                                            />
+                                                        </div>
+                                                    </div>
+                                                )}
+                                            </div>
+
+                                            <p className="text-xs text-tg-hint mt-3">
+                                                📈 Считается прирост с момента отправки публикации. Обновление каждый час.
+                                            </p>
                                         </div>
-                                    ))}
+                                    )
+                                ))}
+
+                                {/* История всех отчетов */}
+                                <div className="bg-white dark:bg-gray-800 rounded-xl p-4 shadow-md">
+                                    <h4 className="font-semibold mb-3">История отчетов</h4>
+                                    <div className="space-y-3">
+                                        {submissions.map(sub => (
+                                            <div key={sub.id} className="border-l-4 pl-3 py-2" style={{
+                                                borderColor: sub.status === 'approved' ? '#10b981' :
+                                                    sub.status === 'revision_requested' ? '#f59e0b' : '#6b7280'
+                                            }}>
+                                                <div className="flex items-center justify-between mb-1">
+                                                    <span className="text-xs text-tg-hint">
+                                                        {new Date(sub.submitted_at).toLocaleDateString('ru')}
+                                                    </span>
+                                                    <span className={`text-xs px-2 py-1 rounded-full ${sub.status === 'approved' ? 'bg-green-100 text-green-800' :
+                                                        sub.status === 'revision_requested' ? 'bg-orange-100 text-orange-800' :
+                                                            sub.status === 'in_progress' ? 'bg-blue-100 text-blue-800' :
+                                                                'bg-gray-100 text-gray-800'
+                                                        }`}>
+                                                        {sub.status === 'approved' ? '✅ Одобрено' :
+                                                            sub.status === 'revision_requested' ? '🔄 На доработке' :
+                                                                sub.status === 'in_progress' ? '📊 Отслеживается' :
+                                                                    '⏳ На проверке'}
+                                                    </span>
+                                                </div>
+                                                <a href={sub.post_url} target="_blank" rel="noopener noreferrer"
+                                                    className="text-sm text-tg-link">
+                                                    Ссылка на пост →
+                                                </a>
+                                            </div>
+                                        ))}
+                                    </div>
                                 </div>
                             </div>
                         )}
