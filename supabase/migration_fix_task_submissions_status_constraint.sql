@@ -9,7 +9,7 @@ BEGIN
     -- В разных инстансах он может иметь разное имя (или быть создан без имени).
     --
     -- Примечание: этот блок безопасен для повторного запуска.
-    FOR r IN (
+    FOR constraint_name IN
         SELECT c.conname
         FROM pg_constraint c
         JOIN pg_class t ON t.oid = c.conrelid
@@ -21,8 +21,8 @@ BEGIN
             pg_get_constraintdef(c.oid) ILIKE '%status%'
             AND pg_get_constraintdef(c.oid) ILIKE '%IN%'
           )
-    ) LOOP
-        EXECUTE format('ALTER TABLE public.task_submissions DROP CONSTRAINT IF EXISTS %I', r.conname);
+    LOOP
+        EXECUTE format('ALTER TABLE public.task_submissions DROP CONSTRAINT IF EXISTS %I', constraint_name);
     END LOOP;
 END;
 $$;
