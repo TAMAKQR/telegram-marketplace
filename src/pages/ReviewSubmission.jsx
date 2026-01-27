@@ -8,7 +8,7 @@ import Logo from '../components/Logo'
 function ReviewSubmission() {
     const navigate = useNavigate()
     const { taskId } = useParams()
-    const { user, profile } = useUserStore()
+    const { profile } = useUserStore()
     const { showAlert } = useTelegram()
 
     const [loading, setLoading] = useState(false)
@@ -16,14 +16,14 @@ function ReviewSubmission() {
     const [submission, setSubmission] = useState(null)
 
     useEffect(() => {
-        if (!taskId || !user?.id) return
+        if (!taskId || !profile?.id) return
         loadTaskAndSubmission()
-    }, [taskId, user?.id])
+    }, [taskId, profile?.id])
 
     const loadTaskAndSubmission = async () => {
         try {
-            if (!user?.id) {
-                console.log('ReviewSubmission: waiting for user...')
+            if (!profile?.id) {
+                console.log('ReviewSubmission: waiting for profile...')
                 return
             }
 
@@ -32,7 +32,7 @@ function ReviewSubmission() {
                 .from('tasks')
                 .select('*')
                 .eq('id', taskId)
-                .eq('client_id', user.id)
+                .eq('client_id', profile.id)
                 .single()
 
             if (taskError) throw taskError
@@ -78,11 +78,16 @@ function ReviewSubmission() {
             return
         }
 
+        if (!profile?.id) {
+            showAlert?.('Профиль не загружен, попробуйте еще раз')
+            return
+        }
+
         setLoading(true)
         try {
             const { data, error } = await supabase.rpc('approve_submission', {
                 p_submission_id: submission.id,
-                p_client_id: user.id,
+                p_client_id: profile.id,
                 p_approved: true
             })
 
@@ -110,6 +115,11 @@ function ReviewSubmission() {
             return
         }
 
+        if (!profile?.id) {
+            showAlert?.('Профиль не загружен, попробуйте еще раз')
+            return
+        }
+
         const reason = prompt('Укажите причину отклонения:')
         if (!reason) return
 
@@ -117,7 +127,7 @@ function ReviewSubmission() {
         try {
             const { data, error } = await supabase.rpc('approve_submission', {
                 p_submission_id: submission.id,
-                p_client_id: user.id,
+                p_client_id: profile.id,
                 p_approved: false,
                 p_rejection_reason: reason
             })
