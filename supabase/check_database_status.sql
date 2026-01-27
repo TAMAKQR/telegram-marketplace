@@ -164,4 +164,9 @@ SELECT
         WHEN NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'users' AND column_name = 'is_deleted') 
         THEN '3. Выполнить: migration_soft_delete_users.sql'
         ELSE '✅ Soft delete настроен'
-    END as "Шаг 3";
+    END as "Шаг 3",
+    CASE 
+        WHEN NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'task_submissions' AND column_name = 'approved_at') 
+        THEN '4. Выполнить: migration_fix_task_submissions_approval_columns.sql'
+        ELSE '✅ task_submissions approve columns OK'
+    END as "Шаг 4";
