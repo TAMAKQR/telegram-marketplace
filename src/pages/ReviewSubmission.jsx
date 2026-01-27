@@ -67,6 +67,11 @@ function ReviewSubmission() {
     }
 
     const handleApprove = async () => {
+        if (!submission) {
+            console.error('handleApprove called but submission is null')
+            return
+        }
+
         setLoading(true)
         try {
             const { data, error } = await supabase.rpc('approve_submission', {
@@ -94,6 +99,11 @@ function ReviewSubmission() {
     }
 
     const handleReject = async () => {
+        if (!submission) {
+            console.error('handleReject called but submission is null')
+            return
+        }
+
         const reason = prompt('Укажите причину отклонения:')
         if (!reason) return
 
