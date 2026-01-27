@@ -1,29 +1,42 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 
 export const useTelegram = () => {
     const [tg, setTg] = useState(null)
     const [user, setUser] = useState(null)
+    const initializedRef = useRef(false)
 
     useEffect(() => {
-        const telegram = window.Telegram?.WebApp
+        let tries = 0
+        let intervalId
+        let timeoutId
 
-        if (telegram) {
-            telegram.ready()
-            telegram.expand()
+        const setFavicon = (href) => {
+            let link = document.querySelector('link[rel="icon"][type="image/svg+xml"]') || document.querySelector('link[rel="icon"]')
+            if (!link) {
+                link = document.createElement('link')
+                link.rel = 'icon'
+                link.type = 'image/svg+xml'
+                document.head.appendChild(link)
+            }
+            link.href = href
+        }
+
+        const initTelegram = (telegram) => {
+            if (!telegram || initializedRef.current) return
+            initializedRef.current = true
+
+            try {
+                telegram.ready()
+                telegram.expand()
+            } catch (e) {
+                console.warn('Telegram WebApp ready/expand failed:', e)
+            }
 
             setTg(telegram)
-            setUser(telegram.initDataUnsafe?.user)
 
-            const setFavicon = (href) => {
-                let link = document.querySelector('link[rel="icon"][type="image/svg+xml"]') || document.querySelector('link[rel="icon"]')
-                if (!link) {
-                    link = document.createElement('link')
-                    link.rel = 'icon'
-                    link.type = 'image/svg+xml'
-                    document.head.appendChild(link)
-                }
-                link.href = href
-            }
+            // initDataUnsafe.user иногда появляется не сразу, поэтому выставляем при наличии
+            const unsafeUser = telegram.initDataUnsafe?.user
+            if (unsafeUser) setUser(unsafeUser)
 
             // Apply Telegram theme
             if (telegram.themeParams) {
@@ -40,10 +53,41 @@ export const useTelegram = () => {
             setFavicon(isDark ? '/logos/logo6.svg' : '/logos/logo4.svg')
 
             // Update on theme change
-            telegram.onEvent?.('themeChanged', () => {
+            const onThemeChanged = () => {
                 const dark = telegram.colorScheme === 'dark'
                 setFavicon(dark ? '/logos/logo6.svg' : '/logos/logo4.svg')
-            })
+            }
+            telegram.onEvent?.('themeChanged', onThemeChanged)
+        }
+
+        // Telegram WebApp объект может появиться после первого рендера, поэтому пробуем несколько раз
+        intervalId = setInterval(() => {
+            const telegram = window.Telegram?.WebApp
+            if (telegram) {
+                clearInterval(intervalId)
+                intervalId = null
+                initTelegram(telegram)
+                return
+            }
+
+            tries += 1
+            if (tries >= 50) {
+                clearInterval(intervalId)
+                intervalId = null
+                console.warn('Telegram WebApp not detected after retries')
+            }
+        }, 100)
+
+        // запасной таймаут на случай, если initDataUnsafe.user появится позже, чем сам WebApp
+        timeoutId = setTimeout(() => {
+            const telegram = window.Telegram?.WebApp
+            const unsafeUser = telegram?.initDataUnsafe?.user
+            if (unsafeUser) setUser(unsafeUser)
+        }, 1500)
+
+        return () => {
+            if (intervalId) clearInterval(intervalId)
+            if (timeoutId) clearTimeout(timeoutId)
         }
     }, [])
 
