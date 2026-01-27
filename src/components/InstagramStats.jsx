@@ -37,6 +37,12 @@ export default function InstagramStats({ influencerProfile, compact = false }) {
                 compact ? 6 : 12
             )
 
+            // Проверяем что media.data существует
+            if (!media || !media.data || !Array.isArray(media.data)) {
+                console.error('Invalid media response:', media)
+                throw new Error('Некорректный ответ от Instagram API')
+            }
+
             // Рассчитываем статистику
             const totalLikes = media.data.reduce((sum, post) => sum + (post.like_count || 0), 0)
             const totalComments = media.data.reduce((sum, post) => sum + (post.comments_count || 0), 0)
