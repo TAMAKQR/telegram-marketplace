@@ -158,7 +158,16 @@ function TaskDetails() {
         try {
             const { data, error } = await supabase
                 .from('task_submissions')
-                .select('*')
+                .select(`
+                    *,
+                    influencer:influencer_id(
+                        id,
+                        first_name,
+                        last_name,
+                        telegram_id,
+                        influencer_profiles(instagram_username)
+                    )
+                `)
                 .eq('task_id', taskId)
                 .order('created_at', { ascending: false })
 
