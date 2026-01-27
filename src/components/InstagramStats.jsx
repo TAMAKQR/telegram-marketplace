@@ -49,18 +49,25 @@ export default function InstagramStats({ influencerProfile, compact = false }) {
                 throw new Error('Некорректный ответ от Instagram API')
             }
 
+            // Фильтруем валидные посты (с id и базовыми полями)
+            const validPosts = media.data.filter(post => post && post.id)
+
+            if (validPosts.length === 0) {
+                throw new Error('Нет доступных постов для отображения')
+            }
+
             // Рассчитываем статистику
-            const totalLikes = media.data.reduce((sum, post) => sum + (post.like_count || 0), 0)
-            const totalComments = media.data.reduce((sum, post) => sum + (post.comments_count || 0), 0)
-            const avgEngagement = media.data.length > 0
-                ? ((totalLikes + totalComments) / media.data.length).toFixed(0)
+            const totalLikes = validPosts.reduce((sum, post) => sum + (post.like_count || 0), 0)
+            const totalComments = validPosts.reduce((sum, post) => sum + (post.comments_count || 0), 0)
+            const avgEngagement = validPosts.length > 0
+                ? ((totalLikes + totalComments) / validPosts.length).toFixed(0)
                 : 0
 
             setStats({
-                posts: media.data,
-                totalPosts: media.data.length,
-                avgLikes: (totalLikes / media.data.length).toFixed(0),
-                avgComments: (totalComments / media.data.length).toFixed(0),
+                posts: validPosts,
+                totalPosts: validPosts.length,
+                avgLikes: validPosts.length > 0 ? (totalLikes / validPosts.length).toFixed(0) : 0,
+                avgComments: validPosts.length > 0 ? (totalComments / validPosts.length).toFixed(0) : 0,
                 avgEngagement,
                 lastUpdate: new Date()
             })
@@ -198,7 +205,7 @@ export default function InstagramStats({ influencerProfile, compact = false }) {
             </div>
 
             <div className="grid grid-cols-3 gap-2 mb-3">
-                {stats.posts.slice(0, 6).map((post, idx) => (
+                {stats.posts.slice(0, 6).filter(post => post && post.id).map((post, idx) => (
                     <a
                         key={post.id}
                         href={post.permalink}
