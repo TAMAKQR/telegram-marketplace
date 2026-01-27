@@ -86,7 +86,7 @@ function InfluencerDashboard() {
           tasks(*, users!tasks_client_id_fkey(first_name, last_name))
         `)
                 .eq('influencer_id', profile.id)
-                .in('status', ['pending', 'rejected'])
+                .in('status', ['pending', 'rejected', 'accepted'])
                 .order('created_at', { ascending: false })
 
             if (error) throw error
@@ -98,19 +98,29 @@ function InfluencerDashboard() {
 
     const loadInProgressTasks = async () => {
         try {
+            // Загружаем задания через принятые заявки
             const { data, error } = await supabase
-                .from('tasks')
+                .from('task_applications')
                 .select(`
           *,
-          users!tasks_client_id_fkey(first_name, last_name),
-          task_submissions!left(*)
+          tasks(
+            *,
+            users!tasks_client_id_fkey(first_name, last_name),
+            task_submissions!left(*)
+          )
         `)
-                .eq('status', 'in_progress')
-                .eq('accepted_influencer_id', profile.id)
+                .eq('influencer_id', profile.id)
+                .eq('status', 'accepted')
                 .order('created_at', { ascending: false })
 
             if (error) throw error
-            setInProgressTasks(data || [])
+
+            // Преобразуем данные - берём только задания, которые в статусе in_progress
+            const tasksData = (data || [])
+                .map(app => app.tasks)
+                .filter(task => task && task.status === 'in_progress')
+
+            setInProgressTasks(tasksData)
         } catch (error) {
             console.error('Ошибка загрузки заданий в работе:', error)
         }
