@@ -178,20 +178,7 @@ function TaskDetails() {
 
             console.log('Загружены submissions:', data)
             console.log('Активные submissions:', data?.filter(sub => ['pending', 'in_progress'].includes(sub.status)))
-            // Отладка: проверка структуры данных
-            if (data && data.length > 0) {
-                console.log('Первый submission:', data[0])
-                console.log('Поле users:', data[0].users)
-                console.log('influencer_profiles array:', data[0].users?.influencer_profiles)
-                const firstProfile = data[0].users?.influencer_profiles?.[0]
-                if (firstProfile) {
-                    console.log('Первый influencer_profile:', firstProfile)
-                    console.log('Profile ID:', firstProfile.id)
-                } else {
-                    console.warn('⚠️ influencer_profiles[0] отсутствует или пустой')
-                }
-            }
-
+            // Детальные логи убраны, чтобы исключить падения при отсутствующих полях
             console.log('=== SET SUBMISSIONS ===')
             setSubmissions(data || [])
             console.log('=== loadSubmissions END ===')
