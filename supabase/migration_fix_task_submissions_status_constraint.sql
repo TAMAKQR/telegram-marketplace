@@ -5,12 +5,25 @@
 
 DO $$
 BEGIN
-    -- Удаляем старый constraint (если он существует)
-    ALTER TABLE task_submissions
-        DROP CONSTRAINT IF EXISTS task_submissions_status_check;
-
-    -- На некоторых инстансах constraint мог быть создан с другим именем.
-    -- Если после выполнения всё равно будет 23514, проверьте имя constraint в information_schema.table_constraints.
+    -- Удаляем любой старый CHECK constraint, который ограничивает status.
+    -- В разных инстансах он может иметь разное имя (или быть создан без имени).
+    --
+    -- Примечание: этот блок безопасен для повторного запуска.
+    FOR r IN (
+        SELECT c.conname
+        FROM pg_constraint c
+        JOIN pg_class t ON t.oid = c.conrelid
+        JOIN pg_namespace n ON n.oid = t.relnamespace
+        WHERE n.nspname = 'public'
+          AND t.relname = 'task_submissions'
+          AND c.contype = 'c'
+          AND (
+            pg_get_constraintdef(c.oid) ILIKE '%status%'
+            AND pg_get_constraintdef(c.oid) ILIKE '%IN%'
+          )
+    ) LOOP
+        EXECUTE format('ALTER TABLE public.task_submissions DROP CONSTRAINT IF EXISTS %I', r.conname);
+    END LOOP;
 END;
 $$;
 

@@ -138,6 +138,27 @@ SELECT
         ELSE '❌ task_submissions.approved_by НЕ НАЙДЕНА'
     END;
 
+-- 11b. ПРОВЕРКА CHECK constraint для task_submissions.status
+SELECT '=== TASK_SUBMISSIONS STATUS CHECK ===' as info;
+SELECT
+    CASE
+        WHEN EXISTS (
+            SELECT 1
+            FROM pg_constraint c
+            JOIN pg_class t ON t.oid = c.conrelid
+            JOIN pg_namespace n ON n.oid = t.relnamespace
+            WHERE n.nspname = 'public'
+              AND t.relname = 'task_submissions'
+              AND c.contype = 'c'
+              AND pg_get_constraintdef(c.oid) ILIKE '%status%'
+              AND pg_get_constraintdef(c.oid) ILIKE '%pending_approval%'
+              AND pg_get_constraintdef(c.oid) ILIKE '%in_progress%'
+              AND pg_get_constraintdef(c.oid) ILIKE '%rejected%'
+        )
+        THEN '✅ status CHECK расширен (pending_approval/in_progress/rejected разрешены)'
+        ELSE '❌ status CHECK СЛИШКОМ УЗКИЙ (выполните: migration_fix_task_submissions_status_constraint.sql)'
+    END as "Статус ограничения";
+
 -- 12. ПРОВЕРКА РАСШИРЕНИЯ HTTP
 SELECT '=== HTTP РАСШИРЕНИЕ ===' as info;
 SELECT 
@@ -169,4 +190,21 @@ SELECT
         WHEN NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'task_submissions' AND column_name = 'approved_at') 
         THEN '4. Выполнить: migration_fix_task_submissions_approval_columns.sql'
         ELSE '✅ task_submissions approve columns OK'
-    END as "Шаг 4";
+    END as "Шаг 4",
+    CASE
+        WHEN NOT EXISTS (
+            SELECT 1
+            FROM pg_constraint c
+            JOIN pg_class t ON t.oid = c.conrelid
+            JOIN pg_namespace n ON n.oid = t.relnamespace
+            WHERE n.nspname = 'public'
+              AND t.relname = 'task_submissions'
+              AND c.contype = 'c'
+              AND pg_get_constraintdef(c.oid) ILIKE '%status%'
+              AND pg_get_constraintdef(c.oid) ILIKE '%pending_approval%'
+              AND pg_get_constraintdef(c.oid) ILIKE '%in_progress%'
+              AND pg_get_constraintdef(c.oid) ILIKE '%rejected%'
+        )
+        THEN '5. Выполнить: migration_fix_task_submissions_status_constraint.sql'
+        ELSE '✅ task_submissions status CHECK OK'
+    END as "Шаг 5";
