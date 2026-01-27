@@ -165,7 +165,7 @@
 
 ## 🎉 Начните зарабатывать прямо сейчас!
 
-1. Откройте бота: [@romashka_marketplace_bot](https://t.me/romashka_marketplace_bot)
+1. Откройте бота: [@romashkacz_bot](https://t.me/romashkacz_bot)
 2. Подключите Instagram Business аккаунт
 3. Найдите первое задание
 4. Получите оплату!
@@ -174,6 +174,6 @@
 
 ---
 
-💬 **Наш канал:** [Romashka Marketplace](https://t.me/romashka_marketplace)
-🤖 **Бот:** [@romashka_marketplace_bot](https://t.me/romashka_marketplace_bot)
+💬 **Наш канал:** [Romashka](https://t.me/rosmashkacz)
+🤖 **Бот:** [@romashkacz_bot](https://t.me/romashkacz_bot)
 🌐 **Сайт:** https://dasmart.xyz
