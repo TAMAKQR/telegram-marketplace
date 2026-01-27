@@ -47,8 +47,21 @@ function CreateTask() {
     const handleSubmit = async (e) => {
         e.preventDefault()
 
-        if (!formData.title || !formData.description || !formData.budget) {
+        // Проверяем обязательные поля
+        if (!formData.title || !formData.description) {
             showAlert?.('Заполните все обязательные поля')
+            return
+        }
+
+        // Проверяем budget только если не используются pricing tiers
+        if (!formData.usePricingTiers && !formData.budget) {
+            showAlert?.('Укажите бюджет задания')
+            return
+        }
+
+        // Если используются pricing tiers - проверяем что хотя бы один заполнен
+        if (formData.usePricingTiers && pricingTiers.filter(tier => tier.min && tier.max && tier.price).length === 0) {
+            showAlert?.('Добавьте хотя бы один ценовой диапазон')
             return
         }
 
