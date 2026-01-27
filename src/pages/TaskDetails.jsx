@@ -160,7 +160,7 @@ function TaskDetails() {
                 .from('task_submissions')
                 .select(`
                     *,
-                    influencer:influencer_id(
+                    users:influencer_id(
                         id,
                         first_name,
                         last_name,
