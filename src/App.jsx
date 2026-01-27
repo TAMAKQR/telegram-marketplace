@@ -20,6 +20,7 @@ import InstagramDeauth from './pages/InstagramDeauth'
 import InstagramDelete from './pages/InstagramDelete'
 import Terms from './pages/Terms'
 import Privacy from './pages/Privacy'
+import InfluencerGuide from './pages/InfluencerGuide'
 
 function App() {
     const { user } = useTelegram()
@@ -29,7 +30,7 @@ function App() {
     console.log('App render:', { user, userType, telegram: window.Telegram?.WebApp })
 
     // Проверяем, находимся ли мы на странице без авторизации
-    const publicPaths = ['/instagram/callback', '/instagram/index.html', '/instagram/deauth', '/instagram/delete', '/terms', '/privacy']
+    const publicPaths = ['/instagram/callback', '/instagram/index.html', '/instagram/deauth', '/instagram/delete', '/terms', '/privacy', '/guide']
     const isPublicPage = publicPaths.includes(window.location.pathname)
 
     if (!user && !isPublicPage) {
@@ -53,6 +54,7 @@ function App() {
                     {/* Юридические страницы - доступны без авторизации */}
                     <Route path="/terms" element={<Terms />} />
                     <Route path="/privacy" element={<Privacy />} />
+                    <Route path="/guide" element={<InfluencerGuide />} />
 
                     {/* OAuth Callbacks - доступны без авторизации */}
                     <Route path="/instagram/callback" element={<InstagramCallback />} />
