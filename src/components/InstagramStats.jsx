@@ -6,6 +6,12 @@ export default function InstagramStats({ influencerProfile, compact = false }) {
     const [loading, setLoading] = useState(false)
     const [error, setError] = useState(null)
 
+    // Проверка что influencerProfile существует
+    if (!influencerProfile) {
+        console.warn('InstagramStats: influencerProfile is undefined')
+        return null
+    }
+
     useEffect(() => {
         if (influencerProfile?.instagram_connected && influencerProfile?.instagram_access_token) {
             loadStats()
