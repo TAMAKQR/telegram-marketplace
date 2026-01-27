@@ -97,6 +97,21 @@ function CreateTask() {
                         price: parseFloat(tier.price),
                         metric: tier.metric
                     }))
+
+                // Автоматически генерируем target_metrics из МИНИМАЛЬНЫХ значений pricing_tiers
+                // Автоодобрение происходит при достижении минимального порога
+                const minMetrics = {}
+                finalPricingTiers.forEach(tier => {
+                    const currentMin = minMetrics[tier.metric]
+                    if (currentMin === undefined || tier.min < currentMin) {
+                        minMetrics[tier.metric] = tier.min
+                    }
+                })
+
+                // Устанавливаем target_metrics с минимальными значениями из pricing_tiers
+                Object.keys(minMetrics).forEach(metric => {
+                    targetMetrics[metric] = minMetrics[metric]
+                })
             }
 
             const { data, error } = await supabase
