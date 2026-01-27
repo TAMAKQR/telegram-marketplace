@@ -31,7 +31,10 @@ function App() {
 
     // Проверяем, находимся ли мы на публичной странице (без авторизации)
     const publicPaths = ['/instagram/callback', '/instagram/index.html', '/instagram/deauth', '/instagram/delete', '/terms', '/privacy', '/guide']
-    const isPublicPage = publicPaths.includes(window.location.pathname)
+    const currentPath = window.location.pathname.replace(/\/$/, '') // убираем trailing slash
+    const isPublicPage = publicPaths.some(path => currentPath === path || currentPath.startsWith(path + '/'))
+
+    console.log('Path check:', { currentPath, isPublicPage, publicPaths })
 
     // Если это НЕ публичная страница и нет user - показываем экран загрузки
     if (!isPublicPage && !user) {

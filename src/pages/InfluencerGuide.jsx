@@ -247,10 +247,10 @@ export default function InfluencerGuide() {
                     <h2 className="text-4xl font-bold mb-4">🎉 Начните зарабатывать прямо сейчас!</h2>
                     <p className="text-xl mb-8">Откройте бота, подключите Instagram и найдите первое задание!</p>
                     <div className="flex flex-wrap justify-center gap-4">
-                        <a href="https://t.me/your_bot" className="bg-white text-purple-600 px-8 py-4 rounded-full font-bold text-lg hover:shadow-lg transition-shadow">
+                        <a href="https://t.me/romashka_marketplace_bot" className="bg-white text-purple-600 px-8 py-4 rounded-full font-bold text-lg hover:shadow-lg transition-shadow">
                             🤖 Открыть бота
                         </a>
-                        <a href="https://t.me/your_channel" className="bg-white bg-opacity-20 text-white px-8 py-4 rounded-full font-bold text-lg hover:bg-opacity-30 transition-colors">
+                        <a href="https://t.me/romashka_marketplace" className="bg-white bg-opacity-20 text-white px-8 py-4 rounded-full font-bold text-lg hover:bg-opacity-30 transition-colors">
                             💬 Наш канал
                         </a>
                     </div>
