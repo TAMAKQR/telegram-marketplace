@@ -210,6 +210,13 @@ function TaskDetails() {
                 throw error
             }
 
+            // Проверяем, есть ли ошибка от Instagram API
+            if (data?.error) {
+                console.error('Ошибка Instagram API:', data)
+                showAlert?.(`Ошибка загрузки постов: ${data.message || 'Неизвестная ошибка'}`)
+                return
+            }
+
             if (data?.data) {
                 console.log('Найдено постов:', data.data.length)
                 setUserPosts(data.data)

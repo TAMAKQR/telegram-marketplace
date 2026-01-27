@@ -29,8 +29,14 @@ BEGIN
         v_result := v_response.content::jsonb;
         RETURN v_result;
     ELSE
+        -- Возвращаем информацию об ошибке в формате JSONB для отладки
         RAISE WARNING 'Instagram API error: % - %', v_response.status, v_response.content;
-        RETURN NULL;
+        RETURN jsonb_build_object(
+            'error', true,
+            'status', v_response.status,
+            'message', v_response.content,
+            'data', NULL
+        );
     END IF;
 END;
 $$;
