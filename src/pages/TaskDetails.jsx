@@ -37,15 +37,19 @@ function TaskDetails() {
     }, [taskId])
 
     useEffect(() => {
-        if (taskId && userType) {
-            if (userType === 'client') {
-                loadApplications()
-            } else {
-                checkMyApplication()
-            }
+        if (!taskId || !userType) return
+
+        if (userType === 'client') {
+            loadApplications()
             loadSubmissions()
+            return
         }
-    }, [taskId, userType])
+
+        // influencer
+        if (!profile?.id) return
+        checkMyApplication()
+        loadSubmissions()
+    }, [taskId, userType, profile?.id])
 
     const loadTaskDetails = async () => {
         try {
@@ -98,6 +102,7 @@ function TaskDetails() {
     }
 
     const checkMyApplication = async () => {
+        if (!profile?.id) return
         try {
             const { data, error } = await supabase
                 .from('task_applications')
@@ -118,6 +123,11 @@ function TaskDetails() {
     const checkRequirements = async (taskData) => {
         if (!taskData?.requirements || userType !== 'influencer') {
             setMeetsRequirements(true)
+            return
+        }
+
+        if (!profile?.id) {
+            setMeetsRequirements(false)
             return
         }
 
@@ -191,6 +201,10 @@ function TaskDetails() {
         console.log('loadUserPosts вызвана')
         setLoadingPosts(true)
         try {
+            if (!profile?.id) {
+                showAlert?.('Профиль не загружен, попробуйте еще раз')
+                return
+            }
             console.log('Получение профиля инфлюенсера...')
             // Получаем профиль инфлюенсера с токеном Instagram и user_id
             const { data: influencerProfile, error: profileError } = await supabase
@@ -273,6 +287,10 @@ function TaskDetails() {
     }
 
     const handleSubmitWork = async () => {
+        if (!profile?.id) {
+            showAlert?.('Профиль не загружен, попробуйте еще раз')
+            return
+        }
         if (!postUrl.trim()) {
             showAlert?.('Укажите ссылку на Instagram пост')
             return
@@ -335,6 +353,10 @@ function TaskDetails() {
     }
 
     const handleApply = async () => {
+        if (!profile?.id) {
+            showAlert?.('Профиль не загружен, попробуйте еще раз')
+            return
+        }
         if (!applyMessage.trim()) {
             showAlert?.('Напишите сопроводительное сообщение')
             return
