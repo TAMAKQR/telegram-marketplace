@@ -6,13 +6,8 @@ export default function InstagramStats({ influencerProfile, compact = false }) {
     const [loading, setLoading] = useState(false)
     const [error, setError] = useState(null)
 
-    // Проверка что influencerProfile существует
-    if (!influencerProfile) {
-        console.warn('InstagramStats: influencerProfile is undefined')
-        return null
-    }
-
     useEffect(() => {
+        console.log('InstagramStats useEffect:', { influencerProfile, compact })
         if (influencerProfile?.instagram_connected && influencerProfile?.instagram_access_token) {
             loadStats()
         }
@@ -70,6 +65,11 @@ export default function InstagramStats({ influencerProfile, compact = false }) {
         } finally {
             setLoading(false)
         }
+    }
+
+    if (!influencerProfile) {
+        console.log('InstagramStats: No influencer profile provided')
+        return null
     }
 
     if (!influencerProfile?.instagram_connected) {
