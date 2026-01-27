@@ -164,6 +164,8 @@ function TaskDetails() {
 
             if (error) throw error
 
+            console.log('Загружены submissions:', data)
+            console.log('Активные submissions:', data?.filter(sub => ['pending', 'in_progress'].includes(sub.status)))
             setSubmissions(data || [])
         } catch (error) {
             console.error('Ошибка загрузки отчетов:', error)
@@ -171,8 +173,10 @@ function TaskDetails() {
     }
 
     const loadUserPosts = async () => {
+        console.log('loadUserPosts вызвана')
         setLoadingPosts(true)
         try {
+            console.log('Получение профиля инфлюенсера...')
             // Получаем профиль инфлюенсера с токеном Instagram
             const { data: influencerProfile, error: profileError } = await supabase
                 .from('influencer_profiles')
@@ -180,13 +184,19 @@ function TaskDetails() {
                 .eq('user_id', profile.id)
                 .single()
 
-            if (profileError) throw profileError
+            console.log('Профиль инфлюенсера:', influencerProfile)
+            if (profileError) {
+                console.error('Ошибка получения профиля:', profileError)
+                throw profileError
+            }
 
             if (!influencerProfile?.instagram_access_token) {
+                console.log('Нет токена Instagram')
                 showAlert?.('Необходимо подключить Instagram аккаунт')
                 return
             }
 
+            console.log('Вызов fetch_user_instagram_media...')
             // Вызываем функцию для получения списка медиа
             const { data, error } = await supabase
                 .rpc('fetch_user_instagram_media', {
@@ -194,14 +204,22 @@ function TaskDetails() {
                     p_limit: 25
                 })
 
-            if (error) throw error
+            console.log('Ответ от RPC:', { data, error })
+            if (error) {
+                console.error('Ошибка RPC:', error)
+                throw error
+            }
 
             if (data?.data) {
+                console.log('Найдено постов:', data.data.length)
                 setUserPosts(data.data)
+            } else {
+                console.log('Нет постов в ответе, полный ответ:', data)
+                setUserPosts([])
             }
         } catch (error) {
             console.error('Ошибка загрузки постов:', error)
-            showAlert?.('Не удалось загрузить ваши посты из Instagram')
+            showAlert?.('Не удалось загрузить ваши посты из Instagram: ' + error.message)
         } finally {
             setLoadingPosts(false)
         }
@@ -692,8 +710,8 @@ function TaskDetails() {
                                                         setPostUrl(post.permalink)
                                                     }}
                                                     className={`cursor-pointer rounded-lg overflow-hidden border-2 transition-all ${selectedPost?.id === post.id
-                                                            ? 'border-tg-button shadow-lg scale-105'
-                                                            : 'border-gray-200 dark:border-gray-700 hover:border-gray-400'
+                                                        ? 'border-tg-button shadow-lg scale-105'
+                                                        : 'border-gray-200 dark:border-gray-700 hover:border-gray-400'
                                                         }`}
                                                 >
                                                     <div className="aspect-square relative">
