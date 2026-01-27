@@ -53,6 +53,18 @@ function CreateTask() {
             return
         }
 
+        // Проверяем дедлайн
+        if (!formData.deadline) {
+            showAlert?.('Укажите дедлайн выполнения задания')
+            return
+        }
+
+        // Проверяем что дедлайн не в прошлом
+        if (new Date(formData.deadline) < new Date()) {
+            showAlert?.('Дедлайн не может быть в прошлом')
+            return
+        }
+
         // Проверяем budget только если не используются pricing tiers
         if (!formData.usePricingTiers && !formData.budget) {
             showAlert?.('Укажите бюджет задания')
@@ -459,14 +471,19 @@ function CreateTask() {
 
                 <div>
                     <label className="block text-sm font-medium mb-1">
-                        Дедлайн
+                        Дедлайн *
                     </label>
                     <input
                         type="date"
                         value={formData.deadline}
                         onChange={(e) => setFormData({ ...formData, deadline: e.target.value })}
+                        min={new Date().toISOString().split('T')[0]}
                         className="w-full px-4 py-3 rounded-xl bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 focus:border-tg-button outline-none"
+                        required
                     />
+                    <p className="text-xs text-tg-hint mt-1">
+                        📅 Укажите до какой даты должно быть выполнено задание
+                    </p>
                 </div>
 
                 <button
