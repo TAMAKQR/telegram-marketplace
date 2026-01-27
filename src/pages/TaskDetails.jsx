@@ -754,48 +754,50 @@ function TaskDetails() {
                                             Выберите публикацию
                                         </label>
                                         <div className="grid grid-cols-3 gap-2 max-h-96 overflow-y-auto">
-                                            {userPosts.map(post => (
-                                                <div
-                                                    key={post.id}
-                                                    onClick={() => {
-                                                        setSelectedPost(post)
-                                                        setPostUrl(post.permalink)
-                                                        setWorkDescription(post.caption?.substring(0, 500) || 'Публикация в Instagram')
-                                                        // Автоматически отправляем после выбора поста
-                                                        setTimeout(() => handleSubmitWork(), 100)
-                                                    }}
-                                                    className={`cursor-pointer rounded-lg overflow-hidden border-2 transition-all ${selectedPost?.id === post.id
-                                                        ? 'border-tg-button shadow-lg scale-105'
-                                                        : 'border-gray-200 dark:border-gray-700 hover:border-gray-400'
-                                                        }`}
-                                                >
-                                                    <div className="aspect-square relative">
-                                                        <img
-                                                            src={post.media_type === 'VIDEO' ? post.thumbnail_url : post.media_url}
-                                                            alt={post.caption?.substring(0, 50)}
-                                                            className="w-full h-full object-cover"
-                                                        />
-                                                        {post.media_type === 'VIDEO' && (
-                                                            <div className="absolute top-1 right-1 bg-black/70 text-white text-xs px-1.5 py-0.5 rounded">
-                                                                ▶️
-                                                            </div>
-                                                        )}
-                                                        {post.media_type === 'CAROUSEL_ALBUM' && (
-                                                            <div className="absolute top-1 right-1 bg-black/70 text-white text-xs px-1.5 py-0.5 rounded">
-                                                                📚
-                                                            </div>
-                                                        )}
-                                                        {selectedPost?.id === post.id && (
-                                                            <div className="absolute inset-0 bg-tg-button/20 flex items-center justify-center">
-                                                                <span className="text-3xl">✓</span>
-                                                            </div>
-                                                        )}
+                                            {userPosts
+                                                .filter(post => post && post.id)
+                                                .map(post => (
+                                                    <div
+                                                        key={post.id}
+                                                        onClick={() => {
+                                                            setSelectedPost(post)
+                                                            setPostUrl(post.permalink)
+                                                            setWorkDescription(post.caption?.substring(0, 500) || 'Публикация в Instagram')
+                                                            // Автоматически отправляем после выбора поста
+                                                            setTimeout(() => handleSubmitWork(), 100)
+                                                        }}
+                                                        className={`cursor-pointer rounded-lg overflow-hidden border-2 transition-all ${selectedPost?.id === post.id
+                                                            ? 'border-tg-button shadow-lg scale-105'
+                                                            : 'border-gray-200 dark:border-gray-700 hover:border-gray-400'
+                                                            }`}
+                                                    >
+                                                        <div className="aspect-square relative">
+                                                            <img
+                                                                src={post.media_type === 'VIDEO' ? post.thumbnail_url : post.media_url}
+                                                                alt={post.caption?.substring(0, 50)}
+                                                                className="w-full h-full object-cover"
+                                                            />
+                                                            {post.media_type === 'VIDEO' && (
+                                                                <div className="absolute top-1 right-1 bg-black/70 text-white text-xs px-1.5 py-0.5 rounded">
+                                                                    ▶️
+                                                                </div>
+                                                            )}
+                                                            {post.media_type === 'CAROUSEL_ALBUM' && (
+                                                                <div className="absolute top-1 right-1 bg-black/70 text-white text-xs px-1.5 py-0.5 rounded">
+                                                                    📚
+                                                                </div>
+                                                            )}
+                                                            {selectedPost?.id === post.id && (
+                                                                <div className="absolute inset-0 bg-tg-button/20 flex items-center justify-center">
+                                                                    <span className="text-3xl">✓</span>
+                                                                </div>
+                                                            )}
+                                                        </div>
+                                                        <div className="text-xs p-1 bg-gray-50 dark:bg-gray-900 truncate">
+                                                            {new Date(post.timestamp).toLocaleDateString('ru')}
+                                                        </div>
                                                     </div>
-                                                    <div className="text-xs p-1 bg-gray-50 dark:bg-gray-900 truncate">
-                                                        {new Date(post.timestamp).toLocaleDateString('ru')}
-                                                    </div>
-                                                </div>
-                                            ))}
+                                                ))}
                                         </div>
                                         <div className="flex gap-2 mt-3">
                                             <button
@@ -844,107 +846,111 @@ function TaskDetails() {
                         {submissions.length > 0 && (
                             <div className="space-y-4">
                                 {/* Прогресс метрик для активных submission */}
-                                {submissions.filter(sub => ['in_progress', 'approved'].includes(sub.status)).map(sub => (
-                                    task.target_metrics && (
-                                        <div key={`progress-${sub.id}`} className="bg-white dark:bg-gray-800 rounded-xl p-4 shadow-md">
-                                            <div className="flex items-center justify-between mb-3">
-                                                <h4 className="font-semibold">📊 Прогресс метрик</h4>
-                                                <span className="text-xs px-2 py-1 rounded-full bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200">
-                                                    В процессе
-                                                </span>
+                                {submissions
+                                    .filter(sub => sub && ['in_progress', 'approved'].includes(sub.status))
+                                    .map(sub => (
+                                        task.target_metrics && (
+                                            <div key={sub?.id ? `progress-${sub.id}` : `progress-unknown`} className="bg-white dark:bg-gray-800 rounded-xl p-4 shadow-md">
+                                                <div className="flex items-center justify-between mb-3">
+                                                    <h4 className="font-semibold">📊 Прогресс метрик</h4>
+                                                    <span className="text-xs px-2 py-1 rounded-full bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200">
+                                                        В процессе
+                                                    </span>
+                                                </div>
+
+                                                <div className="mb-3">
+                                                    <a href={sub.post_url} target="_blank" rel="noopener noreferrer"
+                                                        className="text-tg-link text-sm break-all block">
+                                                        {sub.post_url} →
+                                                    </a>
+                                                </div>
+
+                                                <div className="space-y-3">
+                                                    {task.target_metrics.views && (
+                                                        <div>
+                                                            <div className="flex justify-between text-sm mb-1">
+                                                                <span>👁️ Просмотры</span>
+                                                                <span>{(sub.current_metrics?.views || 0).toLocaleString()} / {task.target_metrics.views.toLocaleString()}</span>
+                                                            </div>
+                                                            <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
+                                                                <div
+                                                                    className="bg-blue-500 h-2 rounded-full transition-all"
+                                                                    style={{ width: `${Math.min(((sub.current_metrics?.views || 0) / task.target_metrics.views) * 100, 100)}%` }}
+                                                                />
+                                                            </div>
+                                                        </div>
+                                                    )}
+
+                                                    {task.target_metrics.likes && (
+                                                        <div>
+                                                            <div className="flex justify-between text-sm mb-1">
+                                                                <span>❤️ Лайки</span>
+                                                                <span>{(sub.current_metrics?.likes || 0).toLocaleString()} / {task.target_metrics.likes.toLocaleString()}</span>
+                                                            </div>
+                                                            <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
+                                                                <div
+                                                                    className="bg-pink-500 h-2 rounded-full transition-all"
+                                                                    style={{ width: `${Math.min(((sub.current_metrics?.likes || 0) / task.target_metrics.likes) * 100, 100)}%` }}
+                                                                />
+                                                            </div>
+                                                        </div>
+                                                    )}
+
+                                                    {task.target_metrics.comments && (
+                                                        <div>
+                                                            <div className="flex justify-between text-sm mb-1">
+                                                                <span>💬 Комментарии</span>
+                                                                <span>{(sub.current_metrics?.comments || 0).toLocaleString()} / {task.target_metrics.comments.toLocaleString()}</span>
+                                                            </div>
+                                                            <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
+                                                                <div
+                                                                    className="bg-green-500 h-2 rounded-full transition-all"
+                                                                    style={{ width: `${Math.min(((sub.current_metrics?.comments || 0) / task.target_metrics.comments) * 100, 100)}%` }}
+                                                                />
+                                                            </div>
+                                                        </div>
+                                                    )}
+                                                </div>
+
+                                                <p className="text-xs text-tg-hint mt-3">
+                                                    📈 Считается прирост с момента отправки публикации. Обновление каждый час.
+                                                </p>
                                             </div>
-
-                                            <div className="mb-3">
-                                                <a href={sub.post_url} target="_blank" rel="noopener noreferrer"
-                                                    className="text-tg-link text-sm break-all block">
-                                                    {sub.post_url} →
-                                                </a>
-                                            </div>
-
-                                            <div className="space-y-3">
-                                                {task.target_metrics.views && (
-                                                    <div>
-                                                        <div className="flex justify-between text-sm mb-1">
-                                                            <span>👁️ Просмотры</span>
-                                                            <span>{(sub.current_metrics?.views || 0).toLocaleString()} / {task.target_metrics.views.toLocaleString()}</span>
-                                                        </div>
-                                                        <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
-                                                            <div
-                                                                className="bg-blue-500 h-2 rounded-full transition-all"
-                                                                style={{ width: `${Math.min(((sub.current_metrics?.views || 0) / task.target_metrics.views) * 100, 100)}%` }}
-                                                            />
-                                                        </div>
-                                                    </div>
-                                                )}
-
-                                                {task.target_metrics.likes && (
-                                                    <div>
-                                                        <div className="flex justify-between text-sm mb-1">
-                                                            <span>❤️ Лайки</span>
-                                                            <span>{(sub.current_metrics?.likes || 0).toLocaleString()} / {task.target_metrics.likes.toLocaleString()}</span>
-                                                        </div>
-                                                        <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
-                                                            <div
-                                                                className="bg-pink-500 h-2 rounded-full transition-all"
-                                                                style={{ width: `${Math.min(((sub.current_metrics?.likes || 0) / task.target_metrics.likes) * 100, 100)}%` }}
-                                                            />
-                                                        </div>
-                                                    </div>
-                                                )}
-
-                                                {task.target_metrics.comments && (
-                                                    <div>
-                                                        <div className="flex justify-between text-sm mb-1">
-                                                            <span>💬 Комментарии</span>
-                                                            <span>{(sub.current_metrics?.comments || 0).toLocaleString()} / {task.target_metrics.comments.toLocaleString()}</span>
-                                                        </div>
-                                                        <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
-                                                            <div
-                                                                className="bg-green-500 h-2 rounded-full transition-all"
-                                                                style={{ width: `${Math.min(((sub.current_metrics?.comments || 0) / task.target_metrics.comments) * 100, 100)}%` }}
-                                                            />
-                                                        </div>
-                                                    </div>
-                                                )}
-                                            </div>
-
-                                            <p className="text-xs text-tg-hint mt-3">
-                                                📈 Считается прирост с момента отправки публикации. Обновление каждый час.
-                                            </p>
-                                        </div>
-                                    )
-                                ))}
+                                        )
+                                    ))}
 
                                 {/* История всех отчетов */}
                                 <div className="bg-white dark:bg-gray-800 rounded-xl p-4 shadow-md">
                                     <h4 className="font-semibold mb-3">История отчетов</h4>
                                     <div className="space-y-3">
-                                        {submissions.map(sub => (
-                                            <div key={sub.id} className="border-l-4 pl-3 py-2" style={{
-                                                borderColor: sub.status === 'approved' ? '#10b981' :
-                                                    sub.status === 'revision_requested' ? '#f59e0b' : '#6b7280'
-                                            }}>
-                                                <div className="flex items-center justify-between mb-1">
-                                                    <span className="text-xs text-tg-hint">
-                                                        {new Date(sub.submitted_at).toLocaleDateString('ru')}
-                                                    </span>
-                                                    <span className={`text-xs px-2 py-1 rounded-full ${sub.status === 'approved' ? 'bg-green-100 text-green-800' :
-                                                        sub.status === 'revision_requested' ? 'bg-orange-100 text-orange-800' :
-                                                            sub.status === 'in_progress' ? 'bg-blue-100 text-blue-800' :
-                                                                'bg-gray-100 text-gray-800'
-                                                        }`}>
-                                                        {sub.status === 'approved' ? '✅ Одобрено' :
-                                                            sub.status === 'revision_requested' ? '🔄 На доработке' :
-                                                                sub.status === 'in_progress' ? '📊 Отслеживается' :
-                                                                    '⏳ На проверке'}
-                                                    </span>
+                                        {submissions
+                                            .filter(sub => sub && sub.id)
+                                            .map(sub => (
+                                                <div key={sub.id} className="border-l-4 pl-3 py-2" style={{
+                                                    borderColor: sub.status === 'approved' ? '#10b981' :
+                                                        sub.status === 'revision_requested' ? '#f59e0b' : '#6b7280'
+                                                }}>
+                                                    <div className="flex items-center justify-between mb-1">
+                                                        <span className="text-xs text-tg-hint">
+                                                            {new Date(sub.submitted_at).toLocaleDateString('ru')}
+                                                        </span>
+                                                        <span className={`text-xs px-2 py-1 rounded-full ${sub.status === 'approved' ? 'bg-green-100 text-green-800' :
+                                                            sub.status === 'revision_requested' ? 'bg-orange-100 text-orange-800' :
+                                                                sub.status === 'in_progress' ? 'bg-blue-100 text-blue-800' :
+                                                                    'bg-gray-100 text-gray-800'
+                                                            }`}>
+                                                            {sub.status === 'approved' ? '✅ Одобрено' :
+                                                                sub.status === 'revision_requested' ? '🔄 На доработке' :
+                                                                    sub.status === 'in_progress' ? '📊 Отслеживается' :
+                                                                        '⏳ На проверке'}
+                                                        </span>
+                                                    </div>
+                                                    <a href={sub.post_url} target="_blank" rel="noopener noreferrer"
+                                                        className="text-sm text-tg-link">
+                                                        Ссылка на пост →
+                                                    </a>
                                                 </div>
-                                                <a href={sub.post_url} target="_blank" rel="noopener noreferrer"
-                                                    className="text-sm text-tg-link">
-                                                    Ссылка на пост →
-                                                </a>
-                                            </div>
-                                        ))}
+                                            ))}
                                     </div>
                                 </div>
                             </div>
@@ -956,7 +962,7 @@ function TaskDetails() {
                 {userType === 'client' && (
                     <div>
                         {/* Уведомление о публикации на проверке */}
-                        {submissions.some(sub => sub.status === 'pending') && (
+                        {submissions.some(sub => sub && sub.status === 'pending') && (
                             <div className="mb-4 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-xl p-4">
                                 <div className="flex items-center justify-between mb-3">
                                     <div className="flex items-center gap-2">
@@ -981,80 +987,82 @@ function TaskDetails() {
                         )}
 
                         {/* Отображение прогресса отслеживания метрик */}
-                        {task.status === 'in_progress' && submissions.some(sub => ['pending', 'in_progress', 'approved'].includes(sub.status)) && (
+                        {task.status === 'in_progress' && submissions.some(sub => sub && ['pending', 'in_progress', 'approved'].includes(sub.status)) && (
                             <div className="mb-4">
                                 <h3 className="text-lg font-semibold mb-3">Прогресс выполнения</h3>
-                                {submissions.filter(sub => ['pending', 'in_progress', 'approved'].includes(sub.status)).map(sub => (
-                                    <div key={sub.id} className="bg-white dark:bg-gray-800 rounded-xl p-4 shadow-md">
-                                        <div className="flex items-center justify-between mb-3">
-                                            <h4 className="font-semibold">Отслеживание метрик</h4>
-                                            <span className="text-xs px-2 py-1 rounded-full bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200">
-                                                В процессе
-                                            </span>
-                                        </div>
-
-                                        <div className="mb-3">
-                                            <p className="text-sm text-tg-hint mb-2">Ссылка на публикацию:</p>
-                                            <a href={sub.post_url} target="_blank" rel="noopener noreferrer"
-                                                className="text-tg-link break-all text-sm block">
-                                                {sub.post_url} →
-                                            </a>
-                                        </div>
-
-                                        {task.target_metrics && (
-                                            <div className="space-y-3">
-                                                {task.target_metrics.views && (
-                                                    <div>
-                                                        <div className="flex justify-between text-sm mb-1">
-                                                            <span>👁️ Просмотры</span>
-                                                            <span>{(sub.current_metrics?.views || 0).toLocaleString()} / {task.target_metrics.views.toLocaleString()}</span>
-                                                        </div>
-                                                        <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
-                                                            <div
-                                                                className="bg-blue-500 h-2 rounded-full transition-all"
-                                                                style={{ width: `${Math.min(((sub.current_metrics?.views || 0) / task.target_metrics.views) * 100, 100)}%` }}
-                                                            />
-                                                        </div>
-                                                    </div>
-                                                )}
-
-                                                {task.target_metrics.likes && (
-                                                    <div>
-                                                        <div className="flex justify-between text-sm mb-1">
-                                                            <span>❤️ Лайки</span>
-                                                            <span>{(sub.current_metrics?.likes || 0).toLocaleString()} / {task.target_metrics.likes.toLocaleString()}</span>
-                                                        </div>
-                                                        <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
-                                                            <div
-                                                                className="bg-pink-500 h-2 rounded-full transition-all"
-                                                                style={{ width: `${Math.min(((sub.current_metrics?.likes || 0) / task.target_metrics.likes) * 100, 100)}%` }}
-                                                            />
-                                                        </div>
-                                                    </div>
-                                                )}
-
-                                                {task.target_metrics.comments && (
-                                                    <div>
-                                                        <div className="flex justify-between text-sm mb-1">
-                                                            <span>💬 Комментарии</span>
-                                                            <span>{(sub.current_metrics?.comments || 0).toLocaleString()} / {task.target_metrics.comments.toLocaleString()}</span>
-                                                        </div>
-                                                        <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
-                                                            <div
-                                                                className="bg-green-500 h-2 rounded-full transition-all"
-                                                                style={{ width: `${Math.min(((sub.current_metrics?.comments || 0) / task.target_metrics.comments) * 100, 100)}%` }}
-                                                            />
-                                                        </div>
-                                                    </div>
-                                                )}
+                                {submissions
+                                    .filter(sub => sub && ['pending', 'in_progress', 'approved'].includes(sub.status))
+                                    .map((sub, idx) => (
+                                        <div key={sub?.id ?? `submission-${idx}`} className="bg-white dark:bg-gray-800 rounded-xl p-4 shadow-md">
+                                            <div className="flex items-center justify-between mb-3">
+                                                <h4 className="font-semibold">Отслеживание метрик</h4>
+                                                <span className="text-xs px-2 py-1 rounded-full bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200">
+                                                    В процессе
+                                                </span>
                                             </div>
-                                        )}
 
-                                        <p className="text-xs text-tg-hint mt-3">
-                                            Метрики обновляются автоматически каждый час
-                                        </p>
-                                    </div>
-                                ))}
+                                            <div className="mb-3">
+                                                <p className="text-sm text-tg-hint mb-2">Ссылка на публикацию:</p>
+                                                <a href={sub.post_url} target="_blank" rel="noopener noreferrer"
+                                                    className="text-tg-link break-all text-sm block">
+                                                    {sub.post_url} →
+                                                </a>
+                                            </div>
+
+                                            {task.target_metrics && (
+                                                <div className="space-y-3">
+                                                    {task.target_metrics.views && (
+                                                        <div>
+                                                            <div className="flex justify-between text-sm mb-1">
+                                                                <span>👁️ Просмотры</span>
+                                                                <span>{(sub.current_metrics?.views || 0).toLocaleString()} / {task.target_metrics.views.toLocaleString()}</span>
+                                                            </div>
+                                                            <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
+                                                                <div
+                                                                    className="bg-blue-500 h-2 rounded-full transition-all"
+                                                                    style={{ width: `${Math.min(((sub.current_metrics?.views || 0) / task.target_metrics.views) * 100, 100)}%` }}
+                                                                />
+                                                            </div>
+                                                        </div>
+                                                    )}
+
+                                                    {task.target_metrics.likes && (
+                                                        <div>
+                                                            <div className="flex justify-between text-sm mb-1">
+                                                                <span>❤️ Лайки</span>
+                                                                <span>{(sub.current_metrics?.likes || 0).toLocaleString()} / {task.target_metrics.likes.toLocaleString()}</span>
+                                                            </div>
+                                                            <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
+                                                                <div
+                                                                    className="bg-pink-500 h-2 rounded-full transition-all"
+                                                                    style={{ width: `${Math.min(((sub.current_metrics?.likes || 0) / task.target_metrics.likes) * 100, 100)}%` }}
+                                                                />
+                                                            </div>
+                                                        </div>
+                                                    )}
+
+                                                    {task.target_metrics.comments && (
+                                                        <div>
+                                                            <div className="flex justify-between text-sm mb-1">
+                                                                <span>💬 Комментарии</span>
+                                                                <span>{(sub.current_metrics?.comments || 0).toLocaleString()} / {task.target_metrics.comments.toLocaleString()}</span>
+                                                            </div>
+                                                            <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
+                                                                <div
+                                                                    className="bg-green-500 h-2 rounded-full transition-all"
+                                                                    style={{ width: `${Math.min(((sub.current_metrics?.comments || 0) / task.target_metrics.comments) * 100, 100)}%` }}
+                                                                />
+                                                            </div>
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            )}
+
+                                            <p className="text-xs text-tg-hint mt-3">
+                                                Метрики обновляются автоматически каждый час
+                                            </p>
+                                        </div>
+                                    ))}
                             </div>
                         )}
 
@@ -1066,60 +1074,62 @@ function TaskDetails() {
                             </div>
                         ) : (
                             <div className="space-y-3">
-                                {applications.map(app => (
-                                    <div key={app.id} className="bg-white dark:bg-gray-800 rounded-xl p-4 shadow-md">
-                                        <div className="flex items-start justify-between mb-3">
-                                            <div className="flex-1 min-w-0">
-                                                <h4 className="font-semibold truncate">
-                                                    {app.users?.first_name} {app.users?.last_name}
-                                                </h4>
-                                                {app.users?.influencer_profiles?.[0] ? (
-                                                    <a
-                                                        href={app.users.influencer_profiles[0].instagram_url}
-                                                        target="_blank"
-                                                        rel="noopener noreferrer"
-                                                        className="text-tg-link text-sm break-all"
-                                                    >
-                                                        @{app.users.influencer_profiles[0].instagram_username} →
-                                                    </a>
-                                                ) : (
-                                                    <p className="text-xs text-tg-hint">Профиль Instagram не заполнен</p>
-                                                )}
+                                {applications
+                                    .filter(app => app && app.id)
+                                    .map(app => (
+                                        <div key={app.id} className="bg-white dark:bg-gray-800 rounded-xl p-4 shadow-md">
+                                            <div className="flex items-start justify-between mb-3">
+                                                <div className="flex-1 min-w-0">
+                                                    <h4 className="font-semibold truncate">
+                                                        {app.users?.first_name} {app.users?.last_name}
+                                                    </h4>
+                                                    {app.users?.influencer_profiles?.[0] ? (
+                                                        <a
+                                                            href={app.users.influencer_profiles[0].instagram_url}
+                                                            target="_blank"
+                                                            rel="noopener noreferrer"
+                                                            className="text-tg-link text-sm break-all"
+                                                        >
+                                                            @{app.users.influencer_profiles[0].instagram_username} →
+                                                        </a>
+                                                    ) : (
+                                                        <p className="text-xs text-tg-hint">Профиль Instagram не заполнен</p>
+                                                    )}
+                                                </div>
+                                                <span className={`text-xs px-2 py-1 rounded-full ${getStatusBadge(app.status).color}`}>
+                                                    {getStatusBadge(app.status).text}
+                                                </span>
                                             </div>
-                                            <span className={`text-xs px-2 py-1 rounded-full ${getStatusBadge(app.status).color}`}>
-                                                {getStatusBadge(app.status).text}
-                                            </span>
+
+                                            {app.message && app.message.trim() && (
+                                                <p className="text-sm text-tg-hint mb-3 break-words">{app.message}</p>
+                                            )}
+
+                                            {/* Реальная статистика Instagram */}
+                                            {app.users?.influencer_profiles?.[0] ? (
+                                                <InstagramStats
+                                                    influencerProfile={app.users.influencer_profiles[0]}
+                                                    compact={true}
+                                                />
+                                            ) : (
+                                                <div className="mb-3 p-3 bg-yellow-100 dark:bg-yellow-900/30 rounded-lg">
+                                                    <p className="text-xs text-yellow-800 dark:text-yellow-200">
+                                                        ⚠️ Инфлюенсер еще не заполнил профиль Instagram
+                                                    </p>
+                                                </div>
+                                            )}
+
+
+                                            {app.status === 'pending' && task.status === 'open' && (
+                                                <button
+                                                    onClick={() => handleAcceptApplication(app.id)}
+                                                    className="w-full bg-tg-button text-tg-button-text py-2 rounded-lg font-semibold"
+                                                >
+                                                    Принять исполнителя
+                                                </button>
+                                            )}
                                         </div>
-
-                                        {app.message && app.message.trim() && (
-                                            <p className="text-sm text-tg-hint mb-3 break-words">{app.message}</p>
-                                        )}
-
-                                        {/* Реальная статистика Instagram */}
-                                        {app.users?.influencer_profiles?.[0] ? (
-                                            <InstagramStats
-                                                influencerProfile={app.users.influencer_profiles[0]}
-                                                compact={true}
-                                            />
-                                        ) : (
-                                            <div className="mb-3 p-3 bg-yellow-100 dark:bg-yellow-900/30 rounded-lg">
-                                                <p className="text-xs text-yellow-800 dark:text-yellow-200">
-                                                    ⚠️ Инфлюенсер еще не заполнил профиль Instagram
-                                                </p>
-                                            </div>
-                                        )}
-
-
-                                        {app.status === 'pending' && task.status === 'open' && (
-                                            <button
-                                                onClick={() => handleAcceptApplication(app.id)}
-                                                className="w-full bg-tg-button text-tg-button-text py-2 rounded-lg font-semibold"
-                                            >
-                                                Принять исполнителя
-                                            </button>
-                                        )}
-                                    </div>
-                                ))}
+                                    ))}
                             </div>
                         )}
                     </div>
