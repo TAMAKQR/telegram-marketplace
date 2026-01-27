@@ -186,14 +186,21 @@ function TaskDetails() {
 
             if (error) throw error
 
-            console.log('Загружены submissions:', data)
-            console.log('Активные submissions:', data?.filter(sub => ['pending', 'in_progress'].includes(sub.status)))
+            const rows = Array.isArray(data) ? data.filter(Boolean) : []
+
+            console.log('Загружены submissions:', rows)
+            console.log('Активные submissions:', rows.filter(sub => sub && ['pending', 'in_progress'].includes(sub.status)))
             // Детальные логи убраны, чтобы исключить падения при отсутствующих полях
             console.log('=== SET SUBMISSIONS ===')
-            setSubmissions(data || [])
+            setSubmissions(rows)
             console.log('=== loadSubmissions END ===')
         } catch (error) {
-            console.error('Error loading submission:', error)
+            console.error('Error in loadSubmissions:', {
+                taskId,
+                userType,
+                profileId: profile?.id,
+                error
+            })
         }
     }
 
@@ -394,7 +401,7 @@ function TaskDetails() {
     const handleAcceptApplication = async (applicationId) => {
         console.log('=== handleAcceptApplication ВЫЗВАНА ===', applicationId)
         try {
-            const application = applications.find(app => app.id === applicationId)
+            const application = applications.find(app => app?.id === applicationId)
             console.log('Найденный отклик:', application)
             if (!application) {
                 showAlert?.('Отклик не найден')
@@ -839,7 +846,7 @@ function TaskDetails() {
                         ) : (
                             <>
                                 {/* Проверяем, есть ли активный submission */}
-                                {submissions.some(sub => ['pending', 'in_progress'].includes(sub.status)) ? (
+                                {submissions.some(sub => sub && ['pending', 'in_progress'].includes(sub.status)) ? (
                                     <div className="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-xl p-4">
                                         <div className="flex items-start gap-3">
                                             <span className="text-2xl">⏳</span>

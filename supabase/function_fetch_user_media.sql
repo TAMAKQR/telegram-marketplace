@@ -2,7 +2,10 @@
 -- Возвращает последние посты/рилсы пользователя
 
 -- Удаляем старую версию функции (если существует)
+-- Ранее могла существовать версия с другой сигнатурой, поэтому удаляем безопасно несколько вариантов
 DROP FUNCTION IF EXISTS fetch_user_instagram_media(TEXT, INTEGER);
+DROP FUNCTION IF EXISTS fetch_user_instagram_media(TEXT, TEXT);
+DROP FUNCTION IF EXISTS fetch_user_instagram_media(TEXT, TEXT, INTEGER);
 
 CREATE OR REPLACE FUNCTION fetch_user_instagram_media(
     p_access_token TEXT,
