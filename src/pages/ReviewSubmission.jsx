@@ -236,25 +236,28 @@ function ReviewSubmission() {
                             </p>
                         </div>
                     )}
-                    <p className="text-green-800 dark:text-green-200 font-semibold">
-                        ✅ Публикация одобрена
-                    </p>
-                    <p className="text-sm text-green-700 dark:text-green-300 mt-1">
-                        Идет отслеживание метрик
-                    </p>
-                </div>
+
+                    {submission.status === 'approved' && (
+                        <div className="bg-green-100 dark:bg-green-900/30 rounded-xl p-4 text-center">
+                            <p className="text-green-800 dark:text-green-200 font-semibold">
+                                ✅ Публикация одобрена
+                            </p>
+                            <p className="text-sm text-green-700 dark:text-green-300 mt-1">
+                                Идет отслеживание метрик
+                            </p>
+                        </div>
                     )}
 
-                {submission.status === 'rejected' && (
-                    <div className="bg-red-100 dark:bg-red-900/30 rounded-xl p-4 text-center">
-                        <p className="text-red-800 dark:text-red-200 font-semibold">
-                            ❌ Публикация отклонена
-                        </p>
-                    </div>
-                )}
+                    {submission.status === 'rejected' && (
+                        <div className="bg-red-100 dark:bg-red-900/30 rounded-xl p-4 text-center">
+                            <p className="text-red-800 dark:text-red-200 font-semibold">
+                                ❌ Публикация отклонена
+                            </p>
+                        </div>
+                    )}
+                </div>
             </div>
         </div>
-        </div >
     )
 }
 
