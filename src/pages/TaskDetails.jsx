@@ -807,32 +807,20 @@ function TaskDetails() {
                                             </span>
                                         </div>
 
-                                        {/* Instagram Stats */}
+                                        <p className="text-sm text-tg-hint mb-3 break-words">{app.message}</p>
+
+                                        {/* Реальная статистика Instagram */}
                                         {app.users?.influencer_profiles?.[0] ? (
-                                            <div className="mb-3 p-3 bg-gray-50 dark:bg-gray-700/50 rounded-lg">
-                                                <div className="text-center">
-                                                    <div className="text-xs text-tg-hint">Подписчики</div>
-                                                    <div className="font-semibold">
-                                                        {app.users.influencer_profiles[0].followers_count?.toLocaleString() || '-'}
-                                                    </div>
-                                                </div>
-                                            </div>
+                                            <InstagramStats
+                                                influencerProfile={app.users.influencer_profiles[0]}
+                                                compact={true}
+                                            />
                                         ) : (
                                             <div className="mb-3 p-3 bg-yellow-100 dark:bg-yellow-900/30 rounded-lg">
                                                 <p className="text-xs text-yellow-800 dark:text-yellow-200">
                                                     ⚠️ Инфлюенсер еще не заполнил профиль Instagram
                                                 </p>
                                             </div>
-                                        )}
-
-                                        <p className="text-sm text-tg-hint mb-3 break-words">{app.message}</p>
-
-                                        {/* Реальная статистика Instagram */}
-                                        {app.users?.influencer_profiles?.[0] && (
-                                            <InstagramStats
-                                                influencerProfile={app.users.influencer_profiles[0]}
-                                                compact={true}
-                                            />
                                         )}
 
 
