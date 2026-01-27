@@ -16,11 +16,17 @@ function ReviewSubmission() {
     const [submission, setSubmission] = useState(null)
 
     useEffect(() => {
+        if (!taskId || !user?.id) return
         loadTaskAndSubmission()
-    }, [taskId])
+    }, [taskId, user?.id])
 
     const loadTaskAndSubmission = async () => {
         try {
+            if (!user?.id) {
+                console.log('ReviewSubmission: waiting for user...')
+                return
+            }
+
             // Загружаем задание
             const { data: taskData, error: taskError } = await supabase
                 .from('tasks')
@@ -60,7 +66,7 @@ function ReviewSubmission() {
 
             setSubmission(subData)
         } catch (error) {
-            console.error('Error loading submission:', error)
+            console.error('Error in ReviewSubmission loadTaskAndSubmission:', error)
             showAlert?.('Ошибка загрузки')
             navigate(-1)
         }

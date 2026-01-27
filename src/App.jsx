@@ -27,7 +27,7 @@ function App() {
     const { userType } = useUserStore()
 
     // Debug: показываем что происходит
-    console.log('App render:', { user, userType, telegram: window.Telegram?.WebApp })
+    console.log('App render:', { user, userType, build: typeof __BUILD_TIMESTAMP__ !== 'undefined' ? __BUILD_TIMESTAMP__ : 'unknown', telegram: window.Telegram?.WebApp })
 
     // Проверяем, находимся ли мы на публичной странице (без авторизации)
     const publicPaths = ['/instagram/callback', '/instagram/index.html', '/instagram/deauth', '/instagram/delete', '/terms', '/privacy', '/guide']

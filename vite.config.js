@@ -1,9 +1,14 @@
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 
+const buildTimestamp = Date.now()
+
 // https://vitejs.dev/config/
 export default defineConfig({
     plugins: [react()],
+    define: {
+        __BUILD_TIMESTAMP__: JSON.stringify(buildTimestamp)
+    },
     server: {
         port: 5173,
         host: true,
@@ -21,9 +26,9 @@ export default defineConfig({
         rollupOptions: {
             output: {
                 // Добавляем timestamp к именам файлов для обхода кэша
-                entryFileNames: `assets/[name].[hash].${Date.now()}.js`,
-                chunkFileNames: `assets/[name].[hash].${Date.now()}.js`,
-                assetFileNames: `assets/[name].[hash].${Date.now()}.[ext]`
+                entryFileNames: `assets/[name].[hash].${buildTimestamp}.js`,
+                chunkFileNames: `assets/[name].[hash].${buildTimestamp}.js`,
+                assetFileNames: `assets/[name].[hash].${buildTimestamp}.[ext]`
             }
         }
     }
