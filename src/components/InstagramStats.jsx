@@ -131,6 +131,12 @@ export default function InstagramStats({ influencerProfile, compact = false }) {
         return null
     }
 
+    // Дополнительная проверка на валидность данных
+    if (!stats.posts || !Array.isArray(stats.posts)) {
+        console.warn('Stats exists but posts array is invalid:', stats)
+        return null
+    }
+
     if (compact) {
         return (
             <div className="bg-gradient-to-r from-purple-50 to-pink-50 dark:from-purple-900/20 dark:to-pink-900/20 p-3 rounded-lg border border-purple-200 dark:border-purple-800">
