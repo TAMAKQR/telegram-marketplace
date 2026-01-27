@@ -269,12 +269,9 @@ function InfluencerDashboard() {
             {/* Header */}
             <div className="bg-brand-gradient text-white p-4 pt-8">
                 <div className="flex justify-between items-start">
-                    <div className="flex items-center gap-2">
-                        <Logo className="h-7 w-auto" />
-                        <div>
-                            <h1 className="text-2xl font-bold">Задания</h1>
-                            <p className="text-sm opacity-90">Привет, {user?.first_name}! 📸</p>
-                        </div>
+                    <div>
+                        <h1 className="text-2xl font-bold">Задания</h1>
+                        <p className="text-sm opacity-90">Привет, {user?.first_name}! 📸</p>
                     </div>
                     <div className="flex gap-2">
                         {user && isAdmin(user.id) && (

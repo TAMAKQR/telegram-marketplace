@@ -560,14 +560,6 @@ function TaskDetails() {
                 {/* For Influencers - Work in Progress */}
                 {userType === 'influencer' && task.status === 'in_progress' && myApplication?.status === 'accepted' && (
                     <div className="space-y-4">
-                        {/* Кнопка отправки публикации */}
-                        <button
-                            onClick={() => navigate(`/influencer/task/${task.id}/submit`)}
-                            className="w-full bg-gradient-to-r from-purple-500 to-pink-500 text-white py-4 rounded-xl font-semibold shadow-lg hover:opacity-90"
-                        >
-                            📤 Отправить публикацию
-                        </button>
-
                         {/* Дедлайн */}
                         {task.deadline && (
                             <div className="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-xl p-4">
@@ -680,7 +672,7 @@ function TaskDetails() {
                 {userType === 'client' && (
                     <div>
                         {/* Уведомление о публикации на проверке */}
-                        {submissions.some(sub => sub.status === 'pending_approval') && (
+                        {submissions.some(sub => sub.status === 'pending') && (
                             <div className="mb-4 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-xl p-4">
                                 <div className="flex items-center justify-between mb-3">
                                     <div className="flex items-center gap-2">
@@ -705,10 +697,10 @@ function TaskDetails() {
                         )}
 
                         {/* Отображение прогресса отслеживания метрик */}
-                        {task.status === 'in_progress' && submissions.some(sub => sub.status === 'in_progress') && (
+                        {task.status === 'in_progress' && submissions.some(sub => ['pending', 'in_progress', 'approved'].includes(sub.status)) && (
                             <div className="mb-4">
                                 <h3 className="text-lg font-semibold mb-3">Прогресс выполнения</h3>
-                                {submissions.filter(sub => sub.status === 'in_progress').map(sub => (
+                                {submissions.filter(sub => ['pending', 'in_progress', 'approved'].includes(sub.status)).map(sub => (
                                     <div key={sub.id} className="bg-white dark:bg-gray-800 rounded-xl p-4 shadow-md">
                                         <div className="flex items-center justify-between mb-3">
                                             <h4 className="font-semibold">Отслеживание метрик</h4>
