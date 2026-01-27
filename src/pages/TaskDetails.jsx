@@ -807,7 +807,9 @@ function TaskDetails() {
                                             </span>
                                         </div>
 
-                                        <p className="text-sm text-tg-hint mb-3 break-words">{app.message}</p>
+                                        {app.message && app.message.trim() && (
+                                            <p className="text-sm text-tg-hint mb-3 break-words">{app.message}</p>
+                                        )}
 
                                         {/* Реальная статистика Instagram */}
                                         {app.users?.influencer_profiles?.[0] ? (
