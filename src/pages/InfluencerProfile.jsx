@@ -254,12 +254,6 @@ function InfluencerProfile() {
 
             {/* Form */}
             <form onSubmit={handleSubmit} className="p-4 space-y-4 max-w-full">
-                <div className="bg-blue-100 dark:bg-blue-900/30 p-4 rounded-xl border border-blue-300 dark:border-blue-700">
-                    <p className="text-sm">
-                        💡 Заполните информацию о вашем Instagram аккаунте. Это поможет заказчикам принять решение.
-                    </p>
-                </div>
-
                 {/* Instagram Connection Status */}
                 <div className="bg-gradient-to-r from-purple-100 to-pink-100 dark:from-purple-900/30 dark:to-pink-900/30 p-4 rounded-xl border border-purple-300 dark:border-purple-700">
                     {influencerProfile?.instagram_connected ? (
