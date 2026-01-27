@@ -213,7 +213,24 @@ function TaskDetails() {
             // Проверяем, есть ли ошибка от Instagram API
             if (data?.error) {
                 console.error('Ошибка Instagram API:', data)
-                showAlert?.(`Ошибка загрузки постов: ${data.message || 'Неизвестная ошибка'}`)
+
+                // Парсим сообщение об ошибке
+                let errorMessage = 'Ошибка загрузки постов из Instagram'
+                try {
+                    const errorData = JSON.parse(data.message)
+                    if (errorData.error?.message) {
+                        errorMessage = errorData.error.message
+
+                        // Если токен невалидный - показываем понятное сообщение
+                        if (errorData.error.code === 190 || errorMessage.includes('Invalid OAuth')) {
+                            errorMessage = 'Токен Instagram истек. Пожалуйста, переподключите Instagram в настройках профиля.'
+                        }
+                    }
+                } catch (e) {
+                    errorMessage = data.message || errorMessage
+                }
+
+                showAlert?.(errorMessage)
                 return
             }
 
@@ -222,6 +239,7 @@ function TaskDetails() {
                 setUserPosts(data.data)
             } else {
                 console.log('Нет постов в ответе, полный ответ:', data)
+                showAlert?.('Не найдено постов в Instagram')
                 setUserPosts([])
             }
         } catch (error) {
