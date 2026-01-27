@@ -173,6 +173,13 @@ function TaskDetails() {
             return
         }
 
+        // Валидация формата Instagram ссылки
+        const instagramUrlPattern = /instagram\.com\/(p|reel)\/[A-Za-z0-9_-]+/
+        if (!instagramUrlPattern.test(postUrl)) {
+            showAlert?.('❌ Неверный формат ссылки!\n\nИспользуйте ссылку из Instagram:\n• instagram.com/p/...\n• instagram.com/reel/...\n\nКак скопировать:\n1. Откройте пост в Instagram\n2. Три точки (•••)\n3. "Копировать ссылку"')
+            return
+        }
+
         try {
             const { error } = await supabase
                 .from('task_submissions')
@@ -188,7 +195,7 @@ function TaskDetails() {
 
             if (error) throw error
 
-            showAlert?.('Отчет отправлен заказчику на проверку!')
+            showAlert?.('✅ Отчет отправлен!\n\nМетрики будут автоматически отслеживаться каждый час. Оплата произойдет при достижении целей.')
             setShowSubmissionForm(false)
             setPostUrl('')
             setWorkDescription('')
@@ -595,20 +602,50 @@ function TaskDetails() {
                         {showSubmissionForm ? (
                             <div className="bg-white dark:bg-gray-800 rounded-xl p-4 shadow-md space-y-3">
                                 <h3 className="font-semibold">Отправить отчет о выполнении</h3>
-                                <input
-                                    type="url"
-                                    value={postUrl}
-                                    onChange={(e) => setPostUrl(e.target.value)}
-                                    placeholder="Ссылка на пост в Instagram"
-                                    className="w-full px-4 py-3 rounded-xl bg-gray-100 dark:bg-gray-700 outline-none"
-                                />
-                                <textarea
-                                    value={workDescription}
-                                    onChange={(e) => setWorkDescription(e.target.value)}
-                                    placeholder="Опишите выполненную работу..."
-                                    rows={4}
-                                    className="w-full px-4 py-3 rounded-xl bg-gray-100 dark:bg-gray-700 outline-none resize-none"
-                                />
+
+                                {/* Инструкция как получить ссылку */}
+                                <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-3">
+                                    <p className="text-sm text-blue-800 dark:text-blue-200 mb-2 font-medium">
+                                        📋 Как скопировать ссылку из Instagram:
+                                    </p>
+                                    <ol className="text-xs text-blue-700 dark:text-blue-300 space-y-1 list-decimal list-inside">
+                                        <li>Откройте свою публикацию в Instagram</li>
+                                        <li>Нажмите на три точки (•••)</li>
+                                        <li>Выберите "Копировать ссылку"</li>
+                                        <li>Вставьте ссылку в поле ниже</li>
+                                    </ol>
+                                </div>
+
+                                <div>
+                                    <label className="block text-sm font-medium mb-1">
+                                        Ссылка на Instagram пост *
+                                    </label>
+                                    <input
+                                        type="url"
+                                        value={postUrl}
+                                        onChange={(e) => setPostUrl(e.target.value)}
+                                        placeholder="https://www.instagram.com/p/... или https://www.instagram.com/reel/..."
+                                        className="w-full px-4 py-3 rounded-xl bg-gray-100 dark:bg-gray-700 outline-none"
+                                    />
+                                    {postUrl && !postUrl.match(/instagram\.com\/(p|reel)\/[A-Za-z0-9_-]+/) && (
+                                        <p className="text-xs text-red-600 dark:text-red-400 mt-1">
+                                            ⚠️ Неверный формат ссылки. Используйте ссылку вида: instagram.com/p/... или instagram.com/reel/...
+                                        </p>
+                                    )}
+                                </div>
+
+                                <div>
+                                    <label className="block text-sm font-medium mb-1">
+                                        Описание работы *
+                                    </label>
+                                    <textarea
+                                        value={workDescription}
+                                        onChange={(e) => setWorkDescription(e.target.value)}
+                                        placeholder="Опишите что вы сделали и какие результаты ожидаете..."
+                                        rows={4}
+                                        className="w-full px-4 py-3 rounded-xl bg-gray-100 dark:bg-gray-700 outline-none resize-none"
+                                    />
+                                </div>
                                 <div className="flex gap-2">
                                     <button
                                         onClick={handleSubmitWork}
