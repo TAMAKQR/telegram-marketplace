@@ -21,6 +21,8 @@ function TaskDetails() {
     const [meetsRequirements, setMeetsRequirements] = useState(true)
     const [requirementDetails, setRequirementDetails] = useState(null)
 
+    const [loadingTooLong, setLoadingTooLong] = useState(false)
+
     // Состояния для отчетов
     const [submissions, setSubmissions] = useState([])
     const [showSubmissionForm, setShowSubmissionForm] = useState(false)
@@ -35,6 +37,16 @@ function TaskDetails() {
             loadTaskDetails()
         }
     }, [taskId])
+
+    useEffect(() => {
+        if (!loading) {
+            setLoadingTooLong(false)
+            return
+        }
+
+        const id = setTimeout(() => setLoadingTooLong(true), 12000)
+        return () => clearTimeout(id)
+    }, [loading])
 
     useEffect(() => {
         if (!taskId || !userType) return
@@ -52,15 +64,28 @@ function TaskDetails() {
     }, [taskId, userType, profile?.id])
 
     const loadTaskDetails = async () => {
+        const withTimeout = async (promise, ms, label) => {
+            return await Promise.race([
+                promise,
+                new Promise((_, reject) => setTimeout(() => reject(new Error(`${label} timeout after ${ms}ms`)), ms))
+            ])
+        }
+
         try {
-            const { data, error } = await supabase
-                .from('tasks')
-                .select(`
+            setLoading(true)
+            console.log('=== loadTaskDetails START ===', { taskId, userType, profileId: profile?.id })
+            const { data, error } = await withTimeout(
+                supabase
+                    .from('tasks')
+                    .select(`
           *,
           users!tasks_client_id_fkey(first_name, last_name, username)
         `)
-                .eq('id', taskId)
-                .single()
+                    .eq('id', taskId)
+                    .single(),
+                12000,
+                'loadTaskDetails'
+            )
 
             if (error) throw error
             setTask(data)
@@ -75,6 +100,7 @@ function TaskDetails() {
             navigate(-1)
         } finally {
             setLoading(false)
+            console.log('=== loadTaskDetails END ===', { taskId })
         }
     }
 
@@ -561,7 +587,20 @@ function TaskDetails() {
     if (loading) {
         return (
             <div className="flex items-center justify-center min-h-screen">
-                <div className="text-tg-hint">Загрузка...</div>
+                <div className="text-center px-6">
+                    <div className="text-tg-hint">Загрузка...</div>
+                    {loadingTooLong && (
+                        <div className="mt-3">
+                            <div className="text-xs text-tg-hint mb-2">Загрузка занимает дольше обычного</div>
+                            <button
+                                className="px-4 py-2 rounded-lg bg-tg-button text-tg-button-text text-sm"
+                                onClick={() => window.location.reload()}
+                            >
+                                Перезагрузить
+                            </button>
+                        </div>
+                    )}
+                </div>
             </div>
         )
     }
