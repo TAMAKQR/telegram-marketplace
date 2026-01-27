@@ -61,7 +61,7 @@ SELECT '=== TASK_SUBMISSIONS (ключевые колонки) ===' as info;
 SELECT column_name as "Колонка", data_type as "Тип"
 FROM information_schema.columns 
 WHERE table_name = 'task_submissions' 
-  AND column_name IN ('id', 'task_id', 'influencer_id', 'status', 'instagram_post_url', 'current_metrics', 'initial_metrics')
+    AND column_name IN ('id', 'task_id', 'influencer_id', 'status', 'instagram_post_url', 'current_metrics', 'initial_metrics', 'approved_at', 'approved_by', 'rejection_reason', 'reviewed_at')
 ORDER BY ordinal_position;
 
 -- 7. КОЛОНКИ В INFLUENCER_PROFILES
@@ -126,6 +126,16 @@ SELECT
         WHEN EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'tasks' AND column_name = 'target_metrics') 
         THEN '✅ tasks.target_metrics'
         ELSE '❌ tasks.target_metrics НЕ НАЙДЕНА'
+    END,
+    CASE 
+        WHEN EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'task_submissions' AND column_name = 'approved_at') 
+        THEN '✅ task_submissions.approved_at'
+        ELSE '❌ task_submissions.approved_at НЕ НАЙДЕНА'
+    END,
+    CASE 
+        WHEN EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'task_submissions' AND column_name = 'approved_by') 
+        THEN '✅ task_submissions.approved_by'
+        ELSE '❌ task_submissions.approved_by НЕ НАЙДЕНА'
     END;
 
 -- 12. ПРОВЕРКА РАСШИРЕНИЯ HTTP
