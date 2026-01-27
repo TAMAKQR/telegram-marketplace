@@ -1,6 +1,9 @@
 -- Функция для получения списка медиа пользователя из Instagram
 -- Возвращает последние посты/рилсы пользователя
 
+-- Удаляем старую версию функции (если существует)
+DROP FUNCTION IF EXISTS fetch_user_instagram_media(TEXT, INTEGER);
+
 CREATE OR REPLACE FUNCTION fetch_user_instagram_media(
     p_access_token TEXT,
     p_instagram_user_id TEXT,
