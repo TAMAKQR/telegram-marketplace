@@ -17,6 +17,14 @@ export default defineConfig({
     },
     build: {
         outDir: 'dist',
-        sourcemap: false
+        sourcemap: false,
+        rollupOptions: {
+            output: {
+                // Добавляем timestamp к именам файлов для обхода кэша
+                entryFileNames: `assets/[name].[hash].${Date.now()}.js`,
+                chunkFileNames: `assets/[name].[hash].${Date.now()}.js`,
+                assetFileNames: `assets/[name].[hash].${Date.now()}.[ext]`
+            }
+        }
     }
 })
