@@ -29,11 +29,12 @@ function App() {
     // Debug: показываем что происходит
     console.log('App render:', { user, userType, telegram: window.Telegram?.WebApp })
 
-    // Проверяем, находимся ли мы на странице без авторизации
+    // Проверяем, находимся ли мы на публичной странице (без авторизации)
     const publicPaths = ['/instagram/callback', '/instagram/index.html', '/instagram/deauth', '/instagram/delete', '/terms', '/privacy', '/guide']
     const isPublicPage = publicPaths.includes(window.location.pathname)
 
-    if (!user && !isPublicPage) {
+    // Если это НЕ публичная страница и нет user - показываем экран загрузки
+    if (!isPublicPage && !user) {
         return (
             <div className="flex items-center justify-center min-h-screen bg-tg-bg">
                 <div className="text-center p-4">
