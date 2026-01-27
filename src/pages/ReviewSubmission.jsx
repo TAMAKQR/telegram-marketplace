@@ -45,9 +45,14 @@ function ReviewSubmission() {
                 .limit(1)
                 .maybeSingle()
 
+            console.log('ReviewSubmission - loaded data:', subData)
+            console.log('ReviewSubmission - error:', subError)
+            console.log('ReviewSubmission - users field:', subData?.users)
+
             if (subError) throw subError
 
             if (!subData) {
+                console.warn('No pending submission found for task:', taskId)
                 showAlert?.('Нет публикаций на проверке')
                 navigate(-1)
                 return
