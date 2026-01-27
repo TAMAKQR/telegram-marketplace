@@ -58,10 +58,17 @@ AS $$
 DECLARE
     v_submission RECORD;
     v_instagram_id TEXT;
-    v_metrics JSONB;
-    v_views INTEGER;
-    v_likes INTEGER;
-    v_comments INTEGER;
+    v_current_metrics JSONB;
+    v_initial_metrics JSONB;
+    v_current_views INTEGER;
+    v_current_likes INTEGER;
+    v_current_comments INTEGER;
+    v_initial_views INTEGER;
+    v_initial_likes INTEGER;
+    v_initial_comments INTEGER;
+    v_delta_views INTEGER;
+    v_delta_likes INTEGER;
+    v_delta_comments INTEGER;
     v_result JSONB;
 BEGIN
     RAISE NOTICE 'Starting automatic metrics check...';
@@ -93,26 +100,60 @@ BEGIN
             
             RAISE NOTICE 'Fetching metrics for post: %', v_instagram_id;
             
-            -- Получаем метрики из Instagram API
-            v_metrics := fetch_instagram_post_metrics(
+            -- Получаем ТЕКУЩИЕ метрики из Instagram API
+            v_current_metrics := fetch_instagram_post_metrics(
                 v_submission.instagram_access_token,
                 v_instagram_id
             );
             
-            IF v_metrics IS NOT NULL THEN
-                -- Извлекаем значения
-                v_likes := COALESCE((v_metrics->>'like_count')::INTEGER, 0);
-                v_comments := COALESCE((v_metrics->>'comments_count')::INTEGER, 0);
-                v_views := 0; -- Instagram API не предоставляет views для постов напрямую
+            IF v_current_metrics IS NOT NULL THEN
+                -- Извлекаем ТЕКУЩИЕ значения
+                v_current_likes := COALESCE((v_current_metrics->>'like_count')::INTEGER, 0);
+                v_current_comments := COALESCE((v_current_metrics->>'comments_count')::INTEGER, 0);
+                v_current_views := 0; -- Instagram API не предоставляет views для постов напрямую
                 
-                RAISE NOTICE 'Metrics for submission %: likes=%, comments=%', v_submission.id, v_likes, v_comments;
+                -- Получаем НАЧАЛЬНЫЕ метрики (записанные при отправке публикации)
+                v_initial_metrics := v_submission.initial_metrics;
                 
-                -- Обновляем метрики и проверяем достижение целей
+                -- Если initial_metrics нет (старые публикации), сохраняем текущие как начальные
+                IF v_initial_metrics IS NULL THEN
+                    v_initial_metrics := jsonb_build_object(
+                        'views', v_current_views,
+                        'likes', v_current_likes,
+                        'comments', v_current_comments,
+                        'captured_at', EXTRACT(EPOCH FROM NOW())
+                    );
+                    
+                    -- Сохраняем initial_metrics для следующих проверок
+                    UPDATE task_submissions 
+                    SET initial_metrics = v_initial_metrics
+                    WHERE id = v_submission.id;
+                    
+                    RAISE NOTICE 'Set initial_metrics for submission %: %', v_submission.id, v_initial_metrics;
+                END IF;
+                
+                -- Извлекаем начальные значения
+                v_initial_views := COALESCE((v_initial_metrics->>'views')::INTEGER, 0);
+                v_initial_likes := COALESCE((v_initial_metrics->>'likes')::INTEGER, 0);
+                v_initial_comments := COALESCE((v_initial_metrics->>'comments')::INTEGER, 0);
+                
+                -- Вычисляем ПРИРОСТ (delta = current - initial)
+                v_delta_views := GREATEST(v_current_views - v_initial_views, 0);
+                v_delta_likes := GREATEST(v_current_likes - v_initial_likes, 0);
+                v_delta_comments := GREATEST(v_current_comments - v_initial_comments, 0);
+                
+                RAISE NOTICE 'Metrics for submission %: current(views=%, likes=%, comments=%), initial(views=%, likes=%, comments=%), delta(views=%, likes=%, comments=%)', 
+                    v_submission.id, 
+                    v_current_views, v_current_likes, v_current_comments,
+                    v_initial_views, v_initial_likes, v_initial_comments,
+                    v_delta_views, v_delta_likes, v_delta_comments;
+                
+                -- Обновляем метрики с ПРИРОСТОМ и проверяем достижение целей
                 v_result := update_submission_progress(
                     v_submission.id,
-                    v_views,
-                    v_likes,
-                    v_comments
+                    v_delta_views,
+                    v_delta_likes,
+                    v_delta_comments
                 );
                 
                 RAISE NOTICE 'Update result: %', v_result;
