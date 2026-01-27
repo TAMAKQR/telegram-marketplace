@@ -143,18 +143,29 @@ export const instagramService = {
         return response.json()
     },
 
-    // Получить последние посты пользователя
+    // Получить последние посты пользователя через Supabase RPC
     async getUserMedia(accessToken, userId, limit = 25) {
-        const fields = 'id,caption,media_type,media_url,permalink,timestamp,like_count,comments_count'
-        const response = await fetch(
-            `https://graph.facebook.com/v18.0/${userId}/media?fields=${fields}&limit=${limit}&access_token=${accessToken}`
-        )
+        const { supabase } = await import('./supabase')
 
-        if (!response.ok) {
-            throw new Error('Failed to fetch user media')
+        // Используем Supabase RPC функцию вместо прямого API запроса
+        const { data, error } = await supabase.rpc('fetch_user_instagram_media', {
+            p_access_token: accessToken,
+            p_instagram_user_id: userId,
+            p_limit: limit
+        })
+
+        if (error) {
+            console.error('Supabase RPC error:', error)
+            throw new Error('Failed to fetch user media via Supabase')
         }
 
-        return response.json()
+        // Проверяем на ошибку от Instagram API
+        if (data && data.error) {
+            console.error('Instagram API error:', data)
+            throw new Error(data.message || 'Instagram API error')
+        }
+
+        return data
     },
 
     // Найти пост по URL

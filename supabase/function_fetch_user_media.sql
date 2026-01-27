@@ -21,7 +21,7 @@ BEGIN
     -- Получаем список медиа пользователя через Facebook Graph API (правильный endpoint)
     -- https://graph.facebook.com/v18.0/{user-id}/media
     
-    v_url := 'https://graph.facebook.com/v18.0/' || p_instagram_user_id || '/media?fields=id,caption,media_type,media_url,thumbnail_url,permalink,timestamp&limit=' || p_limit::TEXT || '&access_token=' || p_access_token;
+    v_url := 'https://graph.facebook.com/v18.0/' || p_instagram_user_id || '/media?fields=id,caption,media_type,media_url,thumbnail_url,permalink,timestamp,like_count,comments_count&limit=' || p_limit::TEXT || '&access_token=' || p_access_token;
     
     SELECT * INTO v_response
     FROM http((

@@ -20,49 +20,58 @@ export default function InstagramStats({ influencerProfile, compact = false }) {
         }
 
         try {
+            console.log('🔵 InstagramStats loadStats START')
             setLoading(true)
             setError(null)
 
             // Используем сохраненный instagram_user_id если есть
             const instagramUserId = influencerProfile.instagram_user_id
+            console.log('🔵 Instagram User ID:', instagramUserId)
 
             if (!instagramUserId) {
                 throw new Error('Instagram User ID не найден')
             }
 
             // Получаем профиль пользователя
+            console.log('🔵 Fetching user profile...')
             const userData = await instagramService.getUserProfile(
                 influencerProfile.instagram_access_token,
                 instagramUserId
             )
+            console.log('🔵 User profile fetched:', userData)
 
             // Получаем последние посты
+            console.log('🔵 Fetching user media...')
             const media = await instagramService.getUserMedia(
                 influencerProfile.instagram_access_token,
                 instagramUserId,
                 compact ? 6 : 12
             )
+            console.log('🔵 Media response:', media)
 
             // Проверяем что media.data существует
             if (!media || !media.data || !Array.isArray(media.data)) {
-                console.error('Invalid media response:', media)
+                console.error('❌ Invalid media response:', media)
                 throw new Error('Некорректный ответ от Instagram API')
             }
 
             // Фильтруем валидные посты (с id и базовыми полями)
             const validPosts = media.data.filter(post => post && post.id)
+            console.log('🔵 Valid posts count:', validPosts.length, 'из', media.data.length)
 
             if (validPosts.length === 0) {
                 throw new Error('Нет доступных постов для отображения')
             }
 
             // Рассчитываем статистику
+            console.log('🔵 Calculating stats...')
             const totalLikes = validPosts.reduce((sum, post) => sum + (post.like_count || 0), 0)
             const totalComments = validPosts.reduce((sum, post) => sum + (post.comments_count || 0), 0)
             const avgEngagement = validPosts.length > 0
                 ? ((totalLikes + totalComments) / validPosts.length).toFixed(0)
                 : 0
 
+            console.log('🔵 Setting stats state...')
             setStats({
                 posts: validPosts,
                 totalPosts: validPosts.length,
@@ -71,8 +80,9 @@ export default function InstagramStats({ influencerProfile, compact = false }) {
                 avgEngagement,
                 lastUpdate: new Date()
             })
+            console.log('✅ InstagramStats loadStats SUCCESS')
         } catch (err) {
-            console.error('Error loading Instagram stats:', err)
+            console.error('❌ Error loading Instagram stats:', err)
             setError('Не удалось загрузить статистику')
         } finally {
             setLoading(false)
