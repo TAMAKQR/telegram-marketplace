@@ -3,6 +3,7 @@
 
 CREATE OR REPLACE FUNCTION fetch_user_instagram_media(
     p_access_token TEXT,
+    p_instagram_user_id TEXT,
     p_limit INTEGER DEFAULT 25
 )
 RETURNS JSONB
@@ -12,14 +13,17 @@ AS $$
 DECLARE
     v_response http_response;
     v_result JSONB;
+    v_url TEXT;
 BEGIN
-    -- Получаем список медиа пользователя через Instagram Graph API
-    -- https://graph.instagram.com/me/media?fields=id,caption,media_type,media_url,thumbnail_url,permalink,timestamp&limit=25
+    -- Получаем список медиа пользователя через Facebook Graph API (правильный endpoint)
+    -- https://graph.facebook.com/v18.0/{user-id}/media
+    
+    v_url := 'https://graph.facebook.com/v18.0/' || p_instagram_user_id || '/media?fields=id,caption,media_type,media_url,thumbnail_url,permalink,timestamp&limit=' || p_limit::TEXT || '&access_token=' || p_access_token;
     
     SELECT * INTO v_response
     FROM http((
         'GET',
-        'https://graph.instagram.com/me/media?fields=id,caption,media_type,media_url,thumbnail_url,permalink,timestamp&limit=' || p_limit::TEXT || '&access_token=' || p_access_token,
+        v_url,
         NULL,
         'application/json',
         NULL

@@ -177,10 +177,10 @@ function TaskDetails() {
         setLoadingPosts(true)
         try {
             console.log('Получение профиля инфлюенсера...')
-            // Получаем профиль инфлюенсера с токеном Instagram
+            // Получаем профиль инфлюенсера с токеном Instagram и user_id
             const { data: influencerProfile, error: profileError } = await supabase
                 .from('influencer_profiles')
-                .select('instagram_access_token')
+                .select('instagram_access_token, instagram_user_id')
                 .eq('user_id', profile.id)
                 .single()
 
@@ -196,11 +196,18 @@ function TaskDetails() {
                 return
             }
 
+            if (!influencerProfile?.instagram_user_id) {
+                console.log('Нет Instagram User ID')
+                showAlert?.('Пожалуйста, переподключите Instagram аккаунт')
+                return
+            }
+
             console.log('Вызов fetch_user_instagram_media...')
             // Вызываем функцию для получения списка медиа
             const { data, error } = await supabase
                 .rpc('fetch_user_instagram_media', {
                     p_access_token: influencerProfile.instagram_access_token,
+                    p_instagram_user_id: influencerProfile.instagram_user_id,
                     p_limit: 25
                 })
 
