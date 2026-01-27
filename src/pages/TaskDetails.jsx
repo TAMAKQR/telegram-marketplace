@@ -156,6 +156,7 @@ function TaskDetails() {
 
     const loadSubmissions = async () => {
         try {
+            console.log('=== loadSubmissions START ===')
             const { data, error } = await supabase
                 .from('task_submissions')
                 .select(`
@@ -171,6 +172,8 @@ function TaskDetails() {
                 .eq('task_id', taskId)
                 .order('created_at', { ascending: false })
 
+            console.log('=== loadSubmissions QUERY RESULT ===', { data, error })
+
             if (error) throw error
 
             console.log('Загружены submissions:', data)
@@ -181,9 +184,12 @@ function TaskDetails() {
                 console.log('Поле users:', data[0].users)
                 console.log('Поле influencer:', data[0].influencer)
             }
+
+            console.log('=== SET SUBMISSIONS ===')
             setSubmissions(data || [])
+            console.log('=== loadSubmissions END ===')
         } catch (error) {
-            console.error('Ошибка загрузки отчетов:', error)
+            console.error('Error loading submission:', error)
         }
     }
 
