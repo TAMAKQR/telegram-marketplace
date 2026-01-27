@@ -32,7 +32,7 @@ function ReviewSubmission() {
             if (taskError) throw taskError
             setTask(taskData)
 
-            // Загружаем сабмишен
+            // Загружаем сабмишен на проверке
             const { data: subData, error: subError } = await supabase
                 .from('task_submissions')
                 .select(`
@@ -40,9 +40,19 @@ function ReviewSubmission() {
                     users:influencer_id(first_name, last_name, telegram_id)
                 `)
                 .eq('task_id', taskId)
-                .single()
+                .eq('status', 'pending')
+                .order('created_at', { descending: true })
+                .limit(1)
+                .maybeSingle()
 
             if (subError) throw subError
+
+            if (!subData) {
+                showAlert?.('Нет публикаций на проверке')
+                navigate(-1)
+                return
+            }
+
             setSubmission(subData)
         } catch (error) {
             console.error('Error loading submission:', error)
