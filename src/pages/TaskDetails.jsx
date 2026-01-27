@@ -26,6 +26,9 @@ function TaskDetails() {
     const [showSubmissionForm, setShowSubmissionForm] = useState(false)
     const [postUrl, setPostUrl] = useState('')
     const [workDescription, setWorkDescription] = useState('')
+    const [userPosts, setUserPosts] = useState([])
+    const [loadingPosts, setLoadingPosts] = useState(false)
+    const [selectedPost, setSelectedPost] = useState(null)
 
     useEffect(() => {
         if (taskId) {
@@ -164,6 +167,43 @@ function TaskDetails() {
             setSubmissions(data || [])
         } catch (error) {
             console.error('Ошибка загрузки отчетов:', error)
+        }
+    }
+
+    const loadUserPosts = async () => {
+        setLoadingPosts(true)
+        try {
+            // Получаем профиль инфлюенсера с токеном Instagram
+            const { data: influencerProfile, error: profileError } = await supabase
+                .from('influencer_profiles')
+                .select('instagram_access_token')
+                .eq('user_id', profile.id)
+                .single()
+
+            if (profileError) throw profileError
+
+            if (!influencerProfile?.instagram_access_token) {
+                showAlert?.('Необходимо подключить Instagram аккаунт')
+                return
+            }
+
+            // Вызываем функцию для получения списка медиа
+            const { data, error } = await supabase
+                .rpc('fetch_user_instagram_media', {
+                    p_access_token: influencerProfile.instagram_access_token,
+                    p_limit: 25
+                })
+
+            if (error) throw error
+
+            if (data?.data) {
+                setUserPosts(data.data)
+            }
+        } catch (error) {
+            console.error('Ошибка загрузки постов:', error)
+            showAlert?.('Не удалось загрузить ваши посты из Instagram')
+        } finally {
+            setLoadingPosts(false)
         }
     }
 
@@ -620,36 +660,110 @@ function TaskDetails() {
                             <div className="bg-white dark:bg-gray-800 rounded-xl p-4 shadow-md space-y-3">
                                 <h3 className="font-semibold">Отправить отчет о выполнении</h3>
 
-                                {/* Инструкция как получить ссылку */}
-                                <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-3">
-                                    <p className="text-sm text-blue-800 dark:text-blue-200 mb-2 font-medium">
-                                        📋 Как скопировать ссылку из Instagram:
-                                    </p>
-                                    <ol className="text-xs text-blue-700 dark:text-blue-300 space-y-1 list-decimal list-inside">
-                                        <li>Откройте свою публикацию в Instagram</li>
-                                        <li>Нажмите на три точки (•••)</li>
-                                        <li>Выберите "Копировать ссылку"</li>
-                                        <li>Вставьте ссылку в поле ниже</li>
-                                    </ol>
-                                </div>
+                                {/* Кнопка загрузки постов */}
+                                {userPosts.length === 0 && !loadingPosts && (
+                                    <button
+                                        type="button"
+                                        onClick={loadUserPosts}
+                                        className="w-full bg-gradient-to-r from-purple-500 to-pink-500 text-white py-3 rounded-xl font-semibold hover:opacity-90"
+                                    >
+                                        📸 Загрузить мои посты из Instagram
+                                    </button>
+                                )}
 
-                                <div>
-                                    <label className="block text-sm font-medium mb-1">
-                                        Ссылка на Instagram пост *
-                                    </label>
-                                    <input
-                                        type="url"
-                                        value={postUrl}
-                                        onChange={(e) => setPostUrl(e.target.value)}
-                                        placeholder="https://www.instagram.com/p/... или https://www.instagram.com/reel/..."
-                                        className="w-full px-4 py-3 rounded-xl bg-gray-100 dark:bg-gray-700 outline-none"
-                                    />
-                                    {postUrl && !postUrl.match(/instagram\.com\/(p|reel)\/[A-Za-z0-9_-]+/) && (
-                                        <p className="text-xs text-red-600 dark:text-red-400 mt-1">
-                                            ⚠️ Неверный формат ссылки. Используйте ссылку вида: instagram.com/p/... или instagram.com/reel/...
-                                        </p>
-                                    )}
-                                </div>
+                                {loadingPosts && (
+                                    <div className="text-center py-4">
+                                        <p className="text-tg-hint">Загрузка постов...</p>
+                                    </div>
+                                )}
+
+                                {/* Выбор поста из списка */}
+                                {userPosts.length > 0 && (
+                                    <div>
+                                        <label className="block text-sm font-medium mb-2">
+                                            Выберите публикацию *
+                                        </label>
+                                        <div className="grid grid-cols-3 gap-2 max-h-96 overflow-y-auto">
+                                            {userPosts.map(post => (
+                                                <div
+                                                    key={post.id}
+                                                    onClick={() => {
+                                                        setSelectedPost(post)
+                                                        setPostUrl(post.permalink)
+                                                    }}
+                                                    className={`cursor-pointer rounded-lg overflow-hidden border-2 transition-all ${selectedPost?.id === post.id
+                                                            ? 'border-tg-button shadow-lg scale-105'
+                                                            : 'border-gray-200 dark:border-gray-700 hover:border-gray-400'
+                                                        }`}
+                                                >
+                                                    <div className="aspect-square relative">
+                                                        <img
+                                                            src={post.media_type === 'VIDEO' ? post.thumbnail_url : post.media_url}
+                                                            alt={post.caption?.substring(0, 50)}
+                                                            className="w-full h-full object-cover"
+                                                        />
+                                                        {post.media_type === 'VIDEO' && (
+                                                            <div className="absolute top-1 right-1 bg-black/70 text-white text-xs px-1.5 py-0.5 rounded">
+                                                                ▶️
+                                                            </div>
+                                                        )}
+                                                        {post.media_type === 'CAROUSEL_ALBUM' && (
+                                                            <div className="absolute top-1 right-1 bg-black/70 text-white text-xs px-1.5 py-0.5 rounded">
+                                                                📚
+                                                            </div>
+                                                        )}
+                                                        {selectedPost?.id === post.id && (
+                                                            <div className="absolute inset-0 bg-tg-button/20 flex items-center justify-center">
+                                                                <span className="text-3xl">✓</span>
+                                                            </div>
+                                                        )}
+                                                    </div>
+                                                    <div className="text-xs p-1 bg-gray-50 dark:bg-gray-900 truncate">
+                                                        {new Date(post.timestamp).toLocaleDateString('ru')}
+                                                    </div>
+                                                </div>
+                                            ))}
+                                        </div>
+                                        {selectedPost && (
+                                            <p className="text-xs text-tg-hint mt-2">
+                                                Выбрано: {selectedPost.caption?.substring(0, 100) || 'Без описания'}...
+                                            </p>
+                                        )}
+                                    </div>
+                                )}
+
+                                {/* Ручной ввод ссылки (опционально) */}
+                                {userPosts.length > 0 && (
+                                    <div className="text-center">
+                                        <button
+                                            type="button"
+                                            onClick={() => setUserPosts([])}
+                                            className="text-xs text-tg-hint hover:text-tg-button"
+                                        >
+                                            или ввести ссылку вручную
+                                        </button>
+                                    </div>
+                                )}
+
+                                {userPosts.length === 0 && !loadingPosts && (
+                                    <div>
+                                        <label className="block text-sm font-medium mb-1">
+                                            Ссылка на Instagram пост *
+                                        </label>
+                                        <input
+                                            type="url"
+                                            value={postUrl}
+                                            onChange={(e) => setPostUrl(e.target.value)}
+                                            placeholder="https://www.instagram.com/p/... или https://www.instagram.com/reel/..."
+                                            className="w-full px-4 py-3 rounded-xl bg-gray-100 dark:bg-gray-700 outline-none"
+                                        />
+                                        {postUrl && !postUrl.match(/instagram\.com\/(p|reel)\/[A-Za-z0-9_-]+/) && (
+                                            <p className="text-xs text-red-600 dark:text-red-400 mt-1">
+                                                ⚠️ Неверный формат ссылки. Используйте ссылку вида: instagram.com/p/... или instagram.com/reel/...
+                                            </p>
+                                        )}
+                                    </div>
+                                )}
 
                                 <div>
                                     <label className="block text-sm font-medium mb-1">

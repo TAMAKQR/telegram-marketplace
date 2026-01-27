@@ -24,13 +24,13 @@ DECLARE
     v_response http_response;
     v_result JSONB;
 BEGIN
-    -- Вызываем Instagram Graph API для получения метрик поста
-    -- https://graph.instagram.com/{media-id}?fields=like_count,comments_count,media_product_type&access_token={access-token}
+    -- Вызываем Instagram Graph API для получения метрик поста и владельца
+    -- Получаем username владельца для проверки подлинности
     
     SELECT * INTO v_response
     FROM http((
         'GET',
-        'https://graph.instagram.com/' || p_post_id || '?fields=like_count,comments_count,media_product_type&access_token=' || p_access_token,
+        'https://graph.instagram.com/' || p_post_id || '?fields=like_count,comments_count,media_product_type,username,timestamp&access_token=' || p_access_token,
         NULL,
         'application/json',
         NULL
@@ -78,7 +78,8 @@ BEGIN
         SELECT 
             ts.*,
             ip.instagram_user_id,
-            ip.instagram_access_token
+            ip.instagram_access_token,
+            ip.instagram_username
         FROM task_submissions ts
         JOIN influencer_profiles ip ON ts.influencer_id = ip.user_id
         WHERE ts.status = 'in_progress'
@@ -107,6 +108,26 @@ BEGIN
             );
             
             IF v_current_metrics IS NOT NULL THEN
+                -- ПРОВЕРКА БЕЗОПАСНОСТИ: Проверяем что пост принадлежит инфлюенсеру
+                IF v_current_metrics->>'username' IS NOT NULL THEN
+                    IF LOWER(v_current_metrics->>'username') != LOWER(v_submission.instagram_username) THEN
+                        RAISE WARNING 'Post ownership mismatch for submission %: post owner=%, expected=%. Marking as fraud.', 
+                            v_submission.id, 
+                            v_current_metrics->>'username', 
+                            v_submission.instagram_username;
+                        
+                        -- Помечаем как мошенничество
+                        UPDATE task_submissions
+                        SET 
+                            status = 'rejected',
+                            rejection_reason = 'Публикация не принадлежит вашему аккаунту Instagram',
+                            reviewed_at = NOW()
+                        WHERE id = v_submission.id;
+                        
+                        CONTINUE; -- Пропускаем эту публикацию
+                    END IF;
+                END IF;
+                
                 -- Извлекаем ТЕКУЩИЕ значения
                 v_current_likes := COALESCE((v_current_metrics->>'like_count')::INTEGER, 0);
                 v_current_comments := COALESCE((v_current_metrics->>'comments_count')::INTEGER, 0);
