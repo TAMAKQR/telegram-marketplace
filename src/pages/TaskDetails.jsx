@@ -258,8 +258,8 @@ function TaskDetails() {
     }
 
     const handleSubmitWork = async () => {
-        if (!postUrl.trim() || !workDescription.trim()) {
-            showAlert?.('Заполните все поля: ссылка на пост и описание работы')
+        if (!postUrl.trim()) {
+            showAlert?.('Укажите ссылку на Instagram пост')
             return
         }
 
@@ -269,6 +269,9 @@ function TaskDetails() {
             showAlert?.('❌ Неверный формат ссылки!\n\nИспользуйте ссылку из Instagram:\n• instagram.com/p/...\n• instagram.com/reel/...\n\nКак скопировать:\n1. Откройте пост в Instagram\n2. Три точки (•••)\n3. "Копировать ссылку"')
             return
         }
+
+        // Если описание пустое, используем текст по умолчанию
+        const finalDescription = workDescription.trim() || 'Отчет о выполнении задания'
 
         try {
             // Проверяем, нет ли уже активного submission (на проверке или в работе)
@@ -295,7 +298,7 @@ function TaskDetails() {
                         task_id: taskId,
                         influencer_id: profile.id,
                         post_url: postUrl,
-                        description: workDescription,
+                        description: finalDescription,
                         status: 'pending'
                     }
                 ])
@@ -306,6 +309,8 @@ function TaskDetails() {
             setShowSubmissionForm(false)
             setPostUrl('')
             setWorkDescription('')
+            setSelectedPost(null)
+            setUserPosts([])
             await loadSubmissions()
             await loadTaskDetails()
         } catch (error) {
@@ -740,6 +745,9 @@ function TaskDetails() {
                                                     onClick={() => {
                                                         setSelectedPost(post)
                                                         setPostUrl(post.permalink)
+                                                        setWorkDescription(post.caption?.substring(0, 500) || 'Публикация в Instagram')
+                                                        // Автоматически отправляем после выбора поста
+                                                        setTimeout(() => handleSubmitWork(), 100)
                                                     }}
                                                     className={`cursor-pointer rounded-lg overflow-hidden border-2 transition-all ${selectedPost?.id === post.id
                                                         ? 'border-tg-button shadow-lg scale-105'
@@ -787,7 +795,10 @@ function TaskDetails() {
                                     <div className="text-center">
                                         <button
                                             type="button"
-                                            onClick={() => setUserPosts([])}
+                                            onClick={() => {
+                                                setUserPosts([])
+                                                setSelectedPost(null)
+                                            }}
                                             className="text-xs text-tg-hint hover:text-tg-button"
                                         >
                                             или ввести ссылку вручную
@@ -795,52 +806,56 @@ function TaskDetails() {
                                     </div>
                                 )}
 
+                                {/* Показываем поля только если посты не загружены */}
                                 {userPosts.length === 0 && !loadingPosts && (
-                                    <div>
-                                        <label className="block text-sm font-medium mb-1">
-                                            Ссылка на Instagram пост *
-                                        </label>
-                                        <input
-                                            type="url"
-                                            value={postUrl}
-                                            onChange={(e) => setPostUrl(e.target.value)}
-                                            placeholder="https://www.instagram.com/p/... или https://www.instagram.com/reel/..."
-                                            className="w-full px-4 py-3 rounded-xl bg-gray-100 dark:bg-gray-700 outline-none"
-                                        />
-                                        {postUrl && !postUrl.match(/instagram\.com\/(p|reel)\/[A-Za-z0-9_-]+/) && (
-                                            <p className="text-xs text-red-600 dark:text-red-400 mt-1">
-                                                ⚠️ Неверный формат ссылки. Используйте ссылку вида: instagram.com/p/... или instagram.com/reel/...
-                                            </p>
-                                        )}
-                                    </div>
-                                )}
+                                    <>
+                                        <div>
+                                            <label className="block text-sm font-medium mb-1">
+                                                Ссылка на Instagram пост *
+                                            </label>
+                                            <input
+                                                type="url"
+                                                value={postUrl}
+                                                onChange={(e) => setPostUrl(e.target.value)}
+                                                placeholder="https://www.instagram.com/p/... или https://www.instagram.com/reel/..."
+                                                className="w-full px-4 py-3 rounded-xl bg-gray-100 dark:bg-gray-700 outline-none"
+                                            />
+                                            {postUrl && !postUrl.match(/instagram\.com\/(p|reel)\/[A-Za-z0-9_-]+/) && (
+                                                <p className="text-xs text-red-600 dark:text-red-400 mt-1">
+                                                    ⚠️ Неверный формат ссылки. Используйте ссылку вида: instagram.com/p/... или instagram.com/reel/...
+                                                </p>
+                                            )}
+                                        </div>
 
-                                <div>
-                                    <label className="block text-sm font-medium mb-1">
-                                        Описание работы *
-                                    </label>
-                                    <textarea
-                                        value={workDescription}
-                                        onChange={(e) => setWorkDescription(e.target.value)}
-                                        placeholder="Опишите что вы сделали и какие результаты ожидаете..."
-                                        rows={4}
-                                        className="w-full px-4 py-3 rounded-xl bg-gray-100 dark:bg-gray-700 outline-none resize-none"
-                                    />
-                                </div>
-                                <div className="flex gap-2">
-                                    <button
-                                        onClick={handleSubmitWork}
-                                        className="flex-1 bg-green-600 text-white py-3 rounded-xl font-semibold"
-                                    >
-                                        Отправить отчет
-                                    </button>
-                                    <button
-                                        onClick={() => setShowSubmissionForm(false)}
-                                        className="px-4 py-3 rounded-xl bg-gray-200 dark:bg-gray-700"
-                                    >
-                                        Отмена
-                                    </button>
-                                </div>
+                                        <div>
+                                            <label className="block text-sm font-medium mb-1">
+                                                Описание работы (опционально)
+                                            </label>
+                                            <textarea
+                                                value={workDescription}
+                                                onChange={(e) => setWorkDescription(e.target.value)}
+                                                placeholder="Опишите что вы сделали и какие результаты ожидаете..."
+                                                rows={4}
+                                                className="w-full px-4 py-3 rounded-xl bg-gray-100 dark:bg-gray-700 outline-none resize-none"
+                                            />
+                                        </div>
+
+                                        <div className="flex gap-2">
+                                            <button
+                                                onClick={handleSubmitWork}
+                                                className="flex-1 bg-green-600 text-white py-3 rounded-xl font-semibold"
+                                            >
+                                                Отправить отчет
+                                            </button>
+                                            <button
+                                                onClick={() => setShowSubmissionForm(false)}
+                                                className="px-4 py-3 rounded-xl bg-gray-200 dark:bg-gray-700"
+                                            >
+                                                Отмена
+                                            </button>
+                                        </div>
+                                    </>
+                                )}
                             </div>
                         ) : (
                             <>
