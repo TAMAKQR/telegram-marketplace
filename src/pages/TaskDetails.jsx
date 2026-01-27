@@ -182,7 +182,13 @@ function TaskDetails() {
             if (data && data.length > 0) {
                 console.log('Первый submission:', data[0])
                 console.log('Поле users:', data[0].users)
-                console.log('Поле influencer:', data[0].influencer)
+                console.log('influencer_profiles array:', data[0].users?.influencer_profiles)
+                if (data[0].users?.influencer_profiles?.[0]) {
+                    console.log('Первый influencer_profile:', data[0].users.influencer_profiles[0])
+                    console.log('Profile ID:', data[0].users.influencer_profiles[0].id)
+                } else {
+                    console.warn('⚠️ influencer_profiles[0] is undefined!')
+                }
             }
 
             console.log('=== SET SUBMISSIONS ===')
