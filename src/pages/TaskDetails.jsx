@@ -1020,16 +1020,16 @@ function TaskDetails() {
                                                 Новая публикация на проверке
                                             </h3>
                                             <p className="text-sm text-yellow-700 dark:text-yellow-300">
-                                                Инфлюенсер отправил ссылку на публикацию
+                                                Инфлюенсер отправил ссылку на публикацию. Проверьте и одобрите для запуска отслеживания метрик.
                                             </p>
                                         </div>
                                     </div>
                                 </div>
                                 <button
                                     onClick={() => navigate(`/client/task/${taskId}/review`)}
-                                    className="w-full bg-yellow-500 text-white py-3 rounded-xl font-semibold hover:bg-yellow-600"
+                                    className="w-full bg-green-600 text-white py-3 rounded-xl font-semibold hover:bg-green-700"
                                 >
-                                    🔍 Проверить публикацию
+                                    ✅ Одобрить и запустить отслеживание
                                 </button>
                             </div>
                         )}
