@@ -183,11 +183,12 @@ function TaskDetails() {
                 console.log('Первый submission:', data[0])
                 console.log('Поле users:', data[0].users)
                 console.log('influencer_profiles array:', data[0].users?.influencer_profiles)
-                if (data[0].users?.influencer_profiles?.[0]) {
-                    console.log('Первый influencer_profile:', data[0].users.influencer_profiles[0])
-                    console.log('Profile ID:', data[0].users.influencer_profiles[0].id)
+                const firstProfile = data[0].users?.influencer_profiles?.[0]
+                if (firstProfile) {
+                    console.log('Первый influencer_profile:', firstProfile)
+                    console.log('Profile ID:', firstProfile.id)
                 } else {
-                    console.warn('⚠️ influencer_profiles[0] is undefined!')
+                    console.warn('⚠️ influencer_profiles[0] отсутствует или пустой')
                 }
             }
 
