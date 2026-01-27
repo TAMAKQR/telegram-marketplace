@@ -166,7 +166,7 @@ function TaskDetails() {
                         first_name,
                         last_name,
                         telegram_id,
-                        influencer_profiles(instagram_username)
+                        influencer_profiles(*)
                     )
                 `)
                 .eq('task_id', taskId)
