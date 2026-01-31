@@ -89,6 +89,7 @@ serve(async (req) => {
                     JSON.stringify({
                         ok: false,
                         stage: 'exchange_code',
+                        used_app_id: appId,
                         upstream_status: response.status,
                         upstream: data,
                         used_redirect_uri: redirectUri,
@@ -103,6 +104,8 @@ serve(async (req) => {
             return new Response(
                 JSON.stringify({
                     ok: true,
+                    used_app_id: appId,
+                    used_redirect_uri: redirectUri,
                     result: data,
                 }),
                 {
@@ -135,6 +138,7 @@ serve(async (req) => {
                     JSON.stringify({
                         ok: false,
                         stage: 'long_lived',
+                        used_app_id: appId,
                         upstream_status: response.status,
                         upstream: data,
                     }),
@@ -148,6 +152,7 @@ serve(async (req) => {
             return new Response(
                 JSON.stringify({
                     ok: true,
+                    used_app_id: appId,
                     result: data,
                 }),
                 {
@@ -163,7 +168,7 @@ serve(async (req) => {
         })
     } catch (e) {
         // Return 200 so the client can show the exact error message instead of a generic FunctionsHttpError.
-        return new Response(JSON.stringify({ ok: false, stage: 'exception', error: String(e) }), {
+        return new Response(JSON.stringify({ ok: false, stage: 'exception', error: String(e), used_app_id: Deno.env.get('INSTAGRAM_APP_ID') ?? null }), {
             status: 200,
             headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         })
