@@ -1,0 +1,3 @@
+# Allow unauthenticated OPTIONS preflight requests at the gateway.
+# This function does not require an end-user JWT.
+verify_jwt = false
