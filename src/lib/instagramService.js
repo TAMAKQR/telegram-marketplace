@@ -46,9 +46,17 @@ export const instagramService = {
             throw new Error('Failed to exchange code for token')
         }
 
+        if (data?.ok === false) {
+            const upstreamMessage = data?.upstream?.error?.message || data?.upstream?.error_message
+            const hint = data?.used_redirect_uri ? ` (redirect_uri: ${data.used_redirect_uri})` : ''
+            throw new Error(upstreamMessage ? `${upstreamMessage}${hint}` : `Failed to exchange code for token${hint}`)
+        }
+
+        const result = data?.result ?? data
+
         return {
-            accessToken: data.access_token,
-            userId: data.user_id
+            accessToken: result.access_token,
+            userId: result.user_id
         }
     },
 
@@ -68,9 +76,16 @@ export const instagramService = {
             throw new Error('Failed to get long-lived token')
         }
 
+        if (data?.ok === false) {
+            const upstreamMessage = data?.upstream?.error?.message || data?.upstream?.error_message
+            throw new Error(upstreamMessage || 'Failed to get long-lived token')
+        }
+
+        const result = data?.result ?? data
+
         return {
-            accessToken: data.access_token,
-            expiresIn: data.expires_in // seconds (обычно 5184000 = 60 дней)
+            accessToken: result.access_token,
+            expiresIn: result.expires_in // seconds (обычно 5184000 = 60 дней)
         }
     },
 

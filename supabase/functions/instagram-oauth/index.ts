@@ -84,10 +84,32 @@ serve(async (req) => {
 
             const data = await response.json()
 
-            return new Response(JSON.stringify(data), {
-                status: response.ok ? 200 : 502,
-                headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-            })
+            if (!response.ok) {
+                return new Response(
+                    JSON.stringify({
+                        ok: false,
+                        stage: 'exchange_code',
+                        upstream_status: response.status,
+                        upstream: data,
+                        used_redirect_uri: redirectUri,
+                    }),
+                    {
+                        status: 200,
+                        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+                    },
+                )
+            }
+
+            return new Response(
+                JSON.stringify({
+                    ok: true,
+                    result: data,
+                }),
+                {
+                    status: 200,
+                    headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+                },
+            )
         }
 
         if (action === 'long_lived') {
@@ -108,10 +130,31 @@ serve(async (req) => {
             const response = await fetch(`https://graph.instagram.com/access_token?${params}`)
             const data = await response.json()
 
-            return new Response(JSON.stringify(data), {
-                status: response.ok ? 200 : 502,
-                headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-            })
+            if (!response.ok) {
+                return new Response(
+                    JSON.stringify({
+                        ok: false,
+                        stage: 'long_lived',
+                        upstream_status: response.status,
+                        upstream: data,
+                    }),
+                    {
+                        status: 200,
+                        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+                    },
+                )
+            }
+
+            return new Response(
+                JSON.stringify({
+                    ok: true,
+                    result: data,
+                }),
+                {
+                    status: 200,
+                    headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+                },
+            )
         }
 
         return new Response(JSON.stringify({ error: 'Unknown action' }), {
@@ -119,8 +162,9 @@ serve(async (req) => {
             headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         })
     } catch (e) {
-        return new Response(JSON.stringify({ error: String(e) }), {
-            status: 500,
+        // Return 200 so the client can show the exact error message instead of a generic FunctionsHttpError.
+        return new Response(JSON.stringify({ ok: false, stage: 'exception', error: String(e) }), {
+            status: 200,
             headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         })
     }
