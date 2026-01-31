@@ -64,11 +64,12 @@
 </head>
 
 <body>
-    <!-- Put your loader at /public/preloader.gif.mp4 (video) OR /public/preloader.gif (image). -->
+    <!-- Put your loader at /public/preloader.mp4 (video) and optionally /public/preloader.gif (image fallback). -->
     <div id="app-preloader" aria-label="Загрузка">
         <div class="box">
             <video class="media" autoplay muted loop playsinline>
-                <source src="/preloader.gif.mp4" type="video/mp4" />
+                <source src="/preloader.mp4" type="video/mp4" />
+                <img src="/preloader.gif" alt="Загрузка" class="media" />
             </video>
             <div class="text">Загрузка...</div>
         </div>
