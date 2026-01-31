@@ -42,7 +42,8 @@ export default function SubmitTaskPost({ task, onSuccess }) {
             try {
                 metrics = await instagramMetricsService.getPostMetrics(
                     profile.instagram_access_token,
-                    postUrl
+                    postUrl,
+                    profile.instagram_user_id
                 )
             } catch (error) {
                 console.error('Ошибка получения метрик:', error)

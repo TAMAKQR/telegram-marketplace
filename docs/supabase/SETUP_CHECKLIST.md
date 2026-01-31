@@ -13,13 +13,13 @@ CREATE EXTENSION IF NOT EXISTS "http";
 - [ ] `schema.sql` - Основные таблицы (users, tasks, influencer_profiles, task_applications)
 
 ### 2. Миграции структуры таблиц
-- [ ] `migration_balance.sql` - Добавление таблицы transactions
-- [ ] `migration_submissions.sql` - Таблица task_submissions
-- [ ] `migration_pricing_tiers.sql` - Pricing tiers + функции approve_submission
-- [ ] `migration_initial_metrics.sql` - Добавление initial_metrics в task_submissions
-- [ ] `migration_instagram_oauth.sql` - Instagram OAuth токены
-- [ ] `migration_soft_delete_users.sql` - **НЕ ВЫПОЛНЕН** Soft delete для users
-- [ ] `migration_add_is_blocked.sql` - Флаг is_blocked для users
+- [ ] `supabase/migrations/migration_balance.sql` - Добавление таблицы transactions
+- [ ] `supabase/migrations/migration_submissions.sql` - Таблица task_submissions
+- [ ] `supabase/migrations/migration_pricing_tiers.sql` - Pricing tiers + функции approve_submission
+- [ ] `supabase/migrations/migration_initial_metrics.sql` - Добавление initial_metrics в task_submissions
+- [ ] `supabase/migrations/migration_instagram_oauth.sql` - Instagram OAuth токены
+- [ ] `supabase/migrations/migration_soft_delete_users.sql` - **НЕ ВЫПОЛНЕН** Soft delete для users
+- [ ] `supabase/migrations/migration_add_is_blocked.sql` - Флаг is_blocked для users
 
 ### 3. Функции
 - [ ] `increment_balance_function.sql` - Функция пополнения баланса
@@ -49,7 +49,7 @@ CREATE EXTENSION IF NOT EXISTS http;
 Выполнить файл: `supabase/auto_metrics_check.sql`
 
 ### 4️⃣ Выполнить миграцию soft delete
-Выполнить файл: `supabase/migration_soft_delete_users.sql`
+Выполнить файл: `supabase/migrations/migration_soft_delete_users.sql`
 
 ---
 
@@ -107,7 +107,8 @@ WHERE table_name = 'users';
 **Решение:** Обновить `auto_metrics_check.sql` - там добавлена проверка username
 
 ### Проблема: Удаленные пользователи видны в балансе
-**Решение:** Выполнить `migration_soft_delete_users.sql`
+**Решение:** Выполнить `supabase/migrations/migration_soft_delete_users.sql`
+**Файл:** `supabase/migrations/migration_soft_delete_users.sql`
 
 ### Проблема: Нет автопроверки метрик
 **Решение:** Проверить `SELECT * FROM cron.job;` - должна быть задача с jobid=1

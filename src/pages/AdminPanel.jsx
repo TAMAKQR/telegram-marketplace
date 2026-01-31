@@ -4,6 +4,7 @@ import { supabase } from '../lib/supabase'
 import { useTelegram } from '../hooks/useTelegram'
 import { isAdmin, sendAdminNotification } from '../lib/telegramBot'
 import Logo from '../components/Logo'
+import { formatTaskBudget } from '../lib/taskBudget'
 
 function AdminPanel() {
     const navigate = useNavigate()
@@ -488,7 +489,7 @@ function AdminPanel() {
                                                     (ID: {task.influencer.telegram_id})
                                                 </p>
                                             )}
-                                            <p>💰 <span className="font-medium">Бюджет:</span> {task.budget?.toLocaleString()} сом</p>
+                                            <p>💰 <span className="font-medium">Бюджет:</span> {formatTaskBudget(task, { prefix: '' })}</p>
                                             <p>📅 <span className="font-medium">Создан:</span> {new Date(task.created_at).toLocaleDateString('ru')}</p>
                                         </div>
                                     </div>

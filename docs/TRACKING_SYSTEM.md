@@ -60,7 +60,7 @@ Engagement Rate = (200 / 3500) × 100% = 5.7%
 ## Файлы системы
 
 ### База данных
-- `supabase/migration_task_posts.sql` - таблица task_posts с автоматическим расчетом бонусов
+- `supabase/migrations/migration_task_posts.sql` - таблица task_posts с автоматическим расчетом бонусов
 - `supabase/functions_payments.sql` - функция переводов между пользователями
 
 ### Сервисы
@@ -93,7 +93,7 @@ import TaskPostsReview from '../components/TaskPostsReview'
 1. Выполните миграции в Supabase:
 ```sql
 -- 1. Создать таблицу постов
-\i supabase/migration_task_posts.sql
+\i supabase/migrations/migration_task_posts.sql
 
 -- 2. Создать функции платежей
 \i supabase/functions_payments.sql

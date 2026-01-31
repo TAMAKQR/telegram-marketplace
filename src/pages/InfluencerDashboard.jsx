@@ -5,6 +5,7 @@ import { useUserStore } from '../store/userStore'
 import { useTelegram } from '../hooks/useTelegram'
 import { isAdmin } from '../lib/telegramBot'
 import Logo from '../components/Logo'
+import { formatTaskBudget } from '../lib/taskBudget'
 
 function InfluencerDashboard() {
     const navigate = useNavigate()
@@ -269,9 +270,12 @@ function InfluencerDashboard() {
             {/* Header */}
             <div className="bg-brand-gradient text-white p-4 pt-8">
                 <div className="flex justify-between items-start">
-                    <div>
-                        <h1 className="text-2xl font-bold">Задания</h1>
-                        <p className="text-sm opacity-90">Привет, {user?.first_name}! 📸</p>
+                    <div className="flex items-center gap-2">
+                        <Logo className="h-7 w-auto" />
+                        <div>
+                            <h1 className="text-2xl font-bold">Задания</h1>
+                            <p className="text-sm opacity-90">Привет, {user?.first_name}! 📸</p>
+                        </div>
                     </div>
                     <div className="flex gap-2">
                         {user && isAdmin(user.id) && (
@@ -419,7 +423,7 @@ function InfluencerDashboard() {
                                     </p>
                                     <div className="flex justify-between items-center">
                                         <span className="font-semibold text-tg-button text-lg">
-                                            {task.budget} сом
+                                            {formatTaskBudget(task, { prefix: '' })}
                                         </span>
                                     </div>
                                     {task.requirements?.minFollowers && (
@@ -457,7 +461,7 @@ function InfluencerDashboard() {
                                 </p>
                                 <div className="flex justify-between items-center">
                                     <span className="font-semibold text-tg-button">
-                                        {app.proposed_price || app.tasks.budget} сом
+                                        {app.proposed_price ? `${Number(app.proposed_price).toLocaleString('ru-RU')} сом` : formatTaskBudget(app.tasks, { prefix: '' })}
                                     </span>
                                     <span className="text-xs text-tg-hint">
                                         {new Date(app.created_at).toLocaleDateString('ru')}
@@ -490,7 +494,7 @@ function InfluencerDashboard() {
                                 </p>
                                 <div className="flex justify-between items-center">
                                     <span className="font-semibold text-tg-button text-lg">
-                                        {task.budget} сом
+                                        {formatTaskBudget(task, { prefix: '' })}
                                     </span>
                                     {task.deadline && (
                                         <span className="text-xs text-red-600 dark:text-red-400">
@@ -540,7 +544,7 @@ function InfluencerDashboard() {
                                 )}
                                 <div className="flex justify-between items-center">
                                     <span className="font-semibold text-tg-button text-lg">
-                                        {submission.tasks.budget} сом
+                                        {formatTaskBudget(submission.tasks, { prefix: '' })}
                                     </span>
                                     <span className="text-xs text-tg-hint">
                                         {new Date(submission.reviewed_at).toLocaleDateString('ru')}
@@ -573,7 +577,7 @@ function InfluencerDashboard() {
                                 </p>
                                 <div className="flex justify-between items-center">
                                     <span className="font-semibold text-green-600 dark:text-green-400 text-lg">
-                                        +{task.budget} сом
+                                        +{formatTaskBudget(task, { prefix: '' })}
                                     </span>
                                     <span className="text-xs text-tg-hint">
                                         {new Date(task.updated_at).toLocaleDateString('ru')}

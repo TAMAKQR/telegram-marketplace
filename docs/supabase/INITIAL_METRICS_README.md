@@ -47,7 +47,7 @@ Cron-задача:
 ### Шаг 1: Выполнить миграцию
 Выполните в Supabase SQL Editor:
 ```bash
-supabase/migration_initial_metrics.sql
+supabase/migrations/migration_initial_metrics.sql
 ```
 
 Это добавит:

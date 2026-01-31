@@ -27,3 +27,13 @@ dist-ssr
 .env
 .env.local
 .env.production
+
+# Supabase local/prod clones (do not commit real data dumps)
+supabase/seed.prod.sql
+supabase/seed.*.sql
+supabase/*.dump
+supabase/dumps/
+
+# Supabase CLI local state (do not commit)
+supabase/.temp/
+supabase/.branches/

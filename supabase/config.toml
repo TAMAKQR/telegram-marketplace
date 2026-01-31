@@ -1,0 +1,33 @@
+# Supabase CLI configuration (local development)
+# Docs: https://supabase.com/docs/guides/cli
+
+# This value is overwritten when you run `supabase link --project-ref ...`
+project_id = "telegram-webapp"
+
+[api]
+port = 54321
+schemas = ["public", "storage", "graphql_public"]
+extra_search_path = ["public", "extensions"]
+max_rows = 1000
+
+[db]
+port = 54322
+shadow_port = 54320
+major_version = 15
+
+[studio]
+port = 54323
+
+[inbucket]
+port = 54324
+
+[storage]
+file_size_limit = "50MiB"
+
+[auth]
+enabled = true
+site_url = "http://localhost:5173"
+additional_redirect_urls = ["http://localhost:5173"]
+
+[analytics]
+enabled = false

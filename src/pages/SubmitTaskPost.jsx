@@ -3,12 +3,14 @@ import { useNavigate, useParams } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import { useUserStore } from '../store/userStore'
 import { useTelegram } from '../hooks/useTelegram'
+import { instagramMetricsService } from '../lib/instagramMetricsService'
 import Logo from '../components/Logo'
+import { formatTaskBudget } from '../lib/taskBudget'
 
 function SubmitTaskPost() {
     const navigate = useNavigate()
     const { taskId } = useParams()
-    const { user, profile } = useUserStore()
+    const { profile } = useUserStore()
     const { showAlert } = useTelegram()
 
     const [loading, setLoading] = useState(false)
@@ -35,10 +37,10 @@ function SubmitTaskPost() {
 
             // Загружаем заявку инфлюенсера
             const { data: appData, error: appError } = await supabase
-                .from('applications')
+                .from('task_applications')
                 .select('*')
                 .eq('task_id', taskId)
-                .eq('influencer_id', user.id)
+                .eq('influencer_id', profile.id)
                 .eq('status', 'accepted')
                 .single()
 
@@ -50,7 +52,7 @@ function SubmitTaskPost() {
                 .from('task_submissions')
                 .select('*')
                 .eq('task_id', taskId)
-                .eq('influencer_id', user.id)
+                .eq('influencer_id', profile.id)
                 .single()
 
             if (subData) {
@@ -81,11 +83,49 @@ function SubmitTaskPost() {
 
         setLoading(true)
         try {
+            // Получаем Instagram токен и IG user id из профиля инфлюенсера
+            const { data: influencerProfile, error: influencerProfileError } = await supabase
+                .from('influencer_profiles')
+                .select('instagram_connected, instagram_access_token, instagram_user_id, instagram_username')
+                .eq('user_id', user.id)
+                .maybeSingle()
+
+            if (influencerProfileError) throw influencerProfileError
+
+            if (!influencerProfile?.instagram_connected || !influencerProfile?.instagram_access_token) {
+                showAlert?.('Сначала подключите Instagram в профиле')
+                return
+            }
+
+            // Пытаемся получить media_id + базовые метрики на момент отправки
+            let metrics = null
+            try {
+                metrics = await instagramMetricsService.getPostMetrics(
+                    influencerProfile.instagram_access_token,
+                    postUrl,
+                    influencerProfile.instagram_user_id
+                )
+            } catch (e) {
+                console.warn('Could not fetch initial instagram metrics:', e)
+            }
+
+            const instagramMediaId = metrics?.media_id || null
+            const initialMetrics = {
+                views: metrics?.views || 0,
+                likes: metrics?.likes_count || 0,
+                comments: metrics?.comments_count || 0,
+                captured_at: Math.floor(Date.now() / 1000)
+            }
+
             if (submission) {
                 // Обновляем существующий сабмишен
                 const { error } = await supabase
                     .from('task_submissions')
-                    .update({ post_url: postUrl })
+                    .update({
+                        post_url: postUrl,
+                        instagram_media_id: instagramMediaId,
+                        initial_metrics: initialMetrics
+                    })
                     .eq('id', submission.id)
 
                 if (error) throw error
@@ -96,9 +136,11 @@ function SubmitTaskPost() {
                     .from('task_submissions')
                     .insert([{
                         task_id: taskId,
-                        application_id: application.id,
-                        influencer_id: user.id,
+                        influencer_id: profile.id,
                         post_url: postUrl,
+                        description: '',
+                        instagram_media_id: instagramMediaId,
+                        initial_metrics: initialMetrics,
                         status: 'pending_approval'
                     }])
 
@@ -142,7 +184,7 @@ function SubmitTaskPost() {
                     <div className="bg-gray-50 dark:bg-gray-700/50 rounded-xl p-4 mb-6">
                         <h3 className="font-semibold mb-2 break-words">{task.title}</h3>
                         <p className="text-sm text-tg-hint mb-2 break-words">{task.description}</p>
-                        <p className="text-tg-button font-semibold">💰 {task.budget.toLocaleString()} сом</p>
+                        <p className="text-tg-button font-semibold">{formatTaskBudget(task)}</p>
 
                         {task.deadline && (
                             <p className="text-sm text-orange-600 dark:text-orange-400 mt-2">
@@ -204,13 +246,13 @@ function SubmitTaskPost() {
                             </p>
                         </div>
 
-                        {submission && submission.status === 'in_progress' && submission.current_metrics && (
+                        {submission && ['in_progress', 'completed'].includes(submission.status) && submission.current_metrics && (
                             <div className="bg-green-50 dark:bg-green-900/20 rounded-xl p-4">
                                 <h4 className="font-semibold text-green-900 dark:text-green-200 mb-2">
                                     📊 Текущий прогресс
                                 </h4>
                                 <div className="space-y-2">
-                                    {submission.current_metrics.views && (
+                                    {submission.current_metrics.views !== undefined && submission.current_metrics.views !== null && (
                                         <div>
                                             <div className="flex justify-between text-sm mb-1">
                                                 <span>👁 Просмотры</span>
@@ -219,7 +261,7 @@ function SubmitTaskPost() {
                                             <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
                                                 <div
                                                     className="bg-green-500 h-2 rounded-full"
-                                                    style={{ width: `${Math.min((submission.current_metrics.views / task.target_metrics?.views * 100), 100)}%` }}
+                                                    style={{ width: `${task.target_metrics?.views ? Math.min((submission.current_metrics.views / task.target_metrics.views * 100), 100) : 0}%` }}
                                                 />
                                             </div>
                                         </div>

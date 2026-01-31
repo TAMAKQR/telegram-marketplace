@@ -357,7 +357,7 @@ Max инфлюенсеров: 3
 ## Миграция данных
 
 ### SQL скрипт
-Выполните `migration_pricing_tiers.sql` в Supabase SQL Editor.
+Выполните `supabase/migrations/migration_pricing_tiers.sql` в Supabase SQL Editor.
 
 ### Проверка после миграции
 ```sql

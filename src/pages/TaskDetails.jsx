@@ -4,6 +4,7 @@ import { supabase } from '../lib/supabase'
 import { useUserStore } from '../store/userStore'
 import { useTelegram } from '../hooks/useTelegram'
 import { sendTelegramNotification, formatCompletedTaskMessage } from '../lib/telegramBot'
+import { formatTaskBudget } from '../lib/taskBudget'
 import Logo from '../components/Logo'
 import InstagramStats from '../components/InstagramStats'
 
@@ -641,7 +642,7 @@ function TaskDetails() {
 
                     <div className="mb-4">
                         <p className="text-lg font-semibold text-tg-button mb-2">
-                            💰 {task.budget} сом
+                            {formatTaskBudget(task)}
                         </p>
                     </div>
 
@@ -915,14 +916,14 @@ function TaskDetails() {
                             <div className="space-y-4">
                                 {/* Прогресс метрик для активных submission */}
                                 {submissions
-                                    .filter(sub => sub && ['in_progress', 'approved'].includes(sub.status))
+                                    .filter(sub => sub && ['in_progress', 'approved', 'completed'].includes(sub.status))
                                     .map(sub => (
                                         task.target_metrics && (
                                             <div key={sub?.id ? `progress-${sub.id}` : `progress-unknown`} className="bg-white dark:bg-gray-800 rounded-xl p-4 shadow-md">
                                                 <div className="flex items-center justify-between mb-3">
                                                     <h4 className="font-semibold">📊 Прогресс метрик</h4>
                                                     <span className="text-xs px-2 py-1 rounded-full bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200">
-                                                        В процессе
+                                                        {sub.status === 'completed' ? 'Завершено' : 'В процессе'}
                                                     </span>
                                                 </div>
 
@@ -1055,17 +1056,17 @@ function TaskDetails() {
                         )}
 
                         {/* Отображение прогресса отслеживания метрик */}
-                        {task.status === 'in_progress' && submissions.some(sub => sub && ['pending', 'in_progress', 'approved'].includes(sub.status)) && (
+                        {['in_progress', 'completed'].includes(task.status) && submissions.some(sub => sub && ['pending', 'in_progress', 'approved', 'completed'].includes(sub.status)) && (
                             <div className="mb-4">
                                 <h3 className="text-lg font-semibold mb-3">Прогресс выполнения</h3>
                                 {submissions
-                                    .filter(sub => sub && ['pending', 'in_progress', 'approved'].includes(sub.status))
+                                    .filter(sub => sub && ['pending', 'in_progress', 'approved', 'completed'].includes(sub.status))
                                     .map((sub, idx) => (
                                         <div key={sub?.id ?? `submission-${idx}`} className="bg-white dark:bg-gray-800 rounded-xl p-4 shadow-md">
                                             <div className="flex items-center justify-between mb-3">
                                                 <h4 className="font-semibold">Отслеживание метрик</h4>
                                                 <span className="text-xs px-2 py-1 rounded-full bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200">
-                                                    В процессе
+                                                    {sub.status === 'completed' ? 'Завершено' : 'В процессе'}
                                                 </span>
                                             </div>
 

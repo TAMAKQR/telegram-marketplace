@@ -44,7 +44,8 @@ npm install
 
 1. Создайте проект на [supabase.com](https://supabase.com)
 2. Перейдите в SQL Editor и выполните скрипт из файла `supabase/schema.sql`
-3. Получите URL и ANON KEY из Settings → API
+3. Затем выполните миграции из папки `supabase/migrations/` (в SQL Editor, по порядку). Это добавит новые поля/функции, которые использует приложение (например `pricing_tiers`, `target_metrics`, `task_submissions`, трекинг метрик и оплату по «лесенке»).
+4. Получите URL и ANON KEY из Settings → API
 
 ### 3. Настройте переменные окружения
 

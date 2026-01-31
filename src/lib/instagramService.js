@@ -1,11 +1,21 @@
 // Сервис для работы с Instagram Graph API
 const INSTAGRAM_APP_ID = import.meta.env.VITE_INSTAGRAM_APP_ID
-const INSTAGRAM_APP_SECRET = import.meta.env.VITE_INSTAGRAM_APP_SECRET
-const REDIRECT_URI = import.meta.env.VITE_INSTAGRAM_REDIRECT_URI || 'https://cec8671fc594.ngrok-free.app/instagram/callback'
+const DEFAULT_REDIRECT_URI = typeof window !== 'undefined'
+    ? `${window.location.origin}/instagram/callback`
+    : ''
+const REDIRECT_URI = import.meta.env.VITE_INSTAGRAM_REDIRECT_URI || DEFAULT_REDIRECT_URI
 
 export const instagramService = {
     // Получить URL для OAuth авторизации
     getAuthUrl(userId) {
+        if (!INSTAGRAM_APP_ID) {
+            throw new Error('Missing VITE_INSTAGRAM_APP_ID')
+        }
+
+        if (!REDIRECT_URI) {
+            throw new Error('Missing VITE_INSTAGRAM_REDIRECT_URI (could not infer default)')
+        }
+
         // Запрашиваем разрешения для Instagram Business аккаунтов
         // Добавляем pages_read_engagement для получения instagram_business_account
         const params = new URLSearchParams({
@@ -22,28 +32,20 @@ export const instagramService = {
 
     // Обменять код авторизации на токен доступа
     async exchangeCodeForToken(code) {
-        const formData = new URLSearchParams({
-            client_id: INSTAGRAM_APP_ID,
-            client_secret: INSTAGRAM_APP_SECRET,
-            grant_type: 'authorization_code',
-            redirect_uri: REDIRECT_URI,
-            code: code
+        const { supabase } = await import('./supabase')
+
+        const { data, error } = await supabase.functions.invoke('instagram-oauth', {
+            body: {
+                action: 'exchange_code',
+                code
+            }
         })
 
-        // Используем Facebook Graph API для обмена кода
-        const response = await fetch('https://graph.facebook.com/v18.0/oauth/access_token', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/x-www-form-urlencoded',
-            },
-            body: formData
-        })
-
-        if (!response.ok) {
+        if (error) {
+            console.error('instagram-oauth function error:', error)
             throw new Error('Failed to exchange code for token')
         }
 
-        const data = await response.json()
         return {
             accessToken: data.access_token,
             userId: data.user_id
@@ -52,14 +54,19 @@ export const instagramService = {
 
     // Получить долгосрочный токен (60 дней)
     async getLongLivedToken(shortToken) {
-        const params = new URLSearchParams({
-            grant_type: 'ig_exchange_token',
-            client_secret: INSTAGRAM_APP_SECRET,
-            access_token: shortToken
+        const { supabase } = await import('./supabase')
+
+        const { data, error } = await supabase.functions.invoke('instagram-oauth', {
+            body: {
+                action: 'long_lived',
+                shortToken
+            }
         })
 
-        const response = await fetch(`https://graph.instagram.com/access_token?${params}`)
-        const data = await response.json()
+        if (error) {
+            console.error('instagram-oauth function error:', error)
+            throw new Error('Failed to get long-lived token')
+        }
 
         return {
             accessToken: data.access_token,
@@ -104,10 +111,10 @@ export const instagramService = {
     async getMediaInsights(accessToken, mediaId) {
         const metrics = [
             'engagement',
-            'impressions',
             'reach',
             'saved',
-            'video_views' // для видео
+            'shares',
+            'views'
         ].join(',')
 
         const response = await fetch(

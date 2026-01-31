@@ -8,6 +8,11 @@ if (!supabaseUrl || !supabaseAnonKey) {
 }
 
 export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
+    global: {
+        headers: supabaseUrl?.includes('ngrok-free.app')
+            ? { 'ngrok-skip-browser-warning': 'true' }
+            : {},
+    },
     auth: {
         persistSession: false,
         autoRefreshToken: false

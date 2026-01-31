@@ -48,23 +48,35 @@
 
 ⚠️ **ВАЖНО**: Каждый раз когда меняется ngrok URL, нужно обновлять Redirect URI!
 
-## Шаг 5: Обновление .env файла
+## Шаг 5: Переменные окружения (важно про секреты)
 
-Вставьте полученные данные в `.env`:
+### Frontend (Vite)
+
+В `.env.local` задаём только client-safe переменные:
 
 ```env
 VITE_INSTAGRAM_APP_ID=ваш_app_id_здесь
-VITE_INSTAGRAM_APP_SECRET=ваш_app_secret_здесь
 VITE_INSTAGRAM_REDIRECT_URI=https://ваш-ngrok-домен.ngrok-free.app/instagram/callback
+```
+
+### Supabase Edge Functions secrets (server-side)
+
+`App Secret` нельзя хранить в `VITE_*` (он попадёт в браузер). Секреты задаются через Supabase:
+
+```powershell
+# Локально
+npx supabase@latest secrets set INSTAGRAM_APP_ID="<app_id>" INSTAGRAM_APP_SECRET="<app_secret>" INSTAGRAM_REDIRECT_URI="<redirect_uri>"
+
+# Или через Dashboard для production
 ```
 
 ## Шаг 6: Выполнение SQL миграции
 
-Выполните SQL из файла `migration_instagram_oauth.sql` в Supabase:
+Выполните SQL из файла `supabase/migrations/migration_instagram_oauth.sql` в Supabase:
 
 1. Откройте https://supabase.com/dashboard/project/xpeyihbnsxcrybnuqsko
 2. Перейдите в **SQL Editor**
-3. Скопируйте весь SQL из `supabase/migration_instagram_oauth.sql`
+3. Скопируйте весь SQL из `supabase/migrations/migration_instagram_oauth.sql`
 4. Вставьте и выполните (Run)
 
 ## Шаг 7: Тестирование

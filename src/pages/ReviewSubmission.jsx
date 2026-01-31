@@ -4,6 +4,7 @@ import { supabase } from '../lib/supabase'
 import { useUserStore } from '../store/userStore'
 import { useTelegram } from '../hooks/useTelegram'
 import Logo from '../components/Logo'
+import { formatTaskBudget } from '../lib/taskBudget'
 
 function ReviewSubmission() {
     const navigate = useNavigate()
@@ -170,7 +171,7 @@ function ReviewSubmission() {
 
                     <div className="bg-gray-50 dark:bg-gray-700/50 rounded-xl p-4 mb-6">
                         <h3 className="font-semibold mb-2 break-words">{task.title}</h3>
-                        <p className="text-sm text-tg-hint">💰 Бюджет: {task.budget.toLocaleString()} сом</p>
+                        <p className="text-sm text-tg-hint">💰 Бюджет: {formatTaskBudget(task, { prefix: '' })}</p>
                     </div>
 
                     <div className="bg-blue-50 dark:bg-blue-900/20 rounded-xl p-4 mb-6">

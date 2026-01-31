@@ -5,6 +5,7 @@ import { useUserStore } from '../store/userStore'
 import { useTelegram } from '../hooks/useTelegram'
 import { isAdmin } from '../lib/telegramBot'
 import Logo from '../components/Logo'
+import { formatTaskBudget } from '../lib/taskBudget'
 
 function ClientDashboard() {
     const navigate = useNavigate()
@@ -384,7 +385,7 @@ function ClientDashboard() {
                             </p>
                             <div className="flex justify-between items-center">
                                 <span className="task-price">
-                                    {task.budget} сом
+                                    {formatTaskBudget(task, { prefix: '' })}
                                 </span>
                                 <span className="text-xs text-tg-hint">
                                     {task.task_applications?.[0]?.count || 0} откликов

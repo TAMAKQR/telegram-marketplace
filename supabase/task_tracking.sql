@@ -150,7 +150,14 @@ BEGIN
 END;
 $$;
 
--- Функция для обновления прогресса задания
+-- Функция обновления прогресса задания.
+-- ВАЖНО: основная бизнес-логика выплат/лесенки живёт в update_submission_progress(uuid, int, int, int)
+-- (см. migrations/migration_pricing_tiers_ladder_absolute_price.sql).
+-- Этот overload оставлен для совместимости со старыми скриптами, которые передают JSONB.
+
+ALTER TABLE task_submissions
+ADD COLUMN IF NOT EXISTS paid_tiers JSONB DEFAULT '[]'::jsonb;
+
 CREATE OR REPLACE FUNCTION update_submission_progress(
     p_submission_id UUID,
     p_current_metrics JSONB
@@ -160,102 +167,27 @@ LANGUAGE plpgsql
 SECURITY DEFINER
 AS $$
 DECLARE
-    v_submission task_submissions;
-    v_task tasks;
-    v_progress DECIMAL(5, 2);
-    v_completed BOOLEAN := FALSE;
-    v_views_progress DECIMAL(5, 2) := 0;
-    v_likes_progress DECIMAL(5, 2) := 0;
-    v_comments_progress DECIMAL(5, 2) := 0;
+    v_views INTEGER := NULL;
+    v_likes INTEGER := NULL;
+    v_comments INTEGER := NULL;
 BEGIN
-    -- Получаем сабмишен
-    SELECT * INTO v_submission FROM task_submissions WHERE id = p_submission_id;
-    IF NOT FOUND THEN
-        RAISE EXCEPTION 'Submission not found';
+    IF p_current_metrics IS NOT NULL AND jsonb_typeof(p_current_metrics) = 'object' THEN
+        IF p_current_metrics ? 'views' THEN
+            v_views := NULLIF(p_current_metrics->>'views', '')::INTEGER;
+        END IF;
+        IF p_current_metrics ? 'likes' THEN
+            v_likes := NULLIF(p_current_metrics->>'likes', '')::INTEGER;
+        END IF;
+        IF p_current_metrics ? 'comments' THEN
+            v_comments := NULLIF(p_current_metrics->>'comments', '')::INTEGER;
+        END IF;
     END IF;
 
-    -- Получаем задание
-    SELECT * INTO v_task FROM tasks WHERE id = v_submission.task_id;
-    IF NOT FOUND THEN
-        RAISE EXCEPTION 'Task not found';
-    END IF;
-
-    -- Проверяем что у задания есть целевые метрики
-    IF v_task.target_metrics IS NULL THEN
-        RAISE EXCEPTION 'Task has no target metrics';
-    END IF;
-
-    -- Рассчитываем прогресс для каждой метрики
-    IF v_task.target_metrics ? 'views' THEN
-        v_views_progress := LEAST(
-            (COALESCE((p_current_metrics->>'views')::DECIMAL, 0) / 
-             NULLIF((v_task.target_metrics->>'views')::DECIMAL, 0)) * 100,
-            100
-        );
-    END IF;
-
-    IF v_task.target_metrics ? 'likes' THEN
-        v_likes_progress := LEAST(
-            (COALESCE((p_current_metrics->>'likes')::DECIMAL, 0) / 
-             NULLIF((v_task.target_metrics->>'likes')::DECIMAL, 0)) * 100,
-            100
-        );
-    END IF;
-
-    IF v_task.target_metrics ? 'comments' THEN
-        v_comments_progress := LEAST(
-            (COALESCE((p_current_metrics->>'comments')::DECIMAL, 0) / 
-             NULLIF((v_task.target_metrics->>'comments')::DECIMAL, 0)) * 100,
-            100
-        );
-    END IF;
-
-    -- Общий прогресс = среднее по всем метрикам
-    v_progress := (v_views_progress + v_likes_progress + v_comments_progress) / 
-                  NULLIF((CASE WHEN v_task.target_metrics ? 'views' THEN 1 ELSE 0 END +
-                         CASE WHEN v_task.target_metrics ? 'likes' THEN 1 ELSE 0 END +
-                         CASE WHEN v_task.target_metrics ? 'comments' THEN 1 ELSE 0 END), 0);
-
-    -- Проверяем достижение цели (все метрики >= 100%)
-    IF v_views_progress >= 100 AND 
-       (NOT v_task.target_metrics ? 'likes' OR v_likes_progress >= 100) AND
-       (NOT v_task.target_metrics ? 'comments' OR v_comments_progress >= 100) THEN
-        v_completed := TRUE;
-    END IF;
-
-    -- Обновляем сабмишен
-    UPDATE task_submissions
-    SET current_metrics = p_current_metrics,
-        progress = v_progress,
-        status = CASE WHEN v_completed THEN 'completed' ELSE 'in_progress' END,
-        completed_at = CASE WHEN v_completed THEN NOW() ELSE completed_at END,
-        last_checked_at = NOW()
-    WHERE id = p_submission_id;
-
-    -- Если завершено - обновляем задание и выплачиваем
-    IF v_completed THEN
-        UPDATE tasks SET status = 'completed' WHERE id = v_task.id;
-        
-        -- Выплата инфлюенсеру
-        UPDATE users 
-        SET balance = balance + v_task.budget
-        WHERE id = v_submission.influencer_id;
-
-        -- Записываем транзакцию
-        INSERT INTO transactions (user_id, amount, type, description)
-        VALUES (
-            v_submission.influencer_id,
-            v_task.budget,
-            'task_payment',
-            'Выплата за выполнение задания: ' || v_task.title
-        );
-    END IF;
-
-    RETURN jsonb_build_object(
-        'success', true,
-        'progress', v_progress,
-        'completed', v_completed,
-        'current_metrics', p_current_metrics
+    RETURN update_submission_progress(
+        p_submission_id,
+        v_views,
+        v_likes,
+        v_comments
     );
 END;
 $$;

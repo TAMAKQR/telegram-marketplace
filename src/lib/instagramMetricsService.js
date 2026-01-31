@@ -1,8 +1,24 @@
 // Сервис для получения метрик Instagram постов
 
 export const instagramMetricsService = {
+    async resolveInstagramUserId(accessToken) {
+        try {
+            const pagesResponse = await fetch(
+                `https://graph.facebook.com/v18.0/me/accounts?fields=instagram_business_account{id,username}&access_token=${accessToken}`
+            )
+
+            if (!pagesResponse.ok) return null
+
+            const pagesData = await pagesResponse.json()
+            const pageWithIg = pagesData?.data?.find(p => p?.instagram_business_account?.id)
+            return pageWithIg?.instagram_business_account?.id || null
+        } catch {
+            return null
+        }
+    },
+
     // Получить метрики поста по URL
-    async getPostMetrics(accessToken, postUrl) {
+    async getPostMetrics(accessToken, postUrl, instagramUserId = null) {
         try {
             // Извлекаем shortcode из URL поста
             // Примеры URL:
@@ -16,20 +32,27 @@ export const instagramMetricsService = {
 
             const shortcode = match[2]
 
-            // Получаем ID медиа по shortcode через Instagram Business Account
-            // Для этого нужно сначала получить media из аккаунта
+            // Получаем ID медиа по shortcode.
+            // Для Instagram Graph API правильный путь: /{ig-user-id}/media
+            const resolvedInstagramUserId = instagramUserId || await this.resolveInstagramUserId(accessToken)
+
+            if (!resolvedInstagramUserId) {
+                throw new Error('Не удалось определить instagramUserId (нужен бизнес/creator аккаунт и корректный токен)')
+            }
+
             const mediaResponse = await fetch(
-                `https://graph.facebook.com/v18.0/me/media?fields=id,shortcode,permalink&access_token=${accessToken}`
+                `https://graph.facebook.com/v18.0/${resolvedInstagramUserId}/media?fields=id,shortcode,permalink&limit=100&access_token=${accessToken}`
             )
 
             if (!mediaResponse.ok) {
-                throw new Error('Не удалось получить список постов')
+                const body = await mediaResponse.text().catch(() => '')
+                throw new Error(`Не удалось получить список постов (${mediaResponse.status}): ${body}`)
             }
 
             const mediaData = await mediaResponse.json()
 
             // Находим пост по shortcode
-            const media = mediaData.data?.find(m => m.permalink?.includes(shortcode))
+            const media = mediaData.data?.find(m => m.shortcode === shortcode || m.permalink?.includes(shortcode))
 
             if (!media) {
                 throw new Error('Пост не найден в вашем Instagram аккаунте')
@@ -49,7 +72,7 @@ export const instagramMetricsService = {
         try {
             // Получаем базовую информацию о посте
             const infoResponse = await fetch(
-                `https://graph.facebook.com/v18.0/${mediaId}?fields=id,media_type,media_url,permalink,timestamp,like_count,comments_count&access_token=${accessToken}`
+                `https://graph.facebook.com/v18.0/${mediaId}?fields=id,media_type,media_product_type,media_url,permalink,timestamp,like_count,comments_count&access_token=${accessToken}`
             )
 
             if (!infoResponse.ok) {
@@ -60,17 +83,35 @@ export const instagramMetricsService = {
 
             // Получаем insights (метрики) для поста
             let insights = null
+            let views = 0
+            let reach = 0
 
             try {
                 // Для постов и reels
                 if (info.media_type === 'IMAGE' || info.media_type === 'VIDEO' || info.media_type === 'CAROUSEL_ALBUM') {
-                    const insightsResponse = await fetch(
-                        `https://graph.facebook.com/v18.0/${mediaId}/insights?metric=impressions,reach,engagement,saved,shares&access_token=${accessToken}`
+                    // На разных типах медиа доступен разный набор метрик.
+                    // Сначала пробуем расширенный набор (для Reels/видео), если упадёт — фоллбек на базовый.
+                    let insightsData = null
+
+                    const extendedInsightsResponse = await fetch(
+                        `https://graph.facebook.com/v18.0/${mediaId}/insights?metric=views,reach,engagement,saved,shares&access_token=${accessToken}`
                     )
 
-                    if (insightsResponse.ok) {
-                        const insightsData = await insightsResponse.json()
+                    if (extendedInsightsResponse.ok) {
+                        insightsData = await extendedInsightsResponse.json()
+                    } else {
+                        const fallbackInsightsResponse = await fetch(
+                            `https://graph.facebook.com/v18.0/${mediaId}/insights?metric=reach,engagement,saved,shares&access_token=${accessToken}`
+                        )
+                        if (fallbackInsightsResponse.ok) {
+                            insightsData = await fallbackInsightsResponse.json()
+                        }
+                    }
+
+                    if (insightsData?.data) {
                         insights = this.parseInsights(insightsData.data)
+                        views = insights?.views || 0
+                        reach = insights?.reach || 0
                     }
                 }
 
@@ -94,8 +135,9 @@ export const instagramMetricsService = {
             return {
                 media_id: mediaId,
                 post_type: info.media_type === 'IMAGE' ? 'POST' :
-                    info.media_type === 'VIDEO' ? 'REEL' :
-                        info.media_type === 'STORY' ? 'STORY' : 'POST',
+                    info.media_product_type === 'REELS' ? 'REEL' :
+                        info.media_type === 'VIDEO' ? 'REEL' :
+                            info.media_type === 'STORY' ? 'STORY' : 'POST',
                 permalink: info.permalink,
                 timestamp: info.timestamp,
 
@@ -104,8 +146,8 @@ export const instagramMetricsService = {
                 comments_count: info.comments_count || 0,
 
                 // Метрики из Insights (могут быть недоступны)
-                impressions: insights?.impressions || 0,
-                reach: insights?.reach || 0,
+                views,
+                reach,
                 engagement: insights?.engagement || (info.like_count + info.comments_count),
                 saves_count: insights?.saved || 0,
                 shares_count: insights?.shares || 0,

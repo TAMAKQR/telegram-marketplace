@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import { useUserStore } from '../store/userStore'
 import { useTelegram } from '../hooks/useTelegram'
-import { sendTelegramNotification, formatNewTaskMessage } from '../lib/telegramBot'
+import { sendTelegramNotificationSilent, formatNewTaskMessage } from '../lib/telegramBot'
 import Logo from '../components/Logo'
 
 function CreateTask() {
@@ -30,8 +30,139 @@ function CreateTask() {
         { min: '', max: '', price: '', metric: 'views' }
     ])
 
+    const parseOptionalInt = (value) => {
+        if (value === null || value === undefined) return null
+        const trimmed = String(value).trim()
+        if (trimmed === '') return null
+        const parsed = parseInt(trimmed, 10)
+        return Number.isFinite(parsed) ? parsed : null
+    }
+
+    const parseOptionalNumber = (value) => {
+        if (value === null || value === undefined) return null
+        const trimmed = String(value).trim()
+        if (trimmed === '') return null
+        const parsed = parseFloat(trimmed)
+        return Number.isFinite(parsed) ? parsed : null
+    }
+
+    const metricLabel = (metric) => {
+        switch (metric) {
+            case 'views': return 'Просмотры'
+            case 'likes': return 'Лайки'
+            case 'comments': return 'Комментарии'
+            default: return metric
+        }
+    }
+
+    const normalizePricingTiers = (tiers) => {
+        const normalized = tiers.map((tier) => {
+            const min = parseOptionalInt(tier.min)
+            const max = parseOptionalInt(tier.max)
+            const price = parseOptionalNumber(tier.price)
+            return {
+                metric: tier.metric || 'views',
+                min,
+                max,
+                price,
+            }
+        })
+
+        const errors = Array.from({ length: tiers.length }, () => [])
+
+        // basic per-row validation
+        normalized.forEach((t, idx) => {
+            if (t.min === null) errors[idx].push('Укажите "От" (min)')
+            if (t.min !== null && t.min < 0) errors[idx].push('"От" не может быть отрицательным')
+
+            if (t.max !== null && t.max < 0) errors[idx].push('"До" не может быть отрицательным')
+            if (t.min !== null && t.max !== null && t.max < t.min) errors[idx].push('"До" должно быть ≥ "От"')
+
+            if (t.price === null) errors[idx].push('Укажите цену (можно 0)')
+            if (t.price !== null && t.price < 0) errors[idx].push('Цена не может быть отрицательной')
+        })
+
+        // duplicates of (metric, min)
+        const seen = new Map()
+        normalized.forEach((t, idx) => {
+            if (t.min === null) return
+            const key = `${t.metric}:${t.min}`
+            const list = seen.get(key) || []
+            list.push(idx)
+            seen.set(key, list)
+        })
+        for (const [key, idxs] of seen.entries()) {
+            if (idxs.length <= 1) continue
+            const [metric, min] = key.split(':')
+            idxs.forEach((i) => {
+                errors[i].push(`Дубликат порога: ${metricLabel(metric)} от ${Number(min).toLocaleString()}`)
+            })
+        }
+
+        // soft warning for overlaps when max is used
+        const byMetric = normalized
+            .map((t, idx) => ({ ...t, _idx: idx }))
+            .filter(t => t.min !== null)
+            .reduce((acc, t) => {
+                acc[t.metric] = acc[t.metric] || []
+                acc[t.metric].push(t)
+                return acc
+            }, {})
+
+        Object.keys(byMetric).forEach(metric => {
+            const rows = byMetric[metric]
+                .filter(r => r.max !== null)
+                .sort((a, b) => a.min - b.min)
+
+            for (let i = 1; i < rows.length; i++) {
+                const prev = rows[i - 1]
+                const cur = rows[i]
+                if (prev.max >= cur.min) {
+                    errors[cur._idx].push('Пересечение диапазонов (лесенка всё равно сработает, но лучше разнести)')
+                }
+            }
+        })
+
+        const valid = normalized.filter((t, idx) => {
+            // Keep only rows that user intended to fill: require min + price.
+            // Metric is always present.
+            if (t.min === null && t.price === null && t.max === null) return false
+            return errors[idx].length === 0
+        })
+
+        const hasBlockingErrors = errors.some(e => e.length > 0)
+        return { normalized, errors, valid, hasBlockingErrors }
+    }
+
     const addPricingTier = () => {
         setPricingTiers([...pricingTiers, { min: '', max: '', price: '', metric: 'views' }])
+    }
+
+    const addNextPricingTier = () => {
+        const last = pricingTiers[pricingTiers.length - 1] || { min: '', max: '', price: '', metric: 'views' }
+        const lastMin = parseOptionalInt(last.min)
+        const lastMax = parseOptionalInt(last.max)
+        const nextMin = lastMax !== null ? String(lastMax + 1) : (lastMin !== null ? String(lastMin) : '')
+
+        setPricingTiers([
+            ...pricingTiers,
+            { min: nextMin, max: '', price: '', metric: last.metric || 'views' }
+        ])
+    }
+
+    const sortPricingTiers = () => {
+        const order = { views: 0, likes: 1, comments: 2 }
+        const sorted = [...pricingTiers].sort((a, b) => {
+            const metricDiff = (order[a.metric] ?? 99) - (order[b.metric] ?? 99)
+            if (metricDiff !== 0) return metricDiff
+            const amin = parseOptionalInt(a.min)
+            const bmin = parseOptionalInt(b.min)
+            if (amin === null && bmin === null) return 0
+            if (amin === null) return 1
+            if (bmin === null) return -1
+            return amin - bmin
+        })
+        setPricingTiers(sorted)
     }
 
     const removePricingTier = (index) => {
@@ -71,10 +202,19 @@ function CreateTask() {
             return
         }
 
-        // Если используются pricing tiers - проверяем что хотя бы один заполнен
-        if (formData.usePricingTiers && pricingTiers.filter(tier => tier.min && tier.max && tier.price).length === 0) {
-            showAlert?.('Добавьте хотя бы один ценовой диапазон')
-            return
+        // Если используются pricing tiers - валидируем лесенку
+        if (formData.usePricingTiers) {
+            const { valid, hasBlockingErrors } = normalizePricingTiers(pricingTiers)
+
+            if (valid.length === 0) {
+                showAlert?.('Добавьте хотя бы один корректный порог (min + цена). Поле "До" можно оставить пустым.')
+                return
+            }
+
+            if (hasBlockingErrors) {
+                showAlert?.('Есть ошибки в ценовых диапазонах. Проверьте подсказки под полями.')
+                return
+            }
         }
 
         setLoading(true)
@@ -101,14 +241,13 @@ function CreateTask() {
             // Подготавливаем pricing_tiers если они используются
             let finalPricingTiers = null
             if (formData.usePricingTiers) {
-                finalPricingTiers = pricingTiers
-                    .filter(tier => tier.min && tier.max && tier.price)
-                    .map(tier => ({
-                        min: parseInt(tier.min),
-                        max: parseInt(tier.max),
-                        price: parseFloat(tier.price),
-                        metric: tier.metric
-                    }))
+                const { valid } = normalizePricingTiers(pricingTiers)
+                finalPricingTiers = valid.map(tier => ({
+                    min: tier.min,
+                    max: tier.max, // может быть null (до бесконечности)
+                    price: tier.price,
+                    metric: tier.metric
+                }))
 
                 // Автоматически генерируем target_metrics из МИНИМАЛЬНЫХ значений pricing_tiers
                 // Автоодобрение происходит при достижении минимального порога
@@ -153,7 +292,7 @@ function CreateTask() {
             try {
                 const clientName = `${profile.first_name || ''} ${profile.last_name || ''}`.trim() || 'Заказчик'
                 const message = formatNewTaskMessage(data, clientName)
-                await sendTelegramNotification(message)
+                await sendTelegramNotificationSilent(message)
             } catch (notificationError) {
                 console.error('Ошибка отправки уведомления:', notificationError)
                 // Не показываем ошибку пользователю, задание создалось успешно
@@ -255,88 +394,117 @@ function CreateTask() {
                             <label className="block text-sm font-medium">
                                 Ценовые диапазоны *
                             </label>
-                            <button
-                                type="button"
-                                onClick={addPricingTier}
-                                className="text-tg-button font-medium text-sm"
-                            >
-                                + Добавить
-                            </button>
+                            <div className="flex items-center gap-3">
+                                <button
+                                    type="button"
+                                    onClick={sortPricingTiers}
+                                    className="text-tg-button font-medium text-sm"
+                                >
+                                    ↕ Сортировать
+                                </button>
+                                <button
+                                    type="button"
+                                    onClick={addNextPricingTier}
+                                    className="text-tg-button font-medium text-sm"
+                                >
+                                    + Следующий порог
+                                </button>
+                                <button
+                                    type="button"
+                                    onClick={addPricingTier}
+                                    className="text-tg-button font-medium text-sm"
+                                >
+                                    + Добавить
+                                </button>
+                            </div>
                         </div>
 
                         <div className="text-xs text-tg-hint mb-2">
-                            📊 Пример: 2,000-10,000 просмотров = 2,000 сом
+                            📈 Лесенка: выплата начисляется при достижении "От". Поле "До" можно оставить пустым (∞). Цена может быть 0.
                         </div>
 
                         {pricingTiers.map((tier, index) => (
-                            <div key={index} className="bg-gray-50 dark:bg-gray-800 rounded-xl p-3 space-y-2">
-                                <div className="flex items-center justify-between mb-2">
-                                    <span className="text-sm font-medium">Диапазон {index + 1}</span>
-                                    {pricingTiers.length > 1 && (
-                                        <button
-                                            type="button"
-                                            onClick={() => removePricingTier(index)}
-                                            className="text-red-500 text-sm"
-                                        >
-                                            Удалить
-                                        </button>
-                                    )}
-                                </div>
+                            (() => {
+                                const { errors } = normalizePricingTiers(pricingTiers)
+                                const rowErrors = errors?.[index] || []
+                                return (
+                                    <div key={index} className="bg-gray-50 dark:bg-gray-800 rounded-xl p-3 space-y-2">
+                                        <div className="flex items-center justify-between mb-2">
+                                            <span className="text-sm font-medium">Диапазон {index + 1}</span>
+                                            {pricingTiers.length > 1 && (
+                                                <button
+                                                    type="button"
+                                                    onClick={() => removePricingTier(index)}
+                                                    className="text-red-500 text-sm"
+                                                >
+                                                    Удалить
+                                                </button>
+                                            )}
+                                        </div>
 
-                                <div className="grid grid-cols-2 gap-2">
-                                    <div>
-                                        <label className="block text-xs text-tg-hint mb-1">От</label>
-                                        <input
-                                            type="number"
-                                            value={tier.min}
-                                            onChange={(e) => updatePricingTier(index, 'min', e.target.value)}
-                                            placeholder="2000"
-                                            min="0"
-                                            className="w-full px-3 py-2 rounded-lg bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 text-sm"
-                                            required={formData.usePricingTiers}
-                                        />
+                                        <div className="grid grid-cols-2 gap-2">
+                                            <div>
+                                                <label className="block text-xs text-tg-hint mb-1">От</label>
+                                                <input
+                                                    type="number"
+                                                    value={tier.min}
+                                                    onChange={(e) => updatePricingTier(index, 'min', e.target.value)}
+                                                    placeholder="2000"
+                                                    min="0"
+                                                    className="w-full px-3 py-2 rounded-lg bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 text-sm"
+                                                    required={formData.usePricingTiers}
+                                                />
+                                            </div>
+                                            <div>
+                                                <label className="block text-xs text-tg-hint mb-1">До</label>
+                                                <input
+                                                    type="number"
+                                                    value={tier.max}
+                                                    onChange={(e) => updatePricingTier(index, 'max', e.target.value)}
+                                                    placeholder="∞ (необязательно)"
+                                                    min="0"
+                                                    className="w-full px-3 py-2 rounded-lg bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 text-sm"
+                                                />
+                                            </div>
+                                        </div>
+
+                                        <div>
+                                            <label className="block text-xs text-tg-hint mb-1">Цена (сом)</label>
+                                            <input
+                                                type="number"
+                                                value={tier.price}
+                                                onChange={(e) => updatePricingTier(index, 'price', e.target.value)}
+                                                placeholder="2000"
+                                                min="0"
+                                                step="100"
+                                                className="w-full px-3 py-2 rounded-lg bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 text-sm"
+                                                required={formData.usePricingTiers}
+                                            />
+                                        </div>
+
+                                        <div>
+                                            <label className="block text-xs text-tg-hint mb-1">Метрика</label>
+                                            <select
+                                                value={tier.metric}
+                                                onChange={(e) => updatePricingTier(index, 'metric', e.target.value)}
+                                                className="w-full px-3 py-2 rounded-lg bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 text-sm"
+                                            >
+                                                <option value="views">👁️ Просмотры</option>
+                                                <option value="likes">❤️ Лайки</option>
+                                                <option value="comments">💬 Комментарии</option>
+                                            </select>
+                                        </div>
+
+                                        {rowErrors.length > 0 && (
+                                            <div className="text-xs text-red-600 dark:text-red-400 space-y-1">
+                                                {rowErrors.map((msg, i) => (
+                                                    <div key={i}>• {msg}</div>
+                                                ))}
+                                            </div>
+                                        )}
                                     </div>
-                                    <div>
-                                        <label className="block text-xs text-tg-hint mb-1">До</label>
-                                        <input
-                                            type="number"
-                                            value={tier.max}
-                                            onChange={(e) => updatePricingTier(index, 'max', e.target.value)}
-                                            placeholder="10000"
-                                            min="0"
-                                            className="w-full px-3 py-2 rounded-lg bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 text-sm"
-                                            required={formData.usePricingTiers}
-                                        />
-                                    </div>
-                                </div>
-
-                                <div>
-                                    <label className="block text-xs text-tg-hint mb-1">Цена (сом)</label>
-                                    <input
-                                        type="number"
-                                        value={tier.price}
-                                        onChange={(e) => updatePricingTier(index, 'price', e.target.value)}
-                                        placeholder="2000"
-                                        min="0"
-                                        step="100"
-                                        className="w-full px-3 py-2 rounded-lg bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 text-sm"
-                                        required={formData.usePricingTiers}
-                                    />
-                                </div>
-
-                                <div>
-                                    <label className="block text-xs text-tg-hint mb-1">Метрика</label>
-                                    <select
-                                        value={tier.metric}
-                                        onChange={(e) => updatePricingTier(index, 'metric', e.target.value)}
-                                        className="w-full px-3 py-2 rounded-lg bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 text-sm"
-                                    >
-                                        <option value="views">👁️ Просмотры</option>
-                                        <option value="likes">❤️ Лайки</option>
-                                        <option value="comments">💬 Комментарии</option>
-                                    </select>
-                                </div>
-                            </div>
+                                )
+                            })()
                         ))}
                     </div>
                 )}

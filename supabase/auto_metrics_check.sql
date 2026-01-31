@@ -5,12 +5,86 @@
 -- ШАГ 1: Включаем необходимые расширения
 -- ============================================
 
+-- ============================================
+-- ШАГ 0: Hotfix для схемы (локальная среда)
+-- ============================================
+
+ALTER TABLE task_submissions
+ADD COLUMN IF NOT EXISTS instagram_media_id TEXT;
+
+ALTER TABLE task_submissions
+ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ DEFAULT NOW();
+
+ALTER TABLE task_submissions
+ADD COLUMN IF NOT EXISTS completed_at TIMESTAMPTZ;
+
 CREATE EXTENSION IF NOT EXISTS pg_cron;
 CREATE EXTENSION IF NOT EXISTS http;
 
 -- ============================================
 -- ШАГ 2: Функция для получения метрик из Instagram
 -- ============================================
+
+DO $do$
+BEGIN
+    PERFORM 'public.resolve_instagram_media_id_from_shortcode(text,text,text)'::regprocedure;
+EXCEPTION WHEN undefined_function THEN
+    EXECUTE $create$
+        CREATE FUNCTION resolve_instagram_media_id_from_shortcode(
+            p_access_token TEXT,
+            p_instagram_user_id TEXT,
+            p_shortcode TEXT
+        )
+        RETURNS TEXT
+        LANGUAGE plpgsql
+        SECURITY DEFINER
+        AS $fn$
+        DECLARE
+            v_response http_response;
+            v_json JSONB;
+            v_item JSONB;
+            v_media_id TEXT;
+        BEGIN
+            IF p_access_token IS NULL OR p_instagram_user_id IS NULL OR p_shortcode IS NULL THEN
+                RETURN NULL;
+            END IF;
+
+            SELECT * INTO v_response
+            FROM http((
+                'GET',
+                'https://graph.facebook.com/v18.0/' || p_instagram_user_id || '/media?fields=id,shortcode,permalink&limit=100&access_token=' || p_access_token,
+                NULL,
+                'application/json',
+                NULL
+            )::http_request);
+
+            IF v_response.status <> 200 THEN
+                RAISE WARNING 'Instagram media list API error: % - %', v_response.status, v_response.content;
+                RETURN NULL;
+            END IF;
+
+            v_json := v_response.content::jsonb;
+
+            FOR v_item IN
+                SELECT * FROM jsonb_array_elements(COALESCE(v_json->'data', '[]'::jsonb))
+            LOOP
+                IF v_item->>'shortcode' = p_shortcode THEN
+                    v_media_id := v_item->>'id';
+                    EXIT;
+                END IF;
+
+                IF v_media_id IS NULL AND (v_item->>'permalink') ILIKE ('%' || p_shortcode || '%') THEN
+                    v_media_id := v_item->>'id';
+                    EXIT;
+                END IF;
+            END LOOP;
+
+            RETURN v_media_id;
+        END;
+        $fn$;
+    $create$;
+END;
+$do$;
 
 CREATE OR REPLACE FUNCTION fetch_instagram_post_metrics(
     p_access_token TEXT,
@@ -22,15 +96,19 @@ SECURITY DEFINER
 AS $$
 DECLARE
     v_response http_response;
+    v_insights_response http_response;
     v_result JSONB;
+    v_insights JSONB;
+    v_metric JSONB;
+    v_views INTEGER;
+    v_reach INTEGER;
 BEGIN
-    -- Вызываем Instagram Graph API для получения метрик поста и владельца
-    -- Получаем username владельца для проверки подлинности
-    
+    -- Используем Instagram Graph API (graph.facebook.com) по media_id.
+    -- NB: shortcode из URL НЕ является media_id.
     SELECT * INTO v_response
     FROM http((
         'GET',
-        'https://graph.instagram.com/' || p_post_id || '?fields=like_count,comments_count,media_product_type,username,timestamp&access_token=' || p_access_token,
+        'https://graph.facebook.com/v18.0/' || p_post_id || '?fields=like_count,comments_count,media_product_type,owner{username},timestamp&access_token=' || p_access_token,
         NULL,
         'application/json',
         NULL
@@ -38,6 +116,40 @@ BEGIN
     
     IF v_response.status = 200 THEN
         v_result := v_response.content::jsonb;
+
+        -- Пытаемся получить "views" через insights.
+        -- NB: plays / impressions / video_views деприкейтнуты и/или могут возвращать ошибку для REELS.
+        -- Актуальная метрика для FEED/STORY/REELS: views.
+        SELECT * INTO v_insights_response
+        FROM http((
+            'GET',
+            'https://graph.facebook.com/v18.0/' || p_post_id || '/insights?metric=views,reach&access_token=' || p_access_token,
+            NULL,
+            'application/json',
+            NULL
+        )::http_request);
+
+        IF v_insights_response.status = 200 THEN
+            v_insights := v_insights_response.content::jsonb;
+
+            v_views := NULL;
+            v_reach := NULL;
+            FOR v_metric IN
+                SELECT * FROM jsonb_array_elements(COALESCE(v_insights->'data', '[]'::jsonb))
+            LOOP
+                IF v_metric->>'name' = 'views' THEN
+                    v_views := (v_metric->'values'->0->>'value')::INTEGER;
+                ELSIF v_metric->>'name' = 'reach' THEN
+                    v_reach := (v_metric->'values'->0->>'value')::INTEGER;
+                END IF;
+            END LOOP;
+
+            v_result := jsonb_set(v_result, '{views}', to_jsonb(COALESCE(v_views, 0)), TRUE);
+            v_result := jsonb_set(v_result, '{reach}', to_jsonb(COALESCE(v_reach, 0)), TRUE);
+        ELSE
+            RAISE WARNING 'Instagram insights API error: % - %', v_insights_response.status, v_insights_response.content;
+        END IF;
+
         RETURN v_result;
     ELSE
         RAISE WARNING 'Instagram API error: % - %', v_response.status, v_response.content;
@@ -90,12 +202,33 @@ BEGIN
         BEGIN
             RAISE NOTICE 'Processing submission: %', v_submission.id;
             
-            -- Извлекаем Instagram post ID из URL
-            -- Формат: https://www.instagram.com/p/POST_ID/ или https://instagram.com/reel/POST_ID/
-            v_instagram_id := regexp_replace(v_submission.post_url, '^https?://(?:www\.)?instagram\.com/(?:p|reel)/([^/]+).*$', '\1');
-            
-            IF v_instagram_id IS NULL OR v_instagram_id = v_submission.post_url THEN
-                RAISE WARNING 'Cannot extract Instagram post ID from URL: %', v_submission.post_url;
+            -- ВАЖНО: shortcode из URL не равен media_id для Graph API.
+            -- Основной путь: используем сохраненный instagram_media_id.
+            v_instagram_id := v_submission.instagram_media_id;
+
+            -- Фоллбек для старых записей: пробуем получить media_id по shortcode из URL.
+            IF v_instagram_id IS NULL OR length(v_instagram_id) = 0 THEN
+                DECLARE v_shortcode TEXT;
+                BEGIN
+                    v_shortcode := regexp_replace(v_submission.post_url, '^https?://(?:www\.)?instagram\.com/(?:p|reel)/([^/]+).*$','\1');
+                    IF v_shortcode IS NOT NULL AND v_shortcode <> v_submission.post_url THEN
+                        v_instagram_id := resolve_instagram_media_id_from_shortcode(
+                            v_submission.instagram_access_token,
+                            v_submission.instagram_user_id,
+                            v_shortcode
+                        );
+
+                        IF v_instagram_id IS NOT NULL THEN
+                            UPDATE task_submissions
+                            SET instagram_media_id = v_instagram_id
+                            WHERE id = v_submission.id;
+                        END IF;
+                    END IF;
+                END;
+            END IF;
+
+            IF v_instagram_id IS NULL OR length(v_instagram_id) = 0 THEN
+                RAISE WARNING 'No instagram_media_id for submission %, cannot fetch metrics (post_url=%)', v_submission.id, v_submission.post_url;
                 CONTINUE;
             END IF;
             
@@ -109,11 +242,11 @@ BEGIN
             
             IF v_current_metrics IS NOT NULL THEN
                 -- ПРОВЕРКА БЕЗОПАСНОСТИ: Проверяем что пост принадлежит инфлюенсеру
-                IF v_current_metrics->>'username' IS NOT NULL THEN
-                    IF LOWER(v_current_metrics->>'username') != LOWER(v_submission.instagram_username) THEN
+                IF (v_current_metrics->'owner'->>'username') IS NOT NULL THEN
+                    IF LOWER(v_current_metrics->'owner'->>'username') != LOWER(v_submission.instagram_username) THEN
                         RAISE WARNING 'Post ownership mismatch for submission %: post owner=%, expected=%. Marking as fraud.', 
                             v_submission.id, 
-                            v_current_metrics->>'username', 
+                            v_current_metrics->'owner'->>'username', 
                             v_submission.instagram_username;
                         
                         -- Помечаем как мошенничество
@@ -131,7 +264,7 @@ BEGIN
                 -- Извлекаем ТЕКУЩИЕ значения
                 v_current_likes := COALESCE((v_current_metrics->>'like_count')::INTEGER, 0);
                 v_current_comments := COALESCE((v_current_metrics->>'comments_count')::INTEGER, 0);
-                v_current_views := 0; -- Instagram API не предоставляет views для постов напрямую
+                v_current_views := COALESCE((v_current_metrics->>'views')::INTEGER, 0);
                 
                 -- Получаем НАЧАЛЬНЫЕ метрики (записанные при отправке публикации)
                 v_initial_metrics := v_submission.initial_metrics;
@@ -209,11 +342,38 @@ COMMENT ON FUNCTION auto_check_submissions_metrics IS 'Автоматическ�
 -- Если задание уже существует, сначала удалите его:
 -- SELECT cron.unschedule('check-submissions-metrics');
 
-SELECT cron.schedule(
-    'check-submissions-metrics',  -- имя задания
-    '0 * * * *',                   -- каждый час в 0 минут
-    $$ SELECT auto_check_submissions_metrics(); $$
-);
+DO $$
+DECLARE
+    v_job_id BIGINT;
+BEGIN
+    -- pg_cron может быть недоступен в некоторых проектах/окружениях.
+    IF EXISTS (
+        SELECT 1
+        FROM pg_proc p
+        JOIN pg_namespace n ON n.oid = p.pronamespace
+        WHERE n.nspname = 'cron' AND p.proname = 'schedule'
+    ) THEN
+        BEGIN
+            PERFORM cron.unschedule('check-submissions-metrics');
+        EXCEPTION WHEN OTHERS THEN
+            -- ignore if it doesn't exist or can't be unscheduled
+        END;
+
+        BEGIN
+            v_job_id := cron.schedule(
+                'check-submissions-metrics',  -- имя задания
+                '0 * * * *',                   -- каждый час в 0 минут
+                $cron$SELECT auto_check_submissions_metrics();$cron$
+            );
+            RAISE NOTICE 'Scheduled pg_cron job check-submissions-metrics (job_id=%)', v_job_id;
+        EXCEPTION WHEN OTHERS THEN
+            RAISE WARNING 'Could not schedule pg_cron job check-submissions-metrics: %', SQLERRM;
+        END;
+    ELSE
+        RAISE NOTICE 'pg_cron is not available (cron.schedule missing); skipping schedule setup.';
+    END IF;
+END;
+$$;
 
 -- Проверить все запланированные задания:
 -- SELECT * FROM cron.job;
