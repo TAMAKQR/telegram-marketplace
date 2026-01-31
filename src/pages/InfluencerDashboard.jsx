@@ -15,7 +15,7 @@ function InfluencerDashboard() {
     const [myApplications, setMyApplications] = useState([])
     const [inProgressTasks, setInProgressTasks] = useState([])
     const [revisionTasks, setRevisionTasks] = useState([])
-    const [completedTasks, setCompletedTasks] = useState([])
+    const [completedTasks, setCompletedTasks] = useState([]) // completed submissions with joined task
     const [loading, setLoading] = useState(true)
     const [activeTab, setActiveTab] = useState('available') // available, my_applications, in_progress, revision, completed, admin
     const [influencerProfile, setInfluencerProfile] = useState(null)
@@ -148,16 +148,17 @@ function InfluencerDashboard() {
 
     const loadCompletedTasks = async () => {
         try {
+            // История для инфлюенсера должна строиться по факту завершенного сабмишена,
+            // иначе задание может висеть in_progress до дедлайна/не обновить status в tasks.
             const { data, error } = await supabase
-                .from('tasks')
+                .from('task_submissions')
                 .select(`
           *,
-          users!tasks_client_id_fkey(first_name, last_name),
-          task_submissions!inner(*)
+          tasks(*, users!tasks_client_id_fkey(first_name, last_name))
         `)
+                .eq('influencer_id', profile.id)
                 .eq('status', 'completed')
-                .eq('accepted_influencer_id', profile.id)
-                .order('updated_at', { ascending: false })
+                .order('completed_at', { ascending: false })
 
             if (error) throw error
             setCompletedTasks(data || [])
@@ -253,7 +254,7 @@ function InfluencerDashboard() {
         return myApplications.some(app => app.task_id === taskId) ||
             inProgressTasks.some(task => task.id === taskId) ||
             revisionTasks.some(sub => sub.task_id === taskId) ||
-            completedTasks.some(task => task.id === taskId)
+            completedTasks.some(sub => sub.task_id === taskId)
     }
 
     const getStatusBadge = (status) => {
@@ -560,27 +561,27 @@ function InfluencerDashboard() {
                             <p className="text-tg-hint">Нет завершенных заданий</p>
                         </div>
                     ) : (
-                        completedTasks.map(task => (
+                        completedTasks.map(submission => (
                             <div
-                                key={task.id}
-                                onClick={() => navigate(`/influencer/task/${task.id}`)}
+                                key={submission.id}
+                                onClick={() => navigate(`/influencer/task/${submission.task_id}`)}
                                 className="bg-white dark:bg-gray-800 rounded-xl p-4 shadow-md hover:shadow-lg transition-shadow cursor-pointer border-l-4 border-green-500"
                             >
                                 <div className="flex justify-between items-start mb-2">
-                                    <h3 className="font-semibold text-lg flex-1">{task.title}</h3>
+                                    <h3 className="font-semibold text-lg flex-1">{submission.tasks?.title}</h3>
                                     <span className="text-xs bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200 px-2 py-1 rounded-full">
                                         ✅ Завершено
                                     </span>
                                 </div>
                                 <p className="text-tg-hint text-sm mb-3 line-clamp-2">
-                                    {task.description}
+                                    {submission.tasks?.description}
                                 </p>
                                 <div className="flex justify-between items-center">
                                     <span className="font-semibold text-green-600 dark:text-green-400 text-lg">
-                                        +{formatTaskBudget(task, { prefix: '' })}
+                                        +{Number(submission.determined_price || 0).toLocaleString()} сом
                                     </span>
                                     <span className="text-xs text-tg-hint">
-                                        {new Date(task.updated_at).toLocaleDateString('ru')}
+                                        {new Date(submission.completed_at || submission.updated_at || submission.created_at).toLocaleDateString('ru')}
                                     </span>
                                 </div>
                             </div>

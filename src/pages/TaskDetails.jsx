@@ -33,6 +33,19 @@ function TaskDetails() {
     const [loadingPosts, setLoadingPosts] = useState(false)
     const [selectedPost, setSelectedPost] = useState(null)
 
+    const safeJsonArray = (value) => {
+        if (Array.isArray(value)) return value
+        if (typeof value === 'string') {
+            try {
+                const parsed = JSON.parse(value)
+                return Array.isArray(parsed) ? parsed : []
+            } catch {
+                return []
+            }
+        }
+        return []
+    }
+
     useEffect(() => {
         if (taskId) {
             loadTaskDetails()
@@ -674,6 +687,73 @@ function TaskDetails() {
                             </p>
                         </div>
                     )}
+
+                    {(task.target_metrics || (Array.isArray(task.pricing_tiers) && task.pricing_tiers.length > 0) || task.metric_deadline_days || task.work_deadline || task.max_influencers) && (
+                        <div className="border-t pt-4 mt-4">
+                            <h3 className="font-semibold mb-2">🎯 Настройки метрик и оплаты</h3>
+
+                            {task.target_metrics && (
+                                <div className="space-y-1 text-sm text-tg-hint">
+                                    {task.target_metrics.views ? (
+                                        <div className="flex justify-between gap-3">
+                                            <span>👁 Просмотры</span>
+                                            <span className="font-medium">{task.target_metrics.views.toLocaleString()}</span>
+                                        </div>
+                                    ) : null}
+                                    {task.target_metrics.likes ? (
+                                        <div className="flex justify-between gap-3">
+                                            <span>❤️ Лайки</span>
+                                            <span className="font-medium">{task.target_metrics.likes.toLocaleString()}</span>
+                                        </div>
+                                    ) : null}
+                                    {task.target_metrics.comments ? (
+                                        <div className="flex justify-between gap-3">
+                                            <span>💬 Комментарии</span>
+                                            <span className="font-medium">{task.target_metrics.comments.toLocaleString()}</span>
+                                        </div>
+                                    ) : null}
+                                </div>
+                            )}
+
+                            {task.metric_deadline_days ? (
+                                <p className="text-sm text-tg-hint mt-2">⏱ Отслеживание метрик: {task.metric_deadline_days} дн.</p>
+                            ) : null}
+
+                            {task.work_deadline ? (
+                                <p className="text-sm text-tg-hint mt-1">🧾 Дедлайн выполнения: {new Date(task.work_deadline).toLocaleDateString('ru')}</p>
+                            ) : null}
+
+                            {task.max_influencers ? (
+                                <p className="text-sm text-tg-hint mt-1">👥 Лимит исполнителей: {task.max_influencers}</p>
+                            ) : null}
+
+                            {Array.isArray(task.pricing_tiers) && task.pricing_tiers.length > 0 && (
+                                <div className="mt-3">
+                                    <div className="text-sm text-tg-hint mb-2">📈 Лесенка (абсолютная цена за достигнутый порог)</div>
+                                    <div className="space-y-2">
+                                        {safeJsonArray(task.pricing_tiers)
+                                            .filter(t => t && typeof t === 'object')
+                                            .slice()
+                                            .sort((a, b) => {
+                                                const ma = String(a.metric || '')
+                                                const mb = String(b.metric || '')
+                                                if (ma !== mb) return ma.localeCompare(mb)
+                                                return (Number(a.min) || 0) - (Number(b.min) || 0)
+                                            })
+                                            .map((tier, idx) => (
+                                                <div key={`${tier.metric || 'metric'}-${tier.min ?? idx}`} className="flex justify-between gap-3 text-sm">
+                                                    <span className="text-tg-hint">
+                                                        {tier.metric === 'views' ? '👁 Просмотры' : tier.metric === 'likes' ? '❤️ Лайки' : tier.metric === 'comments' ? '💬 Комменты' : tier.metric}
+                                                        : ≥ {(Number(tier.min) || 0).toLocaleString()}
+                                                    </span>
+                                                    <span className="font-medium">{(Number(tier.price) || 0).toLocaleString()} сом</span>
+                                                </div>
+                                            ))}
+                                    </div>
+                                </div>
+                            )}
+                        </div>
+                    )}
                 </div>
 
                 {/* For Influencers */}
@@ -981,6 +1061,25 @@ function TaskDetails() {
                                                     )}
                                                 </div>
 
+                                                {(sub.determined_price !== undefined && sub.determined_price !== null) && (
+                                                    <div className="mt-3 pt-3 border-t">
+                                                        <div className="flex justify-between text-sm">
+                                                            <span className="text-tg-hint">💸 Начислено</span>
+                                                            <span className="font-semibold">{Number(sub.determined_price || 0).toLocaleString()} сом</span>
+                                                        </div>
+                                                        {safeJsonArray(sub.paid_tiers).length > 0 && (
+                                                            <div className="text-xs text-tg-hint mt-1">
+                                                                Оплачено порогов (лесенка): {safeJsonArray(sub.paid_tiers).length}
+                                                            </div>
+                                                        )}
+                                                        {sub.metric_deadline && (
+                                                            <div className="text-xs text-tg-hint mt-1">
+                                                                Отслеживание до: {new Date(sub.metric_deadline).toLocaleDateString('ru-RU')}
+                                                            </div>
+                                                        )}
+                                                    </div>
+                                                )}
+
                                                 <p className="text-xs text-tg-hint mt-3">
                                                     📈 Считается прирост с момента отправки публикации. Обновление каждый час.
                                                 </p>
@@ -1006,18 +1105,28 @@ function TaskDetails() {
                                                         <span className={`text-xs px-2 py-1 rounded-full ${sub.status === 'approved' ? 'bg-green-100 text-green-800' :
                                                             sub.status === 'revision_requested' ? 'bg-orange-100 text-orange-800' :
                                                                 sub.status === 'in_progress' ? 'bg-blue-100 text-blue-800' :
-                                                                    'bg-gray-100 text-gray-800'
+                                                                    sub.status === 'completed' ? 'bg-emerald-100 text-emerald-800' :
+                                                                        sub.status === 'rejected' ? 'bg-red-100 text-red-800' :
+                                                                            'bg-gray-100 text-gray-800'
                                                             }`}>
                                                             {sub.status === 'approved' ? '✅ Одобрено' :
                                                                 sub.status === 'revision_requested' ? '🔄 На доработке' :
                                                                     sub.status === 'in_progress' ? '📊 Отслеживается' :
-                                                                        '⏳ На проверке'}
+                                                                        sub.status === 'completed' ? '🏁 Завершено' :
+                                                                            sub.status === 'rejected' ? '❌ Отклонено' :
+                                                                                '⏳ На проверке'}
                                                         </span>
                                                     </div>
                                                     <a href={sub.post_url} target="_blank" rel="noopener noreferrer"
                                                         className="text-sm text-tg-link">
                                                         Ссылка на пост →
                                                     </a>
+
+                                                    {(sub.determined_price !== undefined && sub.determined_price !== null) && Number(sub.determined_price || 0) > 0 && (
+                                                        <div className="text-xs text-tg-hint mt-1">
+                                                            💸 Начислено: {Number(sub.determined_price || 0).toLocaleString()} сом
+                                                        </div>
+                                                    )}
                                                 </div>
                                             ))}
                                     </div>
@@ -1122,6 +1231,25 @@ function TaskDetails() {
                                                                     style={{ width: `${Math.min(((sub.current_metrics?.comments || 0) / task.target_metrics.comments) * 100, 100)}%` }}
                                                                 />
                                                             </div>
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            )}
+
+                                            {(sub.determined_price !== undefined && sub.determined_price !== null) && (
+                                                <div className="mt-3 pt-3 border-t">
+                                                    <div className="flex justify-between text-sm">
+                                                        <span className="text-tg-hint">💸 Начислено</span>
+                                                        <span className="font-semibold">{Number(sub.determined_price || 0).toLocaleString()} сом</span>
+                                                    </div>
+                                                    {safeJsonArray(sub.paid_tiers).length > 0 && (
+                                                        <div className="text-xs text-tg-hint mt-1">
+                                                            Оплачено порогов (лесенка): {safeJsonArray(sub.paid_tiers).length}
+                                                        </div>
+                                                    )}
+                                                    {sub.metric_deadline && (
+                                                        <div className="text-xs text-tg-hint mt-1">
+                                                            Отслеживание до: {new Date(sub.metric_deadline).toLocaleDateString('ru-RU')}
                                                         </div>
                                                     )}
                                                 </div>
