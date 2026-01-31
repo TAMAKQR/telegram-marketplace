@@ -15,6 +15,12 @@ async function hmacSha256(key: ArrayBuffer, data: string): Promise<ArrayBuffer> 
     return await crypto.subtle.sign('HMAC', cryptoKey, enc.encode(data))
 }
 
+async function hmacSha256RawKey(key: string, data: string): Promise<ArrayBuffer> {
+    const enc = new TextEncoder()
+    const cryptoKey = await crypto.subtle.importKey('raw', enc.encode(key), { name: 'HMAC', hash: 'SHA-256' }, false, ['sign'])
+    return await crypto.subtle.sign('HMAC', cryptoKey, enc.encode(data))
+}
+
 export async function verifyTelegramInitData(
     initData: string,
     botToken: string,
@@ -46,13 +52,24 @@ export async function verifyTelegramInitData(
     pairs.sort((a, b) => a.localeCompare(b))
     const dataCheckString = pairs.join('\n')
 
-    // secret_key = sha256(bot_token)
-    const secretKey = await sha256(botToken)
-    const signature = await hmacSha256(secretKey, dataCheckString)
-    const expectedHash = toHex(signature)
+    // Telegram WebApp validation (current):
+    // secret_key = HMAC_SHA256("WebAppData", bot_token)
+    // hash = HMAC_SHA256(secret_key, data_check_string)
+    // Some older implementations used secret_key = SHA256(bot_token).
+    const hashNormalized = hash.toLowerCase()
 
-    if (expectedHash !== hash) {
-        return { ok: false, reason: 'hash_mismatch' }
+    const secretKeyWebApp = await hmacSha256RawKey(botToken, 'WebAppData')
+    const signatureWebApp = await hmacSha256(secretKeyWebApp, dataCheckString)
+    const expectedHashWebApp = toHex(signatureWebApp).toLowerCase()
+
+    if (expectedHashWebApp !== hashNormalized) {
+        // Backward-compat fallback
+        const secretKeyLegacy = await sha256(botToken)
+        const signatureLegacy = await hmacSha256(secretKeyLegacy, dataCheckString)
+        const expectedHashLegacy = toHex(signatureLegacy).toLowerCase()
+        if (expectedHashLegacy !== hashNormalized) {
+            return { ok: false, reason: 'hash_mismatch' }
+        }
     }
 
     const userRaw = params.get('user')
