@@ -3,21 +3,36 @@ import ReactDOM from 'react-dom/client'
 import App from './App.jsx'
 import './index.css'
 
+const PRELOADER_MIN_MS = 650
+const PRELOADER_MAX_MS = 12000
+const preloaderStartedAt = Date.now()
+
+function hideAppPreloader() {
+    const preloader = document.getElementById('app-preloader')
+    if (!preloader) return
+
+    const elapsed = Date.now() - preloaderStartedAt
+    const remaining = Math.max(PRELOADER_MIN_MS - elapsed, 0)
+
+    window.setTimeout(() => {
+        preloader.classList.add('fade-out')
+        window.setTimeout(() => preloader.remove(), 260)
+    }, remaining)
+}
+
+// Expose for the app to call when it's actually ready
+window.__hideAppPreloader = hideAppPreloader
+
 ReactDOM.createRoot(document.getElementById('root')).render(
     <React.StrictMode>
         <App />
     </React.StrictMode>,
 )
 
-// Hide the HTML preloader as soon as React is mounted
-const preloader = document.getElementById('app-preloader')
-if (preloader) {
-    // Allow one paint so the UI doesn't flash
-    requestAnimationFrame(() => {
-        preloader.classList.add('fade-out')
-        window.setTimeout(() => preloader.remove(), 260)
-    })
-}
+// Safety: never keep preloader forever
+window.setTimeout(() => {
+    hideAppPreloader()
+}, PRELOADER_MAX_MS)
 
 // Telegram WebApp: signal readiness (optional but recommended)
 try {

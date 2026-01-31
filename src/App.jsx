@@ -38,6 +38,29 @@ function AppShell() {
 
     const [bootstrapping, setBootstrapping] = useState(false)
 
+    // Hide the HTML preloader when the app is actually usable
+    useEffect(() => {
+        const hide = window.__hideAppPreloader
+        if (typeof hide !== 'function') return
+
+        // Public pages (OAuth callbacks, legal pages) should render immediately
+        if (isPublicPage) {
+            hide()
+            return
+        }
+
+        // If opened outside Telegram, reveal the "Open via Telegram" message
+        if (!user) {
+            hide()
+            return
+        }
+
+        // In Telegram: wait until we finished loading user profile/type
+        if (!bootstrapping) {
+            hide()
+        }
+    }, [isPublicPage, user, bootstrapping])
+
     // Debug: показываем что происходит
     console.log('App render:', { user, userType, build, telegram: window.Telegram?.WebApp })
     console.log('Path check:', { currentPath, isPublicPage, publicPaths })
