@@ -7,15 +7,24 @@ const PRELOADER_MIN_MS = 650
 const PRELOADER_MAX_MS = 12000
 const preloaderStartedAt = Date.now()
 
+function showAppRoot() {
+    const root = document.getElementById('root')
+    if (root) root.style.visibility = 'visible'
+}
+
 function hideAppPreloader() {
     const preloader = document.getElementById('app-preloader')
-    if (!preloader) return
+    if (!preloader) {
+        showAppRoot()
+        return
+    }
 
     const elapsed = Date.now() - preloaderStartedAt
     const remaining = Math.max(PRELOADER_MIN_MS - elapsed, 0)
 
     window.setTimeout(() => {
         preloader.classList.add('fade-out')
+        showAppRoot()
         window.setTimeout(() => preloader.remove(), 260)
     }, remaining)
 }

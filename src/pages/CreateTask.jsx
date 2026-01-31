@@ -292,7 +292,12 @@ function CreateTask() {
             try {
                 const clientName = `${profile.first_name || ''} ${profile.last_name || ''}`.trim() || 'Заказчик'
                 const message = formatNewTaskMessage(data, clientName)
-                await sendTelegramNotificationSilent(message)
+                const notifyResult = await sendTelegramNotificationSilent(message)
+                if (!notifyResult) {
+                    console.warn(
+                        'Telegram notification was not sent. Check Supabase Edge Function secrets: TELEGRAM_BOT_TOKEN, TELEGRAM_GROUP_CHAT_ID; and that the action is performed inside Telegram WebApp (initData header).',
+                    )
+                }
             } catch (notificationError) {
                 console.error('Ошибка отправки уведомления:', notificationError)
                 // Не показываем ошибку пользователю, задание создалось успешно

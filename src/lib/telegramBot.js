@@ -27,6 +27,13 @@ const sendTelegramNotificationWithOptions = async (message, options = {}) => {
     return null
   }
 
+  // Telegram API returns { ok: false, description, ... } on errors.
+  if (data && data.ok === false) {
+    const log = silent ? console.debug : console.warn
+    log('telegram-notify telegram API error:', data)
+    return null
+  }
+
   return data
 }
 
