@@ -46,6 +46,16 @@ function TaskDetails() {
         return []
     }
 
+    const bestEffortSnapshotInstagramStats = async () => {
+        if (!profile?.id) return
+
+        try {
+            await supabase.rpc('refresh_instagram_stats_for_user', { p_user_id: profile.id })
+        } catch (e) {
+            console.warn('Could not snapshot instagram stats on apply:', e)
+        }
+    }
+
     useEffect(() => {
         if (taskId) {
             loadTaskDetails()
@@ -127,7 +137,16 @@ function TaskDetails() {
           users:influencer_id(
             first_name,
             last_name,
-            influencer_profiles(*)
+                        influencer_profiles(
+                            id,
+                            user_id,
+                            instagram_username,
+                            instagram_url,
+                            followers_count,
+                            engagement_rate,
+                            instagram_connected,
+                            last_stats_update
+                        )
           )
         `)
                 .eq('task_id', taskId)
@@ -216,7 +235,16 @@ function TaskDetails() {
                         first_name,
                         last_name,
                         telegram_id,
-                        influencer_profiles(*)
+                        influencer_profiles(
+                            id,
+                            user_id,
+                            instagram_username,
+                            instagram_url,
+                            followers_count,
+                            engagement_rate,
+                            instagram_connected,
+                            last_stats_update
+                        )
                     )
                 `)
                 .eq('task_id', taskId)
@@ -428,6 +456,9 @@ function TaskDetails() {
                 ])
 
             if (error) throw error
+
+            // Best-effort: refresh cached IG stats so client sees them immediately
+            await bestEffortSnapshotInstagramStats()
 
             showAlert?.('Отклик отправлен!')
             setShowApplyForm(false)
@@ -694,21 +725,24 @@ function TaskDetails() {
 
                             {task.target_metrics && (
                                 <div className="space-y-1 text-sm text-tg-hint">
+                                    <div className="text-xs text-tg-hint">
+                                        Метрики считаются как <span className="font-medium">прирост после публикации</span>
+                                    </div>
                                     {task.target_metrics.views ? (
                                         <div className="flex justify-between gap-3">
-                                            <span>👁 Просмотры</span>
+                                            <span>👁 Просмотры (прирост)</span>
                                             <span className="font-medium">{task.target_metrics.views.toLocaleString()}</span>
                                         </div>
                                     ) : null}
                                     {task.target_metrics.likes ? (
                                         <div className="flex justify-between gap-3">
-                                            <span>❤️ Лайки</span>
+                                            <span>❤️ Лайки (прирост)</span>
                                             <span className="font-medium">{task.target_metrics.likes.toLocaleString()}</span>
                                         </div>
                                     ) : null}
                                     {task.target_metrics.comments ? (
                                         <div className="flex justify-between gap-3">
-                                            <span>💬 Комментарии</span>
+                                            <span>💬 Комментарии (прирост)</span>
                                             <span className="font-medium">{task.target_metrics.comments.toLocaleString()}</span>
                                         </div>
                                     ) : null}

@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { instagramService } from '../lib/instagramService'
+import { supabase } from '../lib/supabase'
 
 export default function InstagramStats({ influencerProfile, compact = false }) {
     const [stats, setStats] = useState(null)
@@ -7,82 +7,44 @@ export default function InstagramStats({ influencerProfile, compact = false }) {
     const [error, setError] = useState(null)
 
     useEffect(() => {
-        console.log('InstagramStats useEffect:', { influencerProfile, compact })
-        if (influencerProfile?.instagram_connected && influencerProfile?.instagram_access_token) {
+        if (influencerProfile?.id) {
             loadStats()
         }
-    }, [influencerProfile])
+    }, [influencerProfile?.id])
 
     const loadStats = async () => {
         if (!influencerProfile) {
-            console.error('loadStats called but no influencerProfile')
             return
         }
 
         try {
-            console.log('🔵 InstagramStats loadStats START')
             setLoading(true)
             setError(null)
+            const { data, error: fetchError } = await supabase
+                .from('instagram_stats')
+                .select('followers_count, following_count, posts_count, avg_likes, avg_comments, engagement_rate, recorded_at')
+                .eq('influencer_profile_id', influencerProfile.id)
+                .order('recorded_at', { ascending: false })
+                .limit(1)
 
-            // Используем сохраненный instagram_user_id если есть
-            const instagramUserId = influencerProfile.instagram_user_id
-            console.log('🔵 Instagram User ID:', instagramUserId)
+            if (fetchError) throw fetchError
 
-            if (!instagramUserId) {
-                throw new Error('Instagram User ID не найден')
+            const latest = Array.isArray(data) ? data[0] : null
+            if (!latest) {
+                setStats(null)
+                return
             }
 
-            // Получаем профиль пользователя
-            console.log('🔵 Fetching user profile...')
-            const userData = await instagramService.getUserProfile(
-                influencerProfile.instagram_access_token,
-                instagramUserId
-            )
-            console.log('🔵 User profile fetched:', userData)
-
-            // Получаем последние посты
-            console.log('🔵 Fetching user media...')
-            const media = await instagramService.getUserMedia(
-                influencerProfile.instagram_access_token,
-                instagramUserId,
-                compact ? 6 : 12
-            )
-            console.log('🔵 Media response:', media)
-
-            // Проверяем что media.data существует
-            if (!media || !media.data || !Array.isArray(media.data)) {
-                console.error('❌ Invalid media response:', media)
-                throw new Error('Некорректный ответ от Instagram API')
-            }
-
-            // Фильтруем валидные посты (с id и базовыми полями)
-            const validPosts = media.data.filter(post => post && post.id)
-            console.log('🔵 Valid posts count:', validPosts.length, 'из', media.data.length)
-
-            if (validPosts.length === 0) {
-                throw new Error('Нет доступных постов для отображения')
-            }
-
-            // Рассчитываем статистику
-            console.log('🔵 Calculating stats...')
-            const totalLikes = validPosts.reduce((sum, post) => sum + (post.like_count || 0), 0)
-            const totalComments = validPosts.reduce((sum, post) => sum + (post.comments_count || 0), 0)
-            const avgEngagement = validPosts.length > 0
-                ? ((totalLikes + totalComments) / validPosts.length).toFixed(0)
-                : 0
-
-            console.log('🔵 Setting stats state...')
             setStats({
-                posts: validPosts,
-                totalPosts: validPosts.length,
-                avgLikes: validPosts.length > 0 ? (totalLikes / validPosts.length).toFixed(0) : 0,
-                avgComments: validPosts.length > 0 ? (totalComments / validPosts.length).toFixed(0) : 0,
-                avgEngagement,
-                lastUpdate: new Date()
+                followers: latest.followers_count ?? null,
+                following: latest.following_count ?? null,
+                postsCount: latest.posts_count ?? null,
+                avgLikes: latest.avg_likes ?? null,
+                avgComments: latest.avg_comments ?? null,
+                engagementRate: latest.engagement_rate ?? null,
+                recordedAt: latest.recorded_at ? new Date(latest.recorded_at) : null
             })
-            console.log('✅ InstagramStats loadStats SUCCESS')
         } catch (err) {
-            console.error('❌ Error loading Instagram stats:', err)
             setError('Не удалось загрузить статистику')
         } finally {
             setLoading(false)
@@ -90,7 +52,6 @@ export default function InstagramStats({ influencerProfile, compact = false }) {
     }
 
     if (!influencerProfile) {
-        console.log('InstagramStats: No influencer profile provided')
         return null
     }
 
@@ -128,13 +89,13 @@ export default function InstagramStats({ influencerProfile, compact = false }) {
     }
 
     if (!stats) {
-        return null
-    }
-
-    // Дополнительная проверка на валидность данных
-    if (!stats.posts || !Array.isArray(stats.posts)) {
-        console.warn('Stats exists but posts array is invalid:', stats)
-        return null
+        return (
+            <div className="bg-gray-50 dark:bg-gray-800 p-3 rounded-lg">
+                <p className="text-xs text-gray-600 dark:text-gray-400">
+                    📊 Нет сохранённой статистики. Попросите инфлюенсера нажать «Обновить статистику» в профиле.
+                </p>
+            </div>
+        )
     }
 
     if (compact) {
@@ -159,23 +120,29 @@ export default function InstagramStats({ influencerProfile, compact = false }) {
                 <div className="grid grid-cols-3 gap-2">
                     <div className="bg-white dark:bg-gray-800 p-2 rounded text-center">
                         <div className="text-lg font-bold text-purple-600 dark:text-purple-400">
-                            {stats.avgLikes}
+                            {stats.avgLikes !== null ? Number(stats.avgLikes).toFixed(0) : '—'}
                         </div>
                         <div className="text-xs text-gray-600 dark:text-gray-400">Ср. лайков</div>
                     </div>
                     <div className="bg-white dark:bg-gray-800 p-2 rounded text-center">
                         <div className="text-lg font-bold text-pink-600 dark:text-pink-400">
-                            {stats.avgComments}
+                            {stats.avgComments !== null ? Number(stats.avgComments).toFixed(0) : '—'}
                         </div>
                         <div className="text-xs text-gray-600 dark:text-gray-400">Ср. коммент.</div>
                     </div>
                     <div className="bg-white dark:bg-gray-800 p-2 rounded text-center">
                         <div className="text-lg font-bold text-blue-600 dark:text-blue-400">
-                            {stats.avgEngagement}
+                            {stats.engagementRate !== null ? `${Number(stats.engagementRate).toFixed(2)}%` : '—'}
                         </div>
-                        <div className="text-xs text-gray-600 dark:text-gray-400">Вовлеч-ть</div>
+                        <div className="text-xs text-gray-600 dark:text-gray-400">Engagement Rate</div>
                     </div>
                 </div>
+
+                {stats.recordedAt ? (
+                    <p className="text-[11px] text-gray-500 dark:text-gray-400 mt-2">
+                        Обновлено {stats.recordedAt.toLocaleString('ru-RU')}
+                    </p>
+                ) : null}
             </div>
         )
     }
@@ -199,54 +166,32 @@ export default function InstagramStats({ influencerProfile, compact = false }) {
                 )}
             </div>
 
-            <div className="grid grid-cols-3 gap-3 mb-4">
+            <div className="grid grid-cols-3 gap-3">
                 <div className="bg-white dark:bg-gray-800 p-3 rounded-lg text-center">
                     <div className="text-2xl font-bold text-purple-600 dark:text-purple-400">
-                        {stats.totalPosts}
-                    </div>
-                    <div className="text-xs text-gray-600 dark:text-gray-400">Постов</div>
-                </div>
-                <div className="bg-white dark:bg-gray-800 p-3 rounded-lg text-center">
-                    <div className="text-2xl font-bold text-pink-600 dark:text-pink-400">
-                        {stats.avgLikes}
+                        {stats.avgLikes !== null ? Number(stats.avgLikes).toFixed(0) : '—'}
                     </div>
                     <div className="text-xs text-gray-600 dark:text-gray-400">Ср. лайков</div>
                 </div>
                 <div className="bg-white dark:bg-gray-800 p-3 rounded-lg text-center">
-                    <div className="text-2xl font-bold text-blue-600 dark:text-blue-400">
-                        {stats.avgComments}
+                    <div className="text-2xl font-bold text-pink-600 dark:text-pink-400">
+                        {stats.avgComments !== null ? Number(stats.avgComments).toFixed(0) : '—'}
                     </div>
                     <div className="text-xs text-gray-600 dark:text-gray-400">Ср. коммент.</div>
                 </div>
+                <div className="bg-white dark:bg-gray-800 p-3 rounded-lg text-center">
+                    <div className="text-2xl font-bold text-blue-600 dark:text-blue-400">
+                        {stats.engagementRate !== null ? `${Number(stats.engagementRate).toFixed(2)}%` : '—'}
+                    </div>
+                    <div className="text-xs text-gray-600 dark:text-gray-400">Engagement Rate</div>
+                </div>
             </div>
 
-            <div className="grid grid-cols-3 gap-2 mb-3">
-                {stats.posts.slice(0, 6).filter(post => post && post.id).map((post, idx) => (
-                    <a
-                        key={post.id}
-                        href={post.permalink}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="relative aspect-square rounded-lg overflow-hidden group"
-                    >
-                        <img
-                            src={post.media_url}
-                            alt={`Post ${idx + 1}`}
-                            className="w-full h-full object-cover"
-                        />
-                        <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-white text-xs">
-                            <div className="text-center">
-                                <div>❤️ {post.like_count || 0}</div>
-                                <div>💬 {post.comments_count || 0}</div>
-                            </div>
-                        </div>
-                    </a>
-                ))}
-            </div>
-
-            <p className="text-xs text-gray-500 dark:text-gray-400 text-center">
-                Последние {stats.totalPosts} постов • Обновлено {stats.lastUpdate.toLocaleTimeString()}
-            </p>
+            {stats.recordedAt ? (
+                <p className="text-xs text-gray-500 dark:text-gray-400 text-center mt-3">
+                    Обновлено {stats.recordedAt.toLocaleString('ru-RU')}
+                </p>
+            ) : null}
         </div>
     )
 }

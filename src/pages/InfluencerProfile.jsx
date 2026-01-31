@@ -25,16 +25,16 @@ function InfluencerProfile() {
         try {
             const { data, error } = await supabase
                 .from('influencer_profiles')
-                .select('*')
+                .select('id, user_id, instagram_username, instagram_url, followers_count, engagement_rate, category, description, price_per_post, verified, created_at, updated_at, instagram_token_expires_at, instagram_user_id, instagram_connected, last_stats_update')
                 .eq('user_id', profile.id)
                 .single()
 
             if (data) {
                 setInfluencerProfile(data)
 
-                // Загружаем статистику Instagram если подключен
-                if (data.instagram_connected && data.instagram_access_token) {
-                    loadInstagramStats(data)
+                // Загружаем сохраненную статистику (без обращения к Instagram API)
+                if (data.instagram_connected) {
+                    loadCachedInstagramStats(data)
                 }
             }
         } catch (error) {
@@ -42,115 +42,42 @@ function InfluencerProfile() {
         }
     }
 
-    const loadInstagramStats = async (profileData) => {
+    const loadCachedInstagramStats = async (profileData) => {
         try {
             setLoadingStats(true)
+            const { data, error } = await supabase
+                .from('instagram_stats')
+                .select('followers_count, following_count, posts_count, avg_likes, avg_comments, engagement_rate, recorded_at')
+                .eq('influencer_profile_id', profileData.id)
+                .order('recorded_at', { ascending: false })
+                .limit(1)
 
-            // Получаем Instagram Business Account ID
-            let instagramUserId = profileData.instagram_user_id
-
-            if (!instagramUserId) {
-                // Пытаемся получить через Facebook Pages
-                const accountsResponse = await fetch(
-                    `https://graph.facebook.com/v18.0/me/accounts?fields=instagram_business_account&access_token=${profileData.instagram_access_token}`
-                )
-                const accountsData = await accountsResponse.json()
-                console.log('Facebook Pages response:', accountsData)
-                console.log('Facebook Pages data array:', accountsData.data)
-
-                if (accountsData.data && accountsData.data.length > 0) {
-                    for (const page of accountsData.data) {
-                        console.log('Page:', page)
-                        if (page.instagram_business_account) {
-                            instagramUserId = page.instagram_business_account.id
-                            console.log('Found Instagram Business Account ID:', instagramUserId)
-                            break
-                        }
-                    }
-                }
-
-                // Если не нашли, используем прямой запрос
-                if (!instagramUserId) {
-                    const meResponse = await fetch(
-                        `https://graph.facebook.com/v18.0/me?fields=id&access_token=${profileData.instagram_access_token}`
-                    )
-                    const meData = await meResponse.json()
-                    instagramUserId = meData.id
-                    console.log('Using Facebook User ID as fallback:', instagramUserId)
-                }
-
-                // Сохраняем найденный ID
-                if (instagramUserId) {
-                    await supabase
-                        .from('influencer_profiles')
-                        .update({ instagram_user_id: instagramUserId })
-                        .eq('id', profileData.id)
-                }
+            if (error) throw error
+            const latest = Array.isArray(data) ? data[0] : null
+            if (!latest) {
+                setInstagramStats(null)
+                return
             }
 
-            console.log('Attempting to fetch Instagram profile with ID:', instagramUserId)
-
-            // Получаем данные профиля и последние посты
-            const userData = await instagramService.getUserProfile(profileData.instagram_access_token, instagramUserId)
-            const media = await instagramService.getUserMedia(
-                profileData.instagram_access_token,
-                userData.id,
-                25
-            )
-
-            console.log('Instagram media received:', media)
-            console.log('Total posts from API:', media.data?.length)
-            console.log('First post sample:', media.data?.[0])
-
-            // Рассчитываем общую статистику
-            const totalLikes = media.data.reduce((sum, post) => sum + (post.like_count || 0), 0)
-            const totalComments = media.data.reduce((sum, post) => sum + (post.comments_count || 0), 0)
-            const totalPosts = userData.media_count || media.data.length
-            const avgLikes = media.data.length > 0 ? (totalLikes / media.data.length).toFixed(0) : 0
-            const avgComments = media.data.length > 0 ? (totalComments / media.data.length).toFixed(0) : 0
-            const avgEngagement = media.data.length > 0
-                ? ((totalLikes + totalComments) / media.data.length).toFixed(0)
-                : 0
-
-            // Engagement rate = ((avg likes + avg comments) / followers) * 100
-            const engagementRate = userData.followers_count > 0
-                ? (((parseFloat(avgLikes) + parseFloat(avgComments)) / userData.followers_count) * 100).toFixed(2)
-                : 0
-
-            // Автоматически обновляем все данные Instagram в базе
-            const updateData = {
-                instagram_username: userData.username,
-                instagram_url: `https://instagram.com/${userData.username}`,
-                followers_count: userData.followers_count || 0,
-                engagement_rate: parseFloat(engagementRate),
-                description: userData.biography || null,
-                last_stats_update: new Date().toISOString()
-            }
-
-            await supabase
-                .from('influencer_profiles')
-                .update(updateData)
-                .eq('id', profileData.id)
-
-            // Обновляем локальное состояние
-            setInfluencerProfile(prev => ({ ...prev, ...updateData }))
+            const avgLikes = Number(latest.avg_likes ?? 0)
+            const avgComments = Number(latest.avg_comments ?? 0)
+            const engagementRate = Number(profileData.engagement_rate ?? latest.engagement_rate ?? 0)
 
             setInstagramStats({
-                posts: media.data,
-                totalPosts: totalPosts,
-                avgLikes: avgLikes,
-                avgComments: avgComments,
-                avgEngagement,
-                engagementRate: engagementRate,
-                followers: userData.followers_count || 0,
-                following: userData.follows_count || 0,
-                name: userData.name,
-                username: userData.username,
-                biography: userData.biography,
-                profilePicture: userData.profile_picture_url
+                totalPosts: Number(latest.posts_count ?? 0),
+                avgLikes: avgLikes.toFixed(0),
+                avgComments: avgComments.toFixed(0),
+                avgEngagement: (avgLikes + avgComments).toFixed(0),
+                engagementRate: engagementRate.toFixed(2),
+                followers: Number(profileData.followers_count ?? latest.followers_count ?? 0),
+                following: Number(latest.following_count ?? 0),
+                username: profileData.instagram_username,
+                biography: profileData.description,
+                lastUpdate: latest.recorded_at ? new Date(latest.recorded_at) : null
             })
         } catch (error) {
             console.error('Ошибка загрузки статистики:', error)
+            setInstagramStats(null)
         } finally {
             setLoadingStats(false)
         }
@@ -217,8 +144,16 @@ function InfluencerProfile() {
 
     const handleRefreshStats = async () => {
         if (influencerProfile?.instagram_connected) {
-            await loadInstagramStats(influencerProfile)
-            // Перезагружаем профиль чтобы получить обновленные данные
+            try {
+                setLoadingStats(true)
+                await supabase.rpc('refresh_instagram_stats_for_user', { p_user_id: profile.id })
+            } catch (e) {
+                console.error('refresh_instagram_stats_for_user failed:', e)
+                showAlert?.('Не удалось обновить статистику')
+            } finally {
+                setLoadingStats(false)
+            }
+
             await loadProfile()
             showAlert?.('Статистика обновлена!')
         }
@@ -324,7 +259,7 @@ function InfluencerProfile() {
                 {influencerProfile?.instagram_connected && loadingStats && !instagramStats && (
                     <div className="bg-purple-50 dark:bg-purple-900/20 p-4 rounded-xl text-center">
                         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-purple-600 mx-auto mb-2"></div>
-                        <p className="text-sm text-gray-600 dark:text-gray-400">Загрузка данных из Instagram...</p>
+                        <p className="text-sm text-gray-600 dark:text-gray-400">Загрузка сохраненной статистики...</p>
                     </div>
                 )}
 

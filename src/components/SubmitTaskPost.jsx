@@ -28,7 +28,7 @@ export default function SubmitTaskPost({ task, onSuccess }) {
             // Получаем профиль инфлюенсера
             const { data: profile } = await supabase
                 .from('influencer_profiles')
-                .select('*')
+                .select('id, instagram_access_token, instagram_user_id')
                 .eq('user_id', task.accepted_influencer_id)
                 .single()
 

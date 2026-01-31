@@ -38,6 +38,10 @@ DECLARE
 
     v_already_paid_for_metric NUMERIC(10,2);
     v_delta_payment NUMERIC(10,2);
+
+    -- Auto-complete when max tier reached
+    v_max_min INTEGER;
+    v_has_all_max_tiers_paid BOOLEAN := FALSE;
 BEGIN
     -- Lock submission row to avoid double-paying on concurrent runs
     SELECT * INTO v_submission
@@ -194,8 +198,41 @@ BEGIN
             determined_price = v_determined_price
         WHERE id = p_submission_id;
 
+        -- Auto-complete as soon as the maximum tier is reached (and recorded as paid)
+        v_has_all_max_tiers_paid := TRUE;
+        FOR v_metric_name IN
+            SELECT DISTINCT (value->>'metric')::TEXT
+            FROM jsonb_array_elements(v_task.pricing_tiers) AS value
+            WHERE value ? 'metric'
+        LOOP
+            SELECT COALESCE(MAX((value->>'min')::INTEGER), 0)
+            INTO v_max_min
+            FROM jsonb_array_elements(v_task.pricing_tiers) AS value
+            WHERE (value->>'metric')::TEXT = v_metric_name;
+
+            v_tier_key := v_metric_name || ':' || v_max_min::TEXT;
+
+            IF NOT EXISTS (
+                SELECT 1
+                FROM jsonb_array_elements(v_paid_tiers) e
+                WHERE e->>'key' = v_tier_key
+            ) THEN
+                v_has_all_max_tiers_paid := FALSE;
+                EXIT;
+            END IF;
+        END LOOP;
+
+        IF v_has_all_max_tiers_paid THEN
+            UPDATE task_submissions
+            SET status = 'completed',
+                completed_at = COALESCE(completed_at, NOW())
+            WHERE id = p_submission_id;
+
+            v_all_completed := TRUE;
+        END IF;
+
         -- Finish tracking at deadline (if configured)
-        IF v_submission.metric_deadline IS NOT NULL AND NOW() >= v_submission.metric_deadline THEN
+        IF NOT v_all_completed AND v_submission.metric_deadline IS NOT NULL AND NOW() >= v_submission.metric_deadline THEN
             UPDATE task_submissions
             SET status = 'completed',
                 completed_at = COALESCE(completed_at, NOW())

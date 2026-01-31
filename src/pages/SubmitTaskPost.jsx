@@ -200,30 +200,30 @@ function SubmitTaskPost() {
                     {task.target_metrics && (
                         <div className="bg-blue-50 dark:bg-blue-900/20 rounded-xl p-4 mb-6">
                             <h3 className="font-semibold text-blue-900 dark:text-blue-200 mb-3">
-                                🎯 Целевые метрики
+                                🎯 Цели по метрикам (прирост после публикации)
                             </h3>
                             <div className="space-y-2">
                                 {task.target_metrics.views && (
                                     <div className="flex justify-between">
-                                        <span className="text-sm">👁 Просмотры:</span>
+                                        <span className="text-sm">👁 Просмотры (прирост):</span>
                                         <span className="font-semibold">{task.target_metrics.views.toLocaleString()}</span>
                                     </div>
                                 )}
                                 {task.target_metrics.likes && (
                                     <div className="flex justify-between">
-                                        <span className="text-sm">❤️ Лайки:</span>
+                                        <span className="text-sm">❤️ Лайки (прирост):</span>
                                         <span className="font-semibold">{task.target_metrics.likes.toLocaleString()}</span>
                                     </div>
                                 )}
                                 {task.target_metrics.comments && (
                                     <div className="flex justify-between">
-                                        <span className="text-sm">💬 Комментарии:</span>
+                                        <span className="text-sm">💬 Комментарии (прирост):</span>
                                         <span className="font-semibold">{task.target_metrics.comments.toLocaleString()}</span>
                                     </div>
                                 )}
                             </div>
                             <p className="text-xs text-tg-hint mt-3">
-                                ℹ️ Система будет автоматически отслеживать прогресс и завершит задание при достижении целей
+                                ℹ️ Система автоматически отслеживает прогресс и фиксирует оплату по достигнутым порогам
                             </p>
                         </div>
                     )}
@@ -255,7 +255,7 @@ function SubmitTaskPost() {
                                     {submission.current_metrics.views !== undefined && submission.current_metrics.views !== null && (
                                         <div>
                                             <div className="flex justify-between text-sm mb-1">
-                                                <span>👁 Просмотры</span>
+                                                <span>👁 Просмотры (прирост)</span>
                                                 <span>{submission.current_metrics.views.toLocaleString()} / {task.target_metrics?.views?.toLocaleString() || 0}</span>
                                             </div>
                                             <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">

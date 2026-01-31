@@ -13,18 +13,45 @@ function ClientDashboard() {
     const { profile } = useUserStore()
     const [tasks, setTasks] = useState([])
     const [loading, setLoading] = useState(true)
-    const [activeTab, setActiveTab] = useState('all') // all, open, in_progress, completed, admin
+    const [activeTab, setActiveTab] = useState('all') // all, open, in_progress, completed, payouts, admin
     const [allUsers, setAllUsers] = useState([])
     const [usersLoading, setUsersLoading] = useState(false)
     const [balanceAmount, setBalanceAmount] = useState('')
     const [selectedUserId, setSelectedUserId] = useState('')
     const [notificationTest, setNotificationTest] = useState(null)
 
-    useEffect(() => {
-        if (profile?.id) {
-            loadTasks()
+    const [payoutHistory, setPayoutHistory] = useState([])
+    const [payoutSummary, setPayoutSummary] = useState({ count: 0, total: 0 })
+
+    const safeJsonArray = (value) => {
+        if (Array.isArray(value)) return value
+        if (typeof value === 'string') {
+            try {
+                const parsed = JSON.parse(value)
+                return Array.isArray(parsed) ? parsed : []
+            } catch {
+                return []
+            }
         }
-    }, [profile, activeTab])
+        return []
+    }
+
+    useEffect(() => {
+        if (!profile?.id) return
+
+        if (activeTab === 'payouts') {
+            loadPayoutHistory()
+            return
+        }
+
+        if (activeTab === 'admin') {
+            // admin tab does not depend on tasks list
+            setLoading(false)
+            return
+        }
+
+        loadTasks()
+    }, [profile?.id, activeTab])
 
     useEffect(() => {
         if (activeTab === 'admin' && user && isAdmin(user.id)) {
@@ -34,6 +61,7 @@ function ClientDashboard() {
 
     const loadTasks = async () => {
         try {
+            setLoading(true)
             let query = supabase
                 .from('tasks')
                 .select('*, task_applications(count)')
@@ -50,6 +78,99 @@ function ClientDashboard() {
             setTasks(data || [])
         } catch (error) {
             console.error('Ошибка загрузки заданий:', error)
+        } finally {
+            setLoading(false)
+        }
+    }
+
+    const loadPayoutHistory = async () => {
+        try {
+            setLoading(true)
+
+            const { data: myTasks, error: tasksError } = await supabase
+                .from('tasks')
+                .select('id')
+                .eq('client_id', profile.id)
+
+            if (tasksError) throw tasksError
+
+            const taskIds = (myTasks || []).map(t => t.id).filter(Boolean)
+            if (taskIds.length === 0) {
+                setPayoutHistory([])
+                setPayoutSummary({ count: 0, total: 0 })
+                return
+            }
+
+            const { data, error } = await supabase
+                .from('task_submissions')
+                .select(`
+          id,
+          task_id,
+          influencer_id,
+          post_url,
+          determined_price,
+                    paid_tiers,
+          completed_at,
+          created_at,
+          tasks:task_id(id, title, status),
+          users:influencer_id(first_name, last_name, username)
+        `)
+                .eq('status', 'completed')
+                .in('task_id', taskIds)
+                .order('completed_at', { ascending: false })
+
+            if (error) throw error
+
+            const rows = Array.isArray(data) ? data.filter(Boolean) : []
+
+            // Пытаемся получить суммы выплат из transactions (источник истины для денег).
+            // Группируем по (task_id, to_user_id) и суммируем amount.
+            const uniqueTaskIds = Array.from(new Set(rows.map(r => r.task_id).filter(Boolean)))
+            const uniqueInfluencerIds = Array.from(new Set(rows.map(r => r.influencer_id).filter(Boolean)))
+
+            let txMap = {}
+            if (uniqueTaskIds.length > 0 && uniqueInfluencerIds.length > 0) {
+                const { data: txRows, error: txError } = await supabase
+                    .from('transactions')
+                    .select('task_id, to_user_id, amount, type, status, from_user_id')
+                    .eq('type', 'task_payment')
+                    .eq('status', 'completed')
+                    .eq('from_user_id', profile.id)
+                    .in('task_id', uniqueTaskIds)
+                    .in('to_user_id', uniqueInfluencerIds)
+
+                if (!txError && Array.isArray(txRows)) {
+                    txMap = txRows.reduce((acc, tx) => {
+                        const key = `${tx.task_id}:${tx.to_user_id}`
+                        const value = Number(tx.amount)
+                        if (!Number.isFinite(value)) return acc
+                        acc[key] = (acc[key] || 0) + value
+                        return acc
+                    }, {})
+                }
+            }
+
+            const enriched = rows.map((row) => {
+                const key = `${row.task_id}:${row.influencer_id}`
+                const txAmount = txMap[key]
+                const fallbackAmount = Number(row?.determined_price)
+                const paidAmount = Number.isFinite(txAmount) ? txAmount : (Number.isFinite(fallbackAmount) ? fallbackAmount : 0)
+                const source = Number.isFinite(txAmount) ? 'transactions' : 'determined_price'
+                return { ...row, _paid_amount: paidAmount, _paid_amount_source: source, _determined_price_num: (Number.isFinite(fallbackAmount) ? fallbackAmount : 0) }
+            })
+
+            setPayoutHistory(enriched)
+
+            const total = enriched.reduce((sum, row) => {
+                const value = Number(row?._paid_amount)
+                return sum + (Number.isFinite(value) ? value : 0)
+            }, 0)
+
+            setPayoutSummary({ count: enriched.length, total })
+        } catch (error) {
+            console.error('Ошибка загрузки истории выплат:', error)
+            setPayoutHistory([])
+            setPayoutSummary({ count: 0, total: 0 })
         } finally {
             setLoading(false)
         }
@@ -215,7 +336,8 @@ function ClientDashboard() {
                     { key: 'all', label: 'Все' },
                     { key: 'open', label: 'Открытые' },
                     { key: 'in_progress', label: 'В работе' },
-                    { key: 'completed', label: 'Завершенные' }
+                    { key: 'completed', label: 'Завершенные' },
+                    { key: 'payouts', label: '💸 История выплат' }
                 ].map(tab => (
                     <button
                         key={tab.key}
@@ -347,6 +469,84 @@ function ClientDashboard() {
                             )}
                         </div>
                     </div>
+                ) : activeTab === 'payouts' ? (
+                    loading ? (
+                        <div className="text-center py-10">
+                            <div className="text-tg-hint">Загрузка...</div>
+                        </div>
+                    ) : payoutHistory.length === 0 ? (
+                        <div className="text-center py-10">
+                            <div className="text-4xl mb-4">💸</div>
+                            <p className="text-tg-hint mb-2">Пока нет завершенных выплат</p>
+                            <p className="text-xs text-tg-hint">История формируется по submissions со статусом completed</p>
+                        </div>
+                    ) : (
+                        <div className="space-y-3">
+                            <div className="bg-white dark:bg-gray-800 rounded-xl p-4 shadow-md">
+                                <div className="text-sm text-tg-hint">Итого</div>
+                                <div className="font-semibold">
+                                    {payoutSummary.count} выплат(ы) • {Math.round(payoutSummary.total).toLocaleString()} сом
+                                </div>
+                            </div>
+
+                            {payoutHistory.map((row) => {
+                                const influencerName = [row?.users?.first_name, row?.users?.last_name].filter(Boolean).join(' ') || (row?.users?.username ? `@${row.users.username}` : 'Инфлюенсер')
+                                const taskTitle = row?.tasks?.title || 'Задание'
+                                const paid = Number(row?._paid_amount)
+                                const paidText = Number.isFinite(paid) ? Math.round(paid).toLocaleString() : '0'
+
+                                const tiersCount = safeJsonArray(row?.paid_tiers).length
+
+                                const determined = Number(row?._determined_price_num)
+                                const paidDiff = Math.abs((Number.isFinite(paid) ? paid : 0) - (Number.isFinite(determined) ? determined : 0))
+                                const showDiff = row?._paid_amount_source === 'transactions' && Number.isFinite(paidDiff) && paidDiff >= 0.01
+
+                                const dateValue = row?.completed_at || row?.created_at
+                                const dateText = dateValue ? new Date(dateValue).toLocaleDateString() : ''
+
+                                return (
+                                    <div
+                                        key={row.id}
+                                        className="task-card bg-white dark:bg-gray-800 rounded-xl shadow-md"
+                                    >
+                                        <div className="flex justify-between items-start" style={{ marginBottom: 'var(--spacing-xs)' }}>
+                                            <h3 className="task-title flex-1 break-words">{taskTitle}</h3>
+                                            <span className="text-xs ml-2">✅ Выплачено</span>
+                                        </div>
+                                        <div className="text-sm text-tg-hint break-words">👤 {influencerName}{dateText ? ` • ${dateText}` : ''}</div>
+                                        {tiersCount > 0 && (
+                                            <div className="text-xs text-tg-hint mt-1">🏁 Оплачено ступеней: {tiersCount}</div>
+                                        )}
+                                        <div className="text-xs text-tg-hint mt-1">
+                                            Источник суммы: {row?._paid_amount_source === 'transactions' ? 'транзакции' : 'determined_price'}
+                                            {showDiff ? ` • determined_price: ${Math.round(determined).toLocaleString()} сом` : ''}
+                                        </div>
+                                        <div className="flex justify-between items-center mt-2">
+                                            <span className="task-price">+ {paidText} сом</span>
+                                            <div className="flex gap-2">
+                                                {row.post_url && (
+                                                    <a
+                                                        href={row.post_url}
+                                                        target="_blank"
+                                                        rel="noreferrer"
+                                                        className="text-xs bg-gray-200 dark:bg-gray-700 px-3 py-2 rounded-lg"
+                                                    >
+                                                        🔗 Пост
+                                                    </a>
+                                                )}
+                                                <button
+                                                    onClick={() => navigate(`/client/task/${row.task_id}`)}
+                                                    className="text-xs bg-brand text-white px-3 py-2 rounded-lg"
+                                                >
+                                                    Открыть
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                )
+                            })}
+                        </div>
+                    )
                 ) : loading ? (
                     <div className="text-center py-10">
                         <div className="text-tg-hint">Загрузка...</div>

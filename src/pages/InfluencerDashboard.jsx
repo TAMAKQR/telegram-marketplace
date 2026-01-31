@@ -45,7 +45,7 @@ function InfluencerDashboard() {
         try {
             const { data, error } = await supabase
                 .from('influencer_profiles')
-                .select('*')
+                .select('id, user_id, instagram_username, instagram_url, followers_count, engagement_rate, category, description, price_per_post, verified, created_at, updated_at, instagram_token_expires_at, instagram_user_id, instagram_connected, last_stats_update')
                 .eq('user_id', profile.id)
                 .single()
 
