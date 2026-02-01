@@ -33,6 +33,7 @@ function TaskDetails() {
     const [userPosts, setUserPosts] = useState([])
     const [loadingPosts, setLoadingPosts] = useState(false)
     const [selectedPost, setSelectedPost] = useState(null)
+    const [submittingWork, setSubmittingWork] = useState(false)
 
     const safeJsonArray = (value) => {
         if (Array.isArray(value)) return value
@@ -438,25 +439,29 @@ function TaskDetails() {
         }
     }
 
-    const handleSubmitWork = async () => {
+    const handleSubmitWork = async (options = {}) => {
         if (!profile?.id) {
             showAlert?.('Профиль не загружен, попробуйте еще раз')
             return
         }
-        if (!postUrl.trim()) {
+
+        const effectivePostUrl = String(options.postUrl ?? postUrl ?? '').trim()
+        const effectiveDescription = String(options.description ?? workDescription ?? '').trim() || 'Отчет о выполнении задания'
+
+        if (!effectivePostUrl) {
             showAlert?.('Укажите ссылку на Instagram пост')
             return
         }
 
         // Валидация формата Instagram ссылки
         const instagramUrlPattern = /instagram\.com\/(p|reel)\/[A-Za-z0-9_-]+/
-        if (!instagramUrlPattern.test(postUrl)) {
+        if (!instagramUrlPattern.test(effectivePostUrl)) {
             showAlert?.('❌ Неверный формат ссылки!\n\nИспользуйте ссылку из Instagram:\n• instagram.com/p/...\n• instagram.com/reel/...\n\nКак скопировать:\n1. Откройте пост в Instagram\n2. Три точки (•••)\n3. "Копировать ссылку"')
             return
         }
 
-        // Если описание пустое, используем текст по умолчанию
-        const finalDescription = workDescription.trim() || 'Отчет о выполнении задания'
+        if (submittingWork) return
+        setSubmittingWork(true)
 
         try {
             // Проверяем, нет ли уже активного submission (на проверке или в работе)
@@ -495,7 +500,7 @@ function TaskDetails() {
                 if (!influencerProfileError && influencerProfile?.instagram_connected && influencerProfile?.instagram_access_token && influencerProfile?.instagram_user_id) {
                     const metrics = await instagramMetricsService.getPostMetrics(
                         influencerProfile.instagram_access_token,
-                        postUrl,
+                        effectivePostUrl,
                         influencerProfile.instagram_user_id
                     )
 
@@ -517,10 +522,10 @@ function TaskDetails() {
                     {
                         task_id: taskId,
                         influencer_id: profile.id,
-                        post_url: postUrl,
-                        description: finalDescription,
+                        post_url: effectivePostUrl,
+                        description: effectiveDescription,
                         status: 'pending',
-                        instagram_post_url: postUrl,
+                        instagram_post_url: effectivePostUrl,
                         instagram_media_id: instagramMediaId,
                         initial_metrics: initialMetrics
                     }
@@ -539,6 +544,8 @@ function TaskDetails() {
         } catch (error) {
             console.error('Ошибка отправки отчета:', error)
             showAlert?.('Ошибка при отправке отчета')
+        } finally {
+            setSubmittingWork(false)
         }
     }
 
@@ -1050,6 +1057,7 @@ function TaskDetails() {
                                     <button
                                         type="button"
                                         onClick={loadUserPosts}
+                                        disabled={submittingWork}
                                         className="w-full bg-gradient-to-r from-purple-500 to-pink-500 text-white py-3 rounded-xl font-semibold hover:opacity-90"
                                     >
                                         📸 Загрузить мои посты из Instagram
@@ -1074,12 +1082,25 @@ function TaskDetails() {
                                                 .map(post => (
                                                     <div
                                                         key={post.id}
-                                                        onClick={() => {
+                                                        onClick={async () => {
+                                                            if (submittingWork) return
+                                                            const permalink = post?.permalink
+                                                            if (!permalink) {
+                                                                showAlert?.('Не удалось получить ссылку на пост (permalink). Попробуйте другой пост.')
+                                                                return
+                                                            }
+
                                                             setSelectedPost(post)
-                                                            setPostUrl(post.permalink)
+                                                            setPostUrl(permalink)
                                                             setWorkDescription(post.caption?.substring(0, 500) || 'Публикация в Instagram')
-                                                            // Автоматически отправляем после выбора поста
-                                                            setTimeout(() => handleSubmitWork(), 100)
+
+                                                            const ok = await showConfirm?.('Отправить выбранный пост как отчет?')
+                                                            if (!ok) return
+
+                                                            await handleSubmitWork({
+                                                                postUrl: permalink,
+                                                                description: post.caption?.substring(0, 500) || 'Публикация в Instagram'
+                                                            })
                                                         }}
                                                         className={`cursor-pointer rounded-lg overflow-hidden border-2 transition-all ${selectedPost?.id === post.id
                                                             ? 'border-tg-button shadow-lg scale-105'
