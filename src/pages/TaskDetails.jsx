@@ -1153,7 +1153,7 @@ function TaskDetails() {
                         ) : (
                             <>
                                 {/* Проверяем, есть ли активный submission */}
-                                {submissions.some(sub => sub && ['pending', 'pending_approval', 'in_progress'].includes(sub.status)) ? (
+                                {submissions.some(sub => sub && ['pending', 'pending_approval'].includes(sub.status)) ? (
                                     <div className="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-xl p-4">
                                         <div className="flex items-start gap-3">
                                             <span className="text-2xl">⏳</span>
@@ -1163,6 +1163,20 @@ function TaskDetails() {
                                                 </h4>
                                                 <p className="text-sm text-yellow-700 dark:text-yellow-300">
                                                     Вы уже отправили отчет. Дождитесь его проверки заказчиком, прежде чем отправлять новый.
+                                                </p>
+                                            </div>
+                                        </div>
+                                    </div>
+                                ) : submissions.some(sub => sub && ['in_progress', 'approved', 'completed'].includes(sub.status)) ? (
+                                    <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-xl p-4">
+                                        <div className="flex items-start gap-3">
+                                            <span className="text-2xl">🚀</span>
+                                            <div>
+                                                <h4 className="font-semibold text-blue-800 dark:text-blue-200 mb-1">
+                                                    Кампания запущена
+                                                </h4>
+                                                <p className="text-sm text-blue-700 dark:text-blue-300">
+                                                    Отчет принят, метрики отслеживаются. Новый отчет можно отправить только если заказчик отклонит текущий.
                                                 </p>
                                             </div>
                                         </div>
