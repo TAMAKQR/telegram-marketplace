@@ -34,6 +34,7 @@ function TaskDetails() {
     const [loadingPosts, setLoadingPosts] = useState(false)
     const [selectedPost, setSelectedPost] = useState(null)
     const [submittingWork, setSubmittingWork] = useState(false)
+    const [refreshingSubmissions, setRefreshingSubmissions] = useState(false)
 
     const safeJsonArray = (value) => {
         if (Array.isArray(value)) return value
@@ -88,6 +89,35 @@ function TaskDetails() {
         checkMyApplication()
         loadSubmissions()
     }, [taskId, userType, profile?.id])
+
+    useEffect(() => {
+        if (!taskId) return
+
+        // UI polling only: reload submissions so progress reflects DB updates.
+        // Backend metrics update (pg_cron) still runs hourly; this just refreshes the screen.
+        const hasActiveTracking = submissions.some(sub => sub && sub.status === 'in_progress')
+        if (!hasActiveTracking) return
+
+        const intervalId = setInterval(() => {
+            try {
+                if (typeof document !== 'undefined' && document.hidden) return
+            } catch {
+                // ignore
+            }
+            loadSubmissions()
+        }, 2 * 60 * 1000)
+
+        return () => clearInterval(intervalId)
+    }, [taskId, submissions])
+
+    const refreshSubmissions = async () => {
+        setRefreshingSubmissions(true)
+        try {
+            await loadSubmissions()
+        } finally {
+            setRefreshingSubmissions(false)
+        }
+    }
 
     const loadTaskDetails = async () => {
         const withTimeout = async (promise, ms, label) => {
@@ -1206,6 +1236,29 @@ function TaskDetails() {
                                                     <span className="text-xs px-2 py-1 rounded-full bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200">
                                                         {sub.status === 'completed' ? 'Завершено' : 'В процессе'}
                                                     </span>
+                                                </div>
+
+                                                <div className="flex items-center justify-between gap-3 mb-3">
+                                                    <div className="text-xs text-tg-hint">
+                                                        {(() => {
+                                                            const capturedAt = sub?.current_metrics?.captured_at
+                                                            const updatedAt = sub?.updated_at
+                                                            const date = capturedAt
+                                                                ? new Date(Number(capturedAt) * 1000)
+                                                                : (updatedAt ? new Date(updatedAt) : null)
+
+                                                            if (!date || Number.isNaN(date.getTime())) return 'Последнее обновление: нет данных'
+                                                            return `Последнее обновление: ${date.toLocaleString('ru')}`
+                                                        })()}
+                                                    </div>
+                                                    <button
+                                                        type="button"
+                                                        onClick={refreshSubmissions}
+                                                        disabled={refreshingSubmissions}
+                                                        className="text-xs text-tg-button font-medium disabled:opacity-50"
+                                                    >
+                                                        {refreshingSubmissions ? 'Обновляем…' : '🔄 Обновить'}
+                                                    </button>
                                                 </div>
 
                                                 <div className="mb-3">
