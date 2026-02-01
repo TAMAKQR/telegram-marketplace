@@ -95,11 +95,14 @@ AS $$
 DECLARE
     v_response http_response;
     v_insights_response http_response;
+    v_insights_fallback_response http_response;
     v_result JSONB;
     v_insights JSONB;
     v_metric JSONB;
     v_views INTEGER;
     v_reach INTEGER;
+    v_plays INTEGER;
+    v_impressions INTEGER;
 BEGIN
     SELECT * INTO v_response
     FROM http((
@@ -125,11 +128,13 @@ BEGIN
             NULL
         )::http_request);
 
+        v_views := NULL;
+        v_reach := NULL;
+        v_plays := NULL;
+        v_impressions := NULL;
+
         IF v_insights_response.status = 200 THEN
             v_insights := v_insights_response.content::jsonb;
-
-            v_views := NULL;
-            v_reach := NULL;
 
             FOR v_metric IN
                 SELECT * FROM jsonb_array_elements(COALESCE(v_insights->'data', '[]'::jsonb))
@@ -140,11 +145,48 @@ BEGIN
                     v_reach := (v_metric->'values'->0->>'value')::INTEGER;
                 END IF;
             END LOOP;
-
-            v_result := jsonb_set(v_result, '{views}', to_jsonb(COALESCE(v_views, 0)), TRUE);
-            v_result := jsonb_set(v_result, '{reach}', to_jsonb(COALESCE(v_reach, 0)), TRUE);
         ELSE
             RAISE WARNING 'Instagram insights API error: % - %', v_insights_response.status, v_insights_response.content;
+
+            -- Fallback: some media types (often REELS) may not support "views"; try "plays".
+            SELECT * INTO v_insights_fallback_response
+            FROM http((
+                'GET',
+                'https://graph.facebook.com/v18.0/' || p_post_id ||
+                    '/insights?metric=plays,reach,impressions&access_token=' || p_access_token,
+                NULL,
+                'application/json',
+                NULL
+            )::http_request);
+
+            IF v_insights_fallback_response.status = 200 THEN
+                v_insights := v_insights_fallback_response.content::jsonb;
+
+                FOR v_metric IN
+                    SELECT * FROM jsonb_array_elements(COALESCE(v_insights->'data', '[]'::jsonb))
+                LOOP
+                    IF v_metric->>'name' = 'plays' THEN
+                        v_plays := (v_metric->'values'->0->>'value')::INTEGER;
+                    ELSIF v_metric->>'name' = 'reach' THEN
+                        v_reach := COALESCE(v_reach, (v_metric->'values'->0->>'value')::INTEGER);
+                    ELSIF v_metric->>'name' = 'impressions' THEN
+                        v_impressions := (v_metric->'values'->0->>'value')::INTEGER;
+                    END IF;
+                END LOOP;
+
+                IF v_views IS NULL THEN
+                    v_views := v_plays;
+                END IF;
+            ELSE
+                RAISE WARNING 'Instagram insights fallback API error: % - %', v_insights_fallback_response.status, v_insights_fallback_response.content;
+            END IF;
+        END IF;
+
+        -- normalize keys
+        v_result := jsonb_set(v_result, '{views}', to_jsonb(COALESCE(v_views, 0)), TRUE);
+        v_result := jsonb_set(v_result, '{reach}', to_jsonb(COALESCE(v_reach, 0)), TRUE);
+        IF v_impressions IS NOT NULL THEN
+            v_result := jsonb_set(v_result, '{impressions}', to_jsonb(v_impressions), TRUE);
         END IF;
 
         RETURN v_result;
