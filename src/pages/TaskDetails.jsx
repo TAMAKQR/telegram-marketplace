@@ -1247,8 +1247,8 @@ function TaskDetails() {
                                                                 ? new Date(Number(capturedAt) * 1000)
                                                                 : (updatedAt ? new Date(updatedAt) : null)
 
-                                                            if (!date || Number.isNaN(date.getTime())) return 'Последнее обновление: нет данных'
-                                                            return `Последнее обновление: ${date.toLocaleString('ru')}`
+                                                            if (!date || Number.isNaN(date.getTime())) return 'Последнее обновление (Бишкек): нет данных'
+                                                            return `Последнее обновление (Бишкек): ${date.toLocaleString('ru-RU', { timeZone: 'Asia/Bishkek' })}`
                                                         })()}
                                                     </div>
                                                     <button
