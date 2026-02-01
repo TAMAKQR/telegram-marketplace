@@ -551,7 +551,7 @@ function EditTask() {
                     <div className="border-t pt-4">
                         <div className="grid grid-cols-1 gap-3">
                             <div>
-                                <label className="block text-sm font-medium mb-1">Срок проверки метрик (дней)</label>
+                                <label className="block text-sm font-medium mb-1">Отслеживание метрик (дней)</label>
                                 <input
                                     type="number"
                                     value={formData.metricDeadlineDays}
@@ -560,6 +560,9 @@ function EditTask() {
                                     className="w-full p-3 rounded-lg border dark:bg-gray-700 dark:border-gray-600"
                                     min="1"
                                 />
+                                <p className="text-xs text-tg-hint mt-1">
+                                    ⏱️ Сколько дней после сдачи отчёта система считает прирост метрик и обновляет прогресс
+                                </p>
                             </div>
                             <div>
                                 <label className="block text-sm font-medium mb-1">Макс. исполнителей (опц.)</label>
@@ -578,7 +581,7 @@ function EditTask() {
 
                     <div>
                         <label className="block text-sm font-medium mb-2">
-                            Дедлайн
+                            Дедлайн сдачи отчёта (публикации)
                         </label>
                         <input
                             type="date"
@@ -587,6 +590,9 @@ function EditTask() {
                             className="w-full p-3 rounded-lg border dark:bg-gray-700 dark:border-gray-600"
                             min={new Date().toISOString().split('T')[0]}
                         />
+                        <p className="text-xs text-tg-hint mt-1">
+                            📅 До этой даты исполнитель должен отправить ссылку/отчёт. Метрики после этого могут отслеживаться отдельно.
+                        </p>
                     </div>
 
                     <div>
