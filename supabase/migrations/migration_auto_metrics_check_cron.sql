@@ -18,6 +18,9 @@ ALTER TABLE task_submissions
 ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ DEFAULT NOW();
 
 ALTER TABLE task_submissions
+ADD COLUMN IF NOT EXISTS last_checked_at TIMESTAMPTZ;
+
+ALTER TABLE task_submissions
 ADD COLUMN IF NOT EXISTS completed_at TIMESTAMPTZ;
 
 -- Resolve media_id from shortcode by scanning recent media list
