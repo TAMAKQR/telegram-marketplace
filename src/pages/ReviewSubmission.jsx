@@ -47,7 +47,7 @@ function ReviewSubmission() {
                     users:influencer_id(first_name, last_name, telegram_id)
                 `)
                 .eq('task_id', taskId)
-                .eq('status', 'pending')
+                .in('status', ['pending', 'pending_approval'])
                 .order('created_at', { descending: true })
                 .limit(1)
                 .maybeSingle()

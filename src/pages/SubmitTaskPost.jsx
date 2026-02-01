@@ -87,7 +87,7 @@ function SubmitTaskPost() {
             const { data: influencerProfile, error: influencerProfileError } = await supabase
                 .from('influencer_profiles')
                 .select('instagram_connected, instagram_access_token, instagram_user_id, instagram_username')
-                .eq('user_id', user.id)
+                .eq('user_id', profile.id)
                 .maybeSingle()
 
             if (influencerProfileError) throw influencerProfileError
@@ -138,10 +138,10 @@ function SubmitTaskPost() {
                         task_id: taskId,
                         influencer_id: profile.id,
                         post_url: postUrl,
-                        description: '',
+                        description: 'Отчет о выполнении задания',
                         instagram_media_id: instagramMediaId,
                         initial_metrics: initialMetrics,
-                        status: 'pending_approval'
+                        status: 'pending'
                     }])
 
                 if (error) throw error

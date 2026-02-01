@@ -7,6 +7,7 @@ import { sendTelegramNotification, formatCompletedTaskMessage } from '../lib/tel
 import { formatTaskBudget } from '../lib/taskBudget'
 import Logo from '../components/Logo'
 import InstagramStats from '../components/InstagramStats'
+import { instagramMetricsService } from '../lib/instagramMetricsService'
 
 function TaskDetails() {
     const { taskId } = useParams()
@@ -168,11 +169,15 @@ function TaskDetails() {
                 .select('*')
                 .eq('task_id', taskId)
                 .eq('influencer_id', profile.id)
-                .single()
+                .maybeSingle()
+
+            if (error) throw error
 
             if (data) {
                 setMyApplication(data)
                 setApplyMessage(data.message || '')
+            } else {
+                setMyApplication(null)
             }
         } catch (error) {
             console.log('Нет отклика на это задание')
@@ -254,10 +259,82 @@ function TaskDetails() {
 
             if (error) throw error
 
-            const rows = Array.isArray(data) ? data.filter(Boolean) : []
+            let rows = Array.isArray(data) ? data.filter(Boolean) : []
+
+            // Backward compatibility: older flow stored reports/metrics in task_posts.
+            // If a task is already in progress but task_submissions is empty, try reading task_posts.
+            if (rows.length === 0) {
+                const { data: legacyPosts, error: legacyError } = await supabase
+                    .from('task_posts')
+                    .select(`
+                        *,
+                        users:influencer_id(
+                            id,
+                            first_name,
+                            last_name,
+                            telegram_id,
+                            influencer_profiles(
+                                id,
+                                user_id,
+                                instagram_username,
+                                instagram_url,
+                                followers_count,
+                                engagement_rate,
+                                instagram_connected,
+                                last_stats_update
+                            )
+                        )
+                    `)
+                    .eq('task_id', taskId)
+                    .order('submitted_at', { ascending: false })
+
+                if (legacyError) {
+                    console.warn('loadSubmissions: legacy task_posts query failed', legacyError)
+                } else if (Array.isArray(legacyPosts) && legacyPosts.length > 0) {
+                    console.log('loadSubmissions: using legacy task_posts fallback', legacyPosts.length)
+                    rows = legacyPosts
+                        .filter(Boolean)
+                        .map((post) => {
+                            const status = post.status === 'paid'
+                                ? 'completed'
+                                : post.status === 'approved'
+                                    ? 'in_progress'
+                                    : 'pending'
+
+                            const views = Number(post.impressions ?? post.reach ?? 0)
+                            const likes = Number(post.likes_count ?? 0)
+                            const comments = Number(post.comments_count ?? 0)
+
+                            return {
+                                id: post.id,
+                                task_id: post.task_id,
+                                influencer_id: post.influencer_id,
+                                post_url: post.post_url,
+                                description: post.description ?? 'Отчет о выполнении задания',
+                                status,
+                                submitted_at: post.submitted_at ?? post.created_at,
+                                created_at: post.submitted_at ?? post.created_at,
+                                reviewed_at: post.approved_at ?? null,
+                                completed_at: post.payment_date ?? null,
+                                determined_price: post.total_payment ?? null,
+                                paid_tiers: null,
+                                metric_deadline: null,
+                                current_metrics: {
+                                    views: Number.isFinite(views) ? views : 0,
+                                    likes: Number.isFinite(likes) ? likes : 0,
+                                    comments: Number.isFinite(comments) ? comments : 0,
+                                    captured_at: post.last_metrics_update
+                                        ? Math.floor(new Date(post.last_metrics_update).getTime() / 1000)
+                                        : null
+                                },
+                                users: post.users ?? null
+                            }
+                        })
+                }
+            }
 
             console.log('Загружены submissions:', rows)
-            console.log('Активные submissions:', rows.filter(sub => sub && ['pending', 'in_progress'].includes(sub.status)))
+            console.log('Активные submissions:', rows.filter(sub => sub && ['pending', 'pending_approval', 'in_progress'].includes(sub.status)))
             // Детальные логи убраны, чтобы исключить падения при отсутствующих полях
             console.log('=== SET SUBMISSIONS ===')
             setSubmissions(rows)
@@ -388,7 +465,7 @@ function TaskDetails() {
                 .select('id, status')
                 .eq('task_id', taskId)
                 .eq('influencer_id', profile.id)
-                .in('status', ['pending', 'in_progress'])
+                .in('status', ['pending', 'pending_approval', 'in_progress'])
 
             if (checkError) throw checkError
 
@@ -399,6 +476,41 @@ function TaskDetails() {
                 return
             }
 
+            // Best-effort: capture instagram_media_id + initial metrics on submit
+            let instagramMediaId = null
+            let initialMetrics = {
+                views: 0,
+                likes: 0,
+                comments: 0,
+                captured_at: Math.floor(Date.now() / 1000)
+            }
+
+            try {
+                const { data: influencerProfile, error: influencerProfileError } = await supabase
+                    .from('influencer_profiles')
+                    .select('instagram_connected, instagram_access_token, instagram_user_id')
+                    .eq('user_id', profile.id)
+                    .maybeSingle()
+
+                if (!influencerProfileError && influencerProfile?.instagram_connected && influencerProfile?.instagram_access_token && influencerProfile?.instagram_user_id) {
+                    const metrics = await instagramMetricsService.getPostMetrics(
+                        influencerProfile.instagram_access_token,
+                        postUrl,
+                        influencerProfile.instagram_user_id
+                    )
+
+                    instagramMediaId = metrics?.media_id || null
+                    initialMetrics = {
+                        views: metrics?.views || 0,
+                        likes: metrics?.likes_count || 0,
+                        comments: metrics?.comments_count || 0,
+                        captured_at: Math.floor(Date.now() / 1000)
+                    }
+                }
+            } catch (e) {
+                console.warn('Could not fetch initial instagram metrics on submit:', e)
+            }
+
             const { error } = await supabase
                 .from('task_submissions')
                 .insert([
@@ -407,7 +519,10 @@ function TaskDetails() {
                         influencer_id: profile.id,
                         post_url: postUrl,
                         description: finalDescription,
-                        status: 'pending'
+                        status: 'pending',
+                        instagram_post_url: postUrl,
+                        instagram_media_id: instagramMediaId,
+                        initial_metrics: initialMetrics
                     }
                 ])
 
@@ -877,6 +992,23 @@ function TaskDetails() {
                 {/* For Influencers - Work in Progress */}
                 {userType === 'influencer' && task.status === 'in_progress' && myApplication?.status === 'accepted' && (
                     <div className="space-y-4">
+                        {submissions.length === 0 && (
+                            <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-xl p-4">
+                                <div className="flex items-start gap-3">
+                                    <span className="text-2xl">ℹ️</span>
+                                    <div>
+                                        <h4 className="font-semibold text-blue-900 dark:text-blue-200 mb-1">
+                                            Метрики появятся после отправки отчета
+                                        </h4>
+                                        <p className="text-sm text-blue-800 dark:text-blue-300">
+                                            Сейчас нет ни одного отчета по этому заданию. Нажмите «Отправить отчет о выполнении» и выберите публикацию.
+                                            После одобрения заказчиком начнется отслеживание метрик.
+                                        </p>
+                                    </div>
+                                </div>
+                            </div>
+                        )}
+
                         {/* Дедлайн */}
                         {task.deadline && (
                             <div className="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-xl p-4">
@@ -1000,7 +1132,7 @@ function TaskDetails() {
                         ) : (
                             <>
                                 {/* Проверяем, есть ли активный submission */}
-                                {submissions.some(sub => sub && ['pending', 'in_progress'].includes(sub.status)) ? (
+                                {submissions.some(sub => sub && ['pending', 'pending_approval', 'in_progress'].includes(sub.status)) ? (
                                     <div className="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-xl p-4">
                                         <div className="flex items-start gap-3">
                                             <span className="text-2xl">⏳</span>
@@ -1173,8 +1305,24 @@ function TaskDetails() {
                 {/* For Clients - Applications List */}
                 {userType === 'client' && (
                     <div>
+                        {['in_progress', 'completed'].includes(task.status) && submissions.length === 0 && (
+                            <div className="mb-4 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-xl p-4">
+                                <div className="flex items-start gap-3">
+                                    <span className="text-2xl">ℹ️</span>
+                                    <div>
+                                        <h3 className="font-semibold text-blue-900 dark:text-blue-200">
+                                            Пока нет отчета по публикации
+                                        </h3>
+                                        <p className="text-sm text-blue-800 dark:text-blue-300">
+                                            Метрики и прогресс появятся после того, как исполнитель отправит ссылку на пост.
+                                        </p>
+                                    </div>
+                                </div>
+                            </div>
+                        )}
+
                         {/* Уведомление о публикации на проверке */}
-                        {submissions.some(sub => sub && sub.status === 'pending') && (
+                        {submissions.some(sub => sub && ['pending', 'pending_approval'].includes(sub.status)) && (
                             <div className="mb-4 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-xl p-4">
                                 <div className="flex items-center justify-between mb-3">
                                     <div className="flex items-center gap-2">
@@ -1199,11 +1347,11 @@ function TaskDetails() {
                         )}
 
                         {/* Отображение прогресса отслеживания метрик */}
-                        {['in_progress', 'completed'].includes(task.status) && submissions.some(sub => sub && ['pending', 'in_progress', 'approved', 'completed'].includes(sub.status)) && (
+                        {['in_progress', 'completed'].includes(task.status) && submissions.some(sub => sub && ['pending', 'pending_approval', 'in_progress', 'approved', 'completed'].includes(sub.status)) && (
                             <div className="mb-4">
                                 <h3 className="text-lg font-semibold mb-3">Прогресс выполнения</h3>
                                 {submissions
-                                    .filter(sub => sub && ['pending', 'in_progress', 'approved', 'completed'].includes(sub.status))
+                                    .filter(sub => sub && ['pending', 'pending_approval', 'in_progress', 'approved', 'completed'].includes(sub.status))
                                     .map((sub, idx) => (
                                         <div key={sub?.id ?? `submission-${idx}`} className="bg-white dark:bg-gray-800 rounded-xl p-4 shadow-md">
                                             <div className="flex items-center justify-between mb-3">

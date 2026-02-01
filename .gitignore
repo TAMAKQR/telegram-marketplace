@@ -37,3 +37,6 @@ supabase/dumps/
 # Supabase CLI local state (do not commit)
 supabase/.temp/
 supabase/.branches/
+
+# Local tooling binaries (do not commit)
+tools/
