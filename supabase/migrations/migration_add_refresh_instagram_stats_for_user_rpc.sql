@@ -1,20 +1,8 @@
--- Migration: add missing RPC used by the frontend
+-- Deprecated migration (NO-OP)
 --
--- Frontend calls: rpc('refresh_instagram_stats_for_user', { p_user_id })
--- Some DB instances don't have this function, causing 404 (Not Found) from PostgREST.
+-- The real implementation is in:
+--   supabase/migrations/migration_instagram_stats_refresh_rpc.sql
 --
--- This is a lightweight compatibility shim. It returns { ok: true }.
-
-CREATE OR REPLACE FUNCTION public.refresh_instagram_stats_for_user(p_user_id uuid)
-RETURNS jsonb
-LANGUAGE plpgsql
-SECURITY DEFINER
-SET search_path = public
-AS $$
-BEGIN
-  RETURN jsonb_build_object('ok', true, 'user_id', p_user_id);
-END;
-$$;
-
-GRANT EXECUTE ON FUNCTION public.refresh_instagram_stats_for_user(uuid) TO anon;
-GRANT EXECUTE ON FUNCTION public.refresh_instagram_stats_for_user(uuid) TO authenticated;
+-- This file previously created a stub function that made the UI show
+-- "Статистика обновлена", while not inserting rows into instagram_stats.
+-- It is intentionally left empty now to avoid overwriting the real function.

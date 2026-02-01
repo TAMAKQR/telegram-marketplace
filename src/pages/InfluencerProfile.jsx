@@ -146,7 +146,23 @@ function InfluencerProfile() {
         if (influencerProfile?.instagram_connected) {
             try {
                 setLoadingStats(true)
-                await supabase.rpc('refresh_instagram_stats_for_user', { p_user_id: profile.id })
+                const { data, error } = await supabase.rpc('refresh_instagram_stats_for_user', { p_user_id: profile.id })
+
+                if (error) throw error
+
+                if (!data || data.success !== true) {
+                    const code = (data && data.error) ? data.error : 'stats_not_saved'
+                    const messageByCode = {
+                        instagram_not_connected: 'Instagram не подключен',
+                        missing_access_token: 'Нет токена Instagram. Переподключите Instagram.',
+                        missing_instagram_user_id: 'Не найден Instagram User ID. Переподключите Instagram.',
+                        instagram_profile_api_error: 'Instagram API не вернул данные профиля (возможно аккаунт не Business/Creator или нет прав).',
+                        instagram_media_api_error: 'Instagram API не вернул медиа (возможно нет прав).',
+                        stats_not_saved: 'Статистика не сохранилась в базе. Проверьте, что применена миграция refresh_instagram_stats_for_user.'
+                    }
+                    showAlert?.(messageByCode[code] || `Не удалось обновить статистику: ${code}`)
+                    return
+                }
             } catch (e) {
                 console.error('refresh_instagram_stats_for_user failed:', e)
                 showAlert?.('Не удалось обновить статистику')
