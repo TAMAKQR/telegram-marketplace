@@ -31,6 +31,15 @@ function runtimeEnvJsPlugin(mode) {
         configurePreviewServer(server) {
             server.middlewares.use(handler)
         },
+        generateBundle() {
+            // Also output a real /env.js into dist for static hosting.
+            // (For Docker/nginx this file is overwritten at container start.)
+            this.emitFile({
+                type: 'asset',
+                fileName: 'env.js',
+                source: body,
+            })
+        },
     }
 }
 
