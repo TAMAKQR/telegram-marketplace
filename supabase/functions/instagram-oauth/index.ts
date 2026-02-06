@@ -82,7 +82,10 @@ serve(async (req) => {
                 ? candidateRedirectUri
                 : null
 
-            const redirectUri = inferredRedirectUri || bodyRedirectUri || defaultRedirectUri
+            // Prefer the redirect URI that the client used in the OAuth dialog (passed back via state/body).
+            // In some environments (Telegram WebView / proxies), the Origin header can be missing or differ,
+            // causing a redirect_uri mismatch during code exchange.
+            const redirectUri = bodyRedirectUri || inferredRedirectUri || defaultRedirectUri
 
             const formData = new URLSearchParams({
                 client_id: appId,
