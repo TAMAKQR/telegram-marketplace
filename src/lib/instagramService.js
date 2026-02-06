@@ -76,6 +76,12 @@ export const instagramService = {
         }
 
         if (data?.ok === false) {
+            // Helpful diagnostics: upstream error payload from Instagram (no secrets).
+            try {
+                console.error('instagram-oauth upstream failure:', data)
+            } catch {
+                // ignore
+            }
             const upstreamMessage = data?.upstream?.error?.message || data?.upstream?.error_message
             const usedRedirect = data?.used_redirect_uri ? `redirect_uri: ${data.used_redirect_uri}` : null
             const usedAppId = data?.used_app_id ? `app_id: ${data.used_app_id}` : null
