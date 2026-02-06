@@ -59,13 +59,14 @@ export default function InstagramCallback() {
                             return {
                                 userId: String(parsed.uid),
                                 redirectUri: parsed.ru ? String(parsed.ru) : null,
+                                appId: parsed.aid ? String(parsed.aid) : null,
                             }
                         }
                     } catch {
                         // ignore
                     }
 
-                    return { userId: String(raw), redirectUri: null }
+                    return { userId: String(raw), redirectUri: null, appId: null }
                 }
 
                 // Получаем Telegram user ID из URL параметра (передадим его при авторизации)
@@ -93,11 +94,16 @@ export default function InstagramCallback() {
 
                 const userId = parsedState.userId
                 const redirectUriFromState = parsedState.redirectUri
+                const clientAppIdFromState = parsedState.appId
 
                 setStatus('exchanging_token')
 
                 // Обмениваем код на short-lived токен через Instagram API
-                const tokenData = await instagramService.exchangeCodeForToken(code, redirectUriFromState || undefined)
+                const tokenData = await instagramService.exchangeCodeForToken(
+                    code,
+                    redirectUriFromState || undefined,
+                    clientAppIdFromState || undefined,
+                )
                 const shortLivedToken = tokenData.accessToken
                 const instagramScopedUserId = tokenData.userId // Instagram-scoped user ID из ответа
 

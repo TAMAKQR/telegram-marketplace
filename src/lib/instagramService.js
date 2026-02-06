@@ -22,7 +22,7 @@ function base64UrlEncode(utf8String) {
 function buildOAuthState(userId, redirectUri) {
     // Keep backward compatibility: if something goes wrong, return userId.
     try {
-        return base64UrlEncode(JSON.stringify({ v: 1, uid: userId, ru: redirectUri }))
+        return base64UrlEncode(JSON.stringify({ v: 1, uid: userId, ru: redirectUri, aid: INSTAGRAM_APP_ID || null }))
     } catch {
         return String(userId)
     }
@@ -43,6 +43,11 @@ export const instagramService = {
 
         // Используем Instagram Business Login (без Facebook)
         // Скоупы: instagram_business_basic + instagram_business_manage_insights
+        try {
+            console.log('Instagram OAuth start:', { appId: INSTAGRAM_APP_ID, redirectUri })
+        } catch {
+            // ignore
+        }
         const params = new URLSearchParams({
             client_id: INSTAGRAM_APP_ID,
             redirect_uri: redirectUri,
@@ -57,16 +62,18 @@ export const instagramService = {
     },
 
     // Обменять код авторизации на токен доступа
-    async exchangeCodeForToken(code, redirectUriOverride = undefined) {
+    async exchangeCodeForToken(code, redirectUriOverride = undefined, clientAppIdOverride = undefined) {
         const { supabase } = await import('./supabase')
 
         const redirectUri = redirectUriOverride || resolveRedirectUri()
+        const clientAppId = clientAppIdOverride || INSTAGRAM_APP_ID || null
 
         const { data, error } = await supabase.functions.invoke('instagram-oauth', {
             body: {
                 action: 'exchange_code',
                 code,
-                redirectUri
+                redirectUri,
+                clientAppId,
             }
         })
 

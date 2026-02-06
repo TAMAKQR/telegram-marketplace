@@ -5,8 +5,22 @@ const buildTimestamp = Date.now()
 
 function runtimeEnvJsPlugin(mode) {
     const loaded = loadEnv(mode, process.cwd(), '')
+    // IMPORTANT: only ship explicitly safe env vars to the browser.
+    // Do NOT expose any secrets/tokens via VITE_* variables.
+    const SAFE_FRONTEND_KEYS = new Set([
+        'VITE_SUPABASE_URL',
+        'VITE_SUPABASE_ANON_KEY',
+
+        'VITE_INSTAGRAM_APP_ID',
+        'VITE_INSTAGRAM_REDIRECT_URI',
+
+        'VITE_TELEGRAM_GROUP_CHAT_ID',
+        'VITE_TELEGRAM_BOT_USERNAME',
+        'VITE_TELEGRAM_WEBAPP_SHORT_NAME',
+    ])
+
     const payload = Object.fromEntries(
-        Object.entries(loaded).filter(([k]) => k.startsWith('VITE_'))
+        Object.entries(loaded).filter(([k]) => SAFE_FRONTEND_KEYS.has(k))
     )
 
     const body =

@@ -6,7 +6,7 @@ type Action = 'exchange_code' | 'long_lived'
 type PingAction = 'ping'
 
 type Body =
-    | { action: 'exchange_code'; code: string; redirectUri?: string }
+    | { action: 'exchange_code'; code: string; redirectUri?: string; clientAppId?: string | null }
     | { action: 'long_lived'; shortToken: string }
 
 function requiredEnv(name: string): string {
@@ -68,6 +68,26 @@ serve(async (req) => {
                 })
             }
 
+            const clientAppId = (typeof body?.clientAppId === 'string' && body.clientAppId.trim().length > 0)
+                ? body.clientAppId.trim()
+                : null
+
+            if (clientAppId && clientAppId !== appId) {
+                return new Response(
+                    JSON.stringify({
+                        ok: false,
+                        stage: 'config_mismatch',
+                        message: 'Client Instagram app_id does not match server INSTAGRAM_APP_ID. Update VITE_INSTAGRAM_APP_ID in the frontend to match Supabase secrets.',
+                        client_app_id: clientAppId,
+                        used_app_id: appId,
+                    }),
+                    {
+                        status: 200,
+                        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+                    },
+                )
+            }
+
             const origin = req.headers.get('origin')
             const inferredRedirectUri = (origin && origin.startsWith('https://') && !origin.includes(' '))
                 ? `${origin.replace(/\/$/, '')}/instagram/callback`
@@ -110,6 +130,7 @@ serve(async (req) => {
                         ok: false,
                         stage: 'exchange_code',
                         used_app_id: appId,
+                        client_app_id: clientAppId,
                         upstream_status: response.status,
                         upstream: data,
                         used_redirect_uri: redirectUri,
@@ -125,6 +146,7 @@ serve(async (req) => {
                 JSON.stringify({
                     ok: true,
                     used_app_id: appId,
+                    client_app_id: clientAppId,
                     used_redirect_uri: redirectUri,
                     result: data,
                 }),
