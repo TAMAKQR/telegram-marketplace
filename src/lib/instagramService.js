@@ -77,7 +77,11 @@ export const instagramService = {
 
         if (data?.ok === false) {
             const upstreamMessage = data?.upstream?.error?.message || data?.upstream?.error_message
-            const hint = data?.used_redirect_uri ? ` (redirect_uri: ${data.used_redirect_uri})` : ''
+            const usedRedirect = data?.used_redirect_uri ? `redirect_uri: ${data.used_redirect_uri}` : null
+            const usedAppId = data?.used_app_id ? `app_id: ${data.used_app_id}` : null
+            const upstreamStatus = data?.upstream_status ? `upstream_status: ${data.upstream_status}` : null
+            const hintParts = [usedAppId, usedRedirect, upstreamStatus].filter(Boolean)
+            const hint = hintParts.length ? ` (${hintParts.join(', ')})` : ''
             throw new Error(upstreamMessage ? `${upstreamMessage}${hint}` : `Failed to exchange code for token${hint}`)
         }
 
