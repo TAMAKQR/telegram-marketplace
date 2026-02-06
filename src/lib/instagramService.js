@@ -79,14 +79,30 @@ export const instagramService = {
             // Helpful diagnostics: upstream error payload from Instagram (no secrets).
             try {
                 console.error('instagram-oauth upstream failure:', data)
+                // Make it easy to copy from DevTools if available.
+                if (typeof window !== 'undefined') {
+                    window.__LAST_INSTAGRAM_OAUTH_ERROR__ = data
+                }
             } catch {
                 // ignore
             }
+
+            let upstreamSnippet = null
+            try {
+                if (data?.upstream) {
+                    const asString = typeof data.upstream === 'string' ? data.upstream : JSON.stringify(data.upstream)
+                    upstreamSnippet = asString && asString.length > 800 ? `${asString.slice(0, 800)}…` : asString
+                }
+            } catch {
+                upstreamSnippet = null
+            }
+
             const upstreamMessage = data?.upstream?.error?.message || data?.upstream?.error_message
             const usedRedirect = data?.used_redirect_uri ? `redirect_uri: ${data.used_redirect_uri}` : null
             const usedAppId = data?.used_app_id ? `app_id: ${data.used_app_id}` : null
             const upstreamStatus = data?.upstream_status ? `upstream_status: ${data.upstream_status}` : null
-            const hintParts = [usedAppId, usedRedirect, upstreamStatus].filter(Boolean)
+            const upstreamInfo = upstreamSnippet ? `upstream: ${upstreamSnippet}` : null
+            const hintParts = [usedAppId, usedRedirect, upstreamStatus, upstreamInfo].filter(Boolean)
             const hint = hintParts.length ? ` (${hintParts.join(', ')})` : ''
             throw new Error(upstreamMessage ? `${upstreamMessage}${hint}` : `Failed to exchange code for token${hint}`)
         }
