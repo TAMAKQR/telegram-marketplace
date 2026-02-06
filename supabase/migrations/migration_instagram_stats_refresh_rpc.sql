@@ -17,18 +17,17 @@ AS $$
 DECLARE
     v_response http_response;
     v_json JSONB;
-    v_page JSONB;
     v_instagram_id TEXT;
 BEGIN
     IF p_access_token IS NULL OR length(p_access_token) = 0 THEN
         RETURN NULL;
     END IF;
 
-    -- Try Facebook pages -> instagram_business_account
+    -- Instagram API with Instagram Login: /me returns user_id directly
     SELECT * INTO v_response
     FROM http((
         'GET',
-        'https://graph.facebook.com/v18.0/me/accounts?fields=instagram_business_account&access_token=' || p_access_token,
+        'https://graph.instagram.com/v22.0/me?fields=user_id,username&access_token=' || p_access_token,
         NULL,
         'application/json',
         NULL
@@ -36,29 +35,13 @@ BEGIN
 
     IF v_response.status = 200 THEN
         v_json := v_response.content::jsonb;
-        FOR v_page IN
-            SELECT * FROM jsonb_array_elements(COALESCE(v_json->'data', '[]'::jsonb))
-        LOOP
-            v_instagram_id := v_page->'instagram_business_account'->>'id';
-            IF v_instagram_id IS NOT NULL AND length(v_instagram_id) > 0 THEN
-                RETURN v_instagram_id;
-            END IF;
-        END LOOP;
-    END IF;
+        -- Response can be { data: [{ user_id, username }] } or { user_id, username }
+        IF v_json->'data' IS NOT NULL AND jsonb_array_length(COALESCE(v_json->'data', '[]'::jsonb)) > 0 THEN
+            v_instagram_id := v_json->'data'->0->>'user_id';
+        ELSE
+            v_instagram_id := COALESCE(v_json->>'user_id', v_json->>'id');
+        END IF;
 
-    -- Fallback: /me id (legacy fallback; may not be IG business id, but keeps compatibility)
-    SELECT * INTO v_response
-    FROM http((
-        'GET',
-        'https://graph.facebook.com/v18.0/me?fields=id&access_token=' || p_access_token,
-        NULL,
-        'application/json',
-        NULL
-    )::http_request);
-
-    IF v_response.status = 200 THEN
-        v_json := v_response.content::jsonb;
-        v_instagram_id := v_json->>'id';
         IF v_instagram_id IS NOT NULL AND length(v_instagram_id) > 0 THEN
             RETURN v_instagram_id;
         END IF;
@@ -142,7 +125,7 @@ BEGIN
     SELECT * INTO v_profile_resp
     FROM http((
         'GET',
-        'https://graph.facebook.com/v18.0/' || v_instagram_user_id ||
+        'https://graph.instagram.com/v22.0/' || v_instagram_user_id ||
             '?fields=id,username,biography,followers_count,follows_count,media_count&access_token=' || v_profile.instagram_access_token,
         NULL,
         'application/json',
@@ -165,7 +148,7 @@ BEGIN
     SELECT * INTO v_media_resp
     FROM http((
         'GET',
-        'https://graph.facebook.com/v18.0/' || v_instagram_user_id ||
+        'https://graph.instagram.com/v22.0/' || v_instagram_user_id ||
             '/media?fields=id,like_count,comments_count,permalink,timestamp&limit=25&access_token=' || v_profile.instagram_access_token,
         NULL,
         'application/json',

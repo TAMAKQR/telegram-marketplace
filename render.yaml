@@ -1,10 +1,15 @@
 services:
   - type: web
     name: telegram-marketplace
-    env: static
-    buildCommand: npm install && npm run build
-    staticPublishPath: ./dist
-    routes:
-      - type: rewrite
-        source: /*
-        destination: /index.html
+    env: docker
+    autoDeploy: true
+    healthCheckPath: /
+    envVars:
+      - key: VITE_SUPABASE_URL
+        sync: false
+      - key: VITE_SUPABASE_ANON_KEY
+        sync: false
+      - key: VITE_INSTAGRAM_APP_ID
+        sync: false
+      - key: VITE_INSTAGRAM_REDIRECT_URI
+        sync: false

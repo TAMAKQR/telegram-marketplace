@@ -51,7 +51,7 @@ EXCEPTION WHEN undefined_function THEN
             SELECT * INTO v_response
             FROM http((
                 'GET',
-                'https://graph.facebook.com/v18.0/' || p_instagram_user_id ||
+                'https://graph.instagram.com/v22.0/' || p_instagram_user_id ||
                     '/media?fields=id,shortcode,permalink&limit=100&access_token=' || p_access_token,
                 NULL,
                 'application/json',
@@ -110,7 +110,7 @@ BEGIN
     SELECT * INTO v_response
     FROM http((
         'GET',
-        'https://graph.facebook.com/v18.0/' || p_post_id ||
+        'https://graph.instagram.com/v22.0/' || p_post_id ||
             '?fields=like_count,comments_count,media_product_type,owner{username},timestamp&access_token=' || p_access_token,
         NULL,
         'application/json',
@@ -124,7 +124,7 @@ BEGIN
         SELECT * INTO v_insights_response
         FROM http((
             'GET',
-            'https://graph.facebook.com/v18.0/' || p_post_id ||
+            'https://graph.instagram.com/v22.0/' || p_post_id ||
                 '/insights?metric=views,reach&access_token=' || p_access_token,
             NULL,
             'application/json',
@@ -155,8 +155,8 @@ BEGIN
             SELECT * INTO v_insights_fallback_response
             FROM http((
                 'GET',
-                'https://graph.facebook.com/v18.0/' || p_post_id ||
-                    '/insights?metric=plays,reach,impressions&access_token=' || p_access_token,
+                'https://graph.instagram.com/v22.0/' || p_post_id ||
+                    '/insights?metric=reach&access_token=' || p_access_token,
                 NULL,
                 'application/json',
                 NULL

@@ -54,6 +54,10 @@ npm install
 ```env
 VITE_SUPABASE_URL=your_supabase_project_url
 VITE_SUPABASE_ANON_KEY=your_supabase_anon_key
+# Optional Telegram return link (used after Instagram OAuth in an external browser)
+VITE_TELEGRAM_BOT_USERNAME=romashkacz_bot
+# Optional: if you have a named Web App, enables direct open to the mini app
+VITE_TELEGRAM_WEBAPP_SHORT_NAME=
 ```
 
 ### 4. Создайте Telegram Bot
@@ -180,6 +184,58 @@ npm run preview
 
 # Линтинг
 npm run lint
+```
+
+## 🐳 Docker (один и тот же образ локально и на сервере)
+
+В этом репозитории есть Docker-образ, который:
+- собирает Vite-приложение в `dist`
+- раздаёт статику через nginx
+- подхватывает переменные окружения на старте контейнера (пишет `/env.js`), поэтому образ можно один раз собрать и запускать в разных окружениях **без пересборки**.
+
+### 1) Локально: поднять Supabase
+
+```bash
+npx supabase start
+```
+
+### 2) Локально: запустить прод-образ (как на сервере)
+
+Скопируйте пример env:
+
+```bash
+copy .env.docker.example .env.docker
+```
+
+В `.env.docker` заполните `VITE_SUPABASE_ANON_KEY` (можно взять из вывода `npx supabase status`) и при необходимости Instagram-переменные.
+
+Запуск:
+
+```bash
+docker compose up --build
+```
+
+Откройте:
+- `http://localhost:8080`
+
+### 3) Сервер: запустить тот же образ
+
+1) Соберите и отправьте образ в registry (Docker Hub / GHCR):
+
+```bash
+docker build -t your-registry/telegram-webapp:latest .
+docker push your-registry/telegram-webapp:latest
+```
+
+2) На сервере запустите контейнер и передайте env:
+
+```bash
+docker run -d --restart=always -p 80:80 \
+   -e VITE_SUPABASE_URL="https://<project-ref>.supabase.co" \
+   -e VITE_SUPABASE_ANON_KEY="<anon-key>" \
+   -e VITE_INSTAGRAM_APP_ID="<app-id>" \
+   -e VITE_INSTAGRAM_REDIRECT_URI="https://<your-domain>/instagram/callback" \
+   your-registry/telegram-webapp:latest
 ```
 
 ## 📝 TODO / Будущие улучшения

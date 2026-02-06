@@ -55,7 +55,7 @@ EXCEPTION WHEN undefined_function THEN
             SELECT * INTO v_response
             FROM http((
                 'GET',
-                'https://graph.facebook.com/v18.0/' || p_instagram_user_id || '/media?fields=id,shortcode,permalink&limit=100&access_token=' || p_access_token,
+                'https://graph.instagram.com/v22.0/' || p_instagram_user_id || '/media?fields=id,shortcode,permalink&limit=100&access_token=' || p_access_token,
                 NULL,
                 'application/json',
                 NULL
@@ -109,12 +109,12 @@ DECLARE
     v_plays INTEGER;
     v_impressions INTEGER;
 BEGIN
-    -- Используем Instagram Graph API (graph.facebook.com) по media_id.
+    -- Используем Instagram Graph API (graph.instagram.com) по media_id.
     -- NB: shortcode из URL НЕ является media_id.
     SELECT * INTO v_response
     FROM http((
         'GET',
-        'https://graph.facebook.com/v18.0/' || p_post_id || '?fields=like_count,comments_count,media_product_type,owner{username},timestamp&access_token=' || p_access_token,
+        'https://graph.instagram.com/v22.0/' || p_post_id || '?fields=like_count,comments_count,media_product_type,owner{username},timestamp&access_token=' || p_access_token,
         NULL,
         'application/json',
         NULL
@@ -129,7 +129,7 @@ BEGIN
         SELECT * INTO v_insights_response
         FROM http((
             'GET',
-            'https://graph.facebook.com/v18.0/' || p_post_id || '/insights?metric=views,reach&access_token=' || p_access_token,
+            'https://graph.instagram.com/v22.0/' || p_post_id || '/insights?metric=views,reach&access_token=' || p_access_token,
             NULL,
             'application/json',
             NULL
@@ -158,7 +158,7 @@ BEGIN
             SELECT * INTO v_insights_fallback_response
             FROM http((
                 'GET',
-                'https://graph.facebook.com/v18.0/' || p_post_id || '/insights?metric=plays,reach,impressions&access_token=' || p_access_token,
+                'https://graph.instagram.com/v22.0/' || p_post_id || '/insights?metric=reach&access_token=' || p_access_token,
                 NULL,
                 'application/json',
                 NULL

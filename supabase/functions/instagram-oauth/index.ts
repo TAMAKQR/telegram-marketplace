@@ -6,7 +6,7 @@ type Action = 'exchange_code' | 'long_lived'
 type PingAction = 'ping'
 
 type Body =
-    | { action: 'exchange_code'; code: string }
+    | { action: 'exchange_code'; code: string; redirectUri?: string }
     | { action: 'long_lived'; shortToken: string }
 
 function requiredEnv(name: string): string {
@@ -57,7 +57,7 @@ serve(async (req) => {
 
         const appId = requiredEnv('INSTAGRAM_APP_ID')
         const appSecret = requiredEnv('INSTAGRAM_APP_SECRET')
-        const redirectUri = requiredEnv('INSTAGRAM_REDIRECT_URI')
+        const defaultRedirectUri = requiredEnv('INSTAGRAM_REDIRECT_URI')
 
         if (action === 'exchange_code') {
             const code = body?.code
@@ -68,6 +68,22 @@ serve(async (req) => {
                 })
             }
 
+            const origin = req.headers.get('origin')
+            const inferredRedirectUri = (origin && origin.startsWith('https://') && !origin.includes(' '))
+                ? `${origin.replace(/\/$/, '')}/instagram/callback`
+                : null
+
+            const candidateRedirectUri = body?.redirectUri
+            const bodyRedirectUri = (typeof candidateRedirectUri === 'string'
+                && candidateRedirectUri.trim().length > 0
+                && candidateRedirectUri.startsWith('https://')
+                && candidateRedirectUri.endsWith('/instagram/callback')
+                && !candidateRedirectUri.includes(' '))
+                ? candidateRedirectUri
+                : null
+
+            const redirectUri = inferredRedirectUri || bodyRedirectUri || defaultRedirectUri
+
             const formData = new URLSearchParams({
                 client_id: appId,
                 client_secret: appSecret,
@@ -76,7 +92,8 @@ serve(async (req) => {
                 code,
             })
 
-            const response = await fetch('https://graph.facebook.com/v18.0/oauth/access_token', {
+            // Instagram Business Login: exchange code via Instagram API directly
+            const response = await fetch('https://api.instagram.com/oauth/access_token', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
                 body: formData,

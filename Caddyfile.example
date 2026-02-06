@@ -1,0 +1,10 @@
+# Example reverse-proxy config for HTTPS (Caddy)
+# Replace dasmart.xyz with your real domain.
+
+# This will automatically obtain/renew TLS certificates.
+dasmart.xyz {
+  encode zstd gzip
+
+  # Proxy to the Docker container published on localhost:8080
+  reverse_proxy 127.0.0.1:8080
+}

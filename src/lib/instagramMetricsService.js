@@ -3,15 +3,17 @@
 export const instagramMetricsService = {
     async resolveInstagramUserId(accessToken) {
         try {
-            const pagesResponse = await fetch(
-                `https://graph.facebook.com/v18.0/me/accounts?fields=instagram_business_account{id,username}&access_token=${accessToken}`
+            // Instagram API with Instagram Login: /me возвращает user_id напрямую
+            const response = await fetch(
+                `https://graph.instagram.com/v22.0/me?fields=user_id,username&access_token=${accessToken}`
             )
 
-            if (!pagesResponse.ok) return null
+            if (!response.ok) return null
 
-            const pagesData = await pagesResponse.json()
-            const pageWithIg = pagesData?.data?.find(p => p?.instagram_business_account?.id)
-            return pageWithIg?.instagram_business_account?.id || null
+            const data = await response.json()
+            // Ответ может быть { data: [{ user_id, username }] } или { user_id, username }
+            if (data?.data?.[0]?.user_id) return data.data[0].user_id
+            return data?.user_id || data?.id || null
         } catch {
             return null
         }
@@ -41,7 +43,7 @@ export const instagramMetricsService = {
             }
 
             const mediaResponse = await fetch(
-                `https://graph.facebook.com/v18.0/${resolvedInstagramUserId}/media?fields=id,shortcode,permalink&limit=100&access_token=${accessToken}`
+                `https://graph.instagram.com/v22.0/${resolvedInstagramUserId}/media?fields=id,shortcode,permalink&limit=100&access_token=${accessToken}`
             )
 
             if (!mediaResponse.ok) {
@@ -72,7 +74,7 @@ export const instagramMetricsService = {
         try {
             // Получаем базовую информацию о посте
             const infoResponse = await fetch(
-                `https://graph.facebook.com/v18.0/${mediaId}?fields=id,media_type,media_product_type,media_url,permalink,timestamp,like_count,comments_count&access_token=${accessToken}`
+                `https://graph.instagram.com/v22.0/${mediaId}?fields=id,media_type,media_product_type,media_url,permalink,timestamp,like_count,comments_count&access_token=${accessToken}`
             )
 
             if (!infoResponse.ok) {
@@ -94,14 +96,14 @@ export const instagramMetricsService = {
                     let insightsData = null
 
                     const extendedInsightsResponse = await fetch(
-                        `https://graph.facebook.com/v18.0/${mediaId}/insights?metric=views,reach,engagement,saved,shares&access_token=${accessToken}`
+                        `https://graph.instagram.com/v22.0/${mediaId}/insights?metric=views,reach,saved,shares&access_token=${accessToken}`
                     )
 
                     if (extendedInsightsResponse.ok) {
                         insightsData = await extendedInsightsResponse.json()
                     } else {
                         const fallbackInsightsResponse = await fetch(
-                            `https://graph.facebook.com/v18.0/${mediaId}/insights?metric=reach,engagement,saved,shares&access_token=${accessToken}`
+                            `https://graph.instagram.com/v22.0/${mediaId}/insights?metric=reach,saved,shares&access_token=${accessToken}`
                         )
                         if (fallbackInsightsResponse.ok) {
                             insightsData = await fallbackInsightsResponse.json()
@@ -118,7 +120,7 @@ export const instagramMetricsService = {
                 // Для Stories
                 if (info.media_type === 'STORY') {
                     const storyInsightsResponse = await fetch(
-                        `https://graph.facebook.com/v18.0/${mediaId}/insights?metric=impressions,reach,replies,exits,taps_forward,taps_back&access_token=${accessToken}`
+                        `https://graph.instagram.com/v22.0/${mediaId}/insights?metric=reach,replies,exits,taps_forward,taps_back&access_token=${accessToken}`
                     )
 
                     if (storyInsightsResponse.ok) {
@@ -186,7 +188,7 @@ export const instagramMetricsService = {
     async checkMetricsAvailability(accessToken, mediaId) {
         try {
             const response = await fetch(
-                `https://graph.facebook.com/v18.0/${mediaId}?fields=insights.metric(impressions)&access_token=${accessToken}`
+                `https://graph.instagram.com/v22.0/${mediaId}/insights?metric=reach&access_token=${accessToken}`
             )
 
             return response.ok
@@ -201,7 +203,7 @@ export const instagramMetricsService = {
             const since = Math.floor(Date.now() / 1000) - (days * 24 * 60 * 60)
 
             const response = await fetch(
-                `https://graph.facebook.com/v18.0/${instagramUserId}/media?fields=id,media_type,permalink,timestamp,like_count,comments_count&since=${since}&access_token=${accessToken}`
+                `https://graph.instagram.com/v22.0/${instagramUserId}/media?fields=id,media_type,permalink,timestamp,like_count,comments_count&since=${since}&access_token=${accessToken}`
             )
 
             if (!response.ok) {

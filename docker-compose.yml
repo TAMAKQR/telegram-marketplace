@@ -1,0 +1,14 @@
+services:
+  web:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "8080:80"
+    env_file:
+      - .env.docker
+    environment:
+      # For local + Supabase CLI on host:
+      # Windows/macOS: host.docker.internal works.
+      # If you run Linux server, set this to your real Supabase URL.
+      VITE_SUPABASE_URL: "http://host.docker.internal:54321"

@@ -16,13 +16,15 @@ import SubmitTaskPost from './pages/SubmitTaskPost'
 import ReviewSubmission from './pages/ReviewSubmission'
 import AdminPanel from './pages/AdminPanel'
 import AccountantPanel from './pages/AccountantPanel'
-import DebugPage from './pages/DebugPage'
 import InstagramCallback from './pages/InstagramCallback'
 import InstagramDeauth from './pages/InstagramDeauth'
 import InstagramDelete from './pages/InstagramDelete'
 import Terms from './pages/Terms'
 import Privacy from './pages/Privacy'
 import InfluencerGuide from './pages/InfluencerGuide'
+
+// Dev-only pages (keep out of production navigation)
+import DebugPage from './pages/_dev/DebugPage'
 
 function AppShell() {
     const location = useLocation()
@@ -192,7 +194,7 @@ function AppShell() {
                         <Route path="/accountant" element={<AccountantPanel />} />
 
                         {/* Отладочная страница */}
-                        <Route path="/debug" element={<DebugPage />} />
+                        {import.meta.env.DEV && <Route path="/debug" element={<DebugPage />} />}
 
                         <Route path="*" element={<Navigate to="/" replace />} />
                     </>

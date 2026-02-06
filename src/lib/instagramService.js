@@ -1,9 +1,32 @@
 // Сервис для работы с Instagram Graph API
-const INSTAGRAM_APP_ID = import.meta.env.VITE_INSTAGRAM_APP_ID
-const DEFAULT_REDIRECT_URI = typeof window !== 'undefined'
-    ? `${window.location.origin}/instagram/callback`
-    : ''
-const REDIRECT_URI = import.meta.env.VITE_INSTAGRAM_REDIRECT_URI || DEFAULT_REDIRECT_URI
+import { getEnv } from './runtimeConfig'
+
+const INSTAGRAM_APP_ID = getEnv('VITE_INSTAGRAM_APP_ID')
+
+function resolveRedirectUri() {
+    // Always infer from current origin to avoid ngrok/env mismatch.
+    if (typeof window !== 'undefined' && window.location?.origin) {
+        return `${window.location.origin}/instagram/callback`
+    }
+
+    // Fallback for non-browser environments
+    return getEnv('VITE_INSTAGRAM_REDIRECT_URI', '')
+}
+
+function base64UrlEncode(utf8String) {
+    // btoa expects binary string; convert from UTF-8 first.
+    const bin = unescape(encodeURIComponent(utf8String))
+    return btoa(bin).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/g, '')
+}
+
+function buildOAuthState(userId, redirectUri) {
+    // Keep backward compatibility: if something goes wrong, return userId.
+    try {
+        return base64UrlEncode(JSON.stringify({ v: 1, uid: userId, ru: redirectUri }))
+    } catch {
+        return String(userId)
+    }
+}
 
 export const instagramService = {
     // Получить URL для OAuth авторизации
@@ -12,32 +35,38 @@ export const instagramService = {
             throw new Error('Missing VITE_INSTAGRAM_APP_ID')
         }
 
-        if (!REDIRECT_URI) {
+        const redirectUri = resolveRedirectUri()
+
+        if (!redirectUri) {
             throw new Error('Missing VITE_INSTAGRAM_REDIRECT_URI (could not infer default)')
         }
 
-        // Запрашиваем разрешения для Instagram Business аккаунтов
-        // Добавляем pages_read_engagement для получения instagram_business_account
+        // Используем Instagram Business Login (без Facebook)
+        // Скоупы: instagram_business_basic + instagram_business_manage_insights
         const params = new URLSearchParams({
             client_id: INSTAGRAM_APP_ID,
-            redirect_uri: REDIRECT_URI,
-            scope: 'instagram_basic,pages_show_list,pages_read_engagement,instagram_manage_insights,business_management',
+            redirect_uri: redirectUri,
+            scope: 'instagram_business_basic,instagram_business_manage_insights',
             response_type: 'code',
-            state: userId // Передаем user ID через state
+            // Encode redirectUri in state so code exchange can use the same value.
+            state: buildOAuthState(userId, redirectUri)
         })
 
-        // Используем Facebook OAuth
-        return `https://www.facebook.com/v18.0/dialog/oauth?${params}`
+        // Instagram OAuth напрямую (без Facebook)
+        return `https://www.instagram.com/oauth/authorize?${params}`
     },
 
     // Обменять код авторизации на токен доступа
-    async exchangeCodeForToken(code) {
+    async exchangeCodeForToken(code, redirectUriOverride = undefined) {
         const { supabase } = await import('./supabase')
+
+        const redirectUri = redirectUriOverride || resolveRedirectUri()
 
         const { data, error } = await supabase.functions.invoke('instagram-oauth', {
             body: {
                 action: 'exchange_code',
-                code
+                code,
+                redirectUri
             }
         })
 
@@ -107,10 +136,10 @@ export const instagramService = {
 
     // Получить профиль пользователя
     async getUserProfile(accessToken, userId) {
-        // Для Instagram Business Account используем Facebook Graph API
+        // Используем Instagram Graph API напрямую
         const fields = 'id,username,name,biography,followers_count,follows_count,media_count,profile_picture_url'
         const response = await fetch(
-            `https://graph.facebook.com/v18.0/${userId}?fields=${fields}&access_token=${accessToken}`
+            `https://graph.instagram.com/v22.0/${userId}?fields=${fields}&access_token=${accessToken}`
         )
 
         if (!response.ok) {
@@ -133,7 +162,7 @@ export const instagramService = {
         ].join(',')
 
         const response = await fetch(
-            `https://graph.facebook.com/v18.0/${mediaId}/insights?metric=${metrics}&access_token=${accessToken}`
+            `https://graph.instagram.com/v22.0/${mediaId}/insights?metric=${metrics}&access_token=${accessToken}`
         )
 
         if (!response.ok) {
@@ -155,7 +184,7 @@ export const instagramService = {
     async getMediaInfo(accessToken, mediaId) {
         const fields = 'id,caption,media_type,media_url,permalink,thumbnail_url,timestamp,like_count,comments_count'
         const response = await fetch(
-            `https://graph.facebook.com/v18.0/${mediaId}?fields=${fields}&access_token=${accessToken}`
+            `https://graph.instagram.com/v22.0/${mediaId}?fields=${fields}&access_token=${accessToken}`
         )
 
         if (!response.ok) {

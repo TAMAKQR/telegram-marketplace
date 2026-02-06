@@ -1,0 +1,15 @@
+services:
+  web:
+    # IMPORTANT: replace OWNER/REPO with your GitHub org/user + repo name
+    # Example: ghcr.io/romashka/telegramwebapp:latest
+    image: ghcr.io/OWNER/REPO:latest
+    ports:
+      - "80:80"
+    restart: unless-stopped
+    env_file:
+      - .env.prod
+    environment:
+      # If you run Supabase in the cloud (recommended), set this in .env.prod:
+      # VITE_SUPABASE_URL=https://<project-ref>.supabase.co
+      # If you run local Supabase on the same server, point to it here.
+      VITE_SUPABASE_URL: "${VITE_SUPABASE_URL}"

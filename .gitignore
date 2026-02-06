@@ -12,6 +12,9 @@ dist
 dist-ssr
 *.local
 
+# Runtime-injected frontend config (generated locally / by docker entrypoint)
+public/env.js
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json
@@ -27,6 +30,7 @@ dist-ssr
 .env
 .env.local
 .env.production
+.env.docker
 
 # Supabase local/prod clones (do not commit real data dumps)
 supabase/seed.prod.sql
@@ -38,5 +42,10 @@ supabase/dumps/
 supabase/.temp/
 supabase/.branches/
 
+# Supabase Edge Function local secrets (do not commit)
+supabase/functions/.env
+supabase/functions/SECRETS.local
+
 # Local tooling binaries (do not commit)
 tools/
+ngrok.exe

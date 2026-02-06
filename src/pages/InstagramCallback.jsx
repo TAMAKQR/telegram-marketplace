@@ -2,15 +2,72 @@ import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import { instagramService } from '../lib/instagramService'
+import { getEnv } from '../lib/runtimeConfig'
 
 export default function InstagramCallback() {
     const [status, setStatus] = useState('processing')
     const [error, setError] = useState(null)
     const navigate = useNavigate()
 
+    const botUsername = getEnv('VITE_TELEGRAM_BOT_USERNAME')
+    const webAppShortName = getEnv('VITE_TELEGRAM_WEBAPP_SHORT_NAME')
+    const telegramHttpLink = botUsername
+        ? (webAppShortName
+            ? `https://t.me/${botUsername}/${webAppShortName}?startapp=instagram_connected`
+            : `https://t.me/${botUsername}`)
+        : null
+    const telegramDeepLink = botUsername ? `tg://resolve?domain=${botUsername}` : null
+
+    useEffect(() => {
+        if (status !== 'browser_success') return
+        if (!telegramHttpLink && !telegramDeepLink) return
+
+        // Some browsers block automatic deep links without user gesture,
+        // but it's still worth attempting a gentle redirect.
+        const t = setTimeout(() => {
+            try {
+                if (telegramDeepLink) {
+                    window.location.href = telegramDeepLink
+                    return
+                }
+                if (telegramHttpLink) {
+                    window.location.href = telegramHttpLink
+                }
+            } catch {
+                // ignore
+            }
+        }, 1200)
+
+        return () => clearTimeout(t)
+    }, [status, telegramDeepLink, telegramHttpLink])
+
     useEffect(() => {
         const handleCallback = async () => {
             try {
+                const parseState = (raw) => {
+                    // Backward compatible: raw UUID is accepted.
+                    if (!raw) return null
+
+                    // Try base64url JSON: { v: 1, uid, ru }
+                    try {
+                        const padded = raw.replace(/-/g, '+').replace(/_/g, '/')
+                        const padLen = (4 - (padded.length % 4)) % 4
+                        const b64 = padded + '='.repeat(padLen)
+                        const json = decodeURIComponent(escape(atob(b64)))
+                        const parsed = JSON.parse(json)
+                        if (parsed && typeof parsed === 'object' && parsed.uid) {
+                            return {
+                                userId: String(parsed.uid),
+                                redirectUri: parsed.ru ? String(parsed.ru) : null,
+                            }
+                        }
+                    } catch {
+                        // ignore
+                    }
+
+                    return { userId: String(raw), redirectUri: null }
+                }
+
                 // Получаем Telegram user ID из URL параметра (передадим его при авторизации)
                 const urlParams = new URLSearchParams(window.location.search)
                 const code = urlParams.get('code')
@@ -29,45 +86,61 @@ export default function InstagramCallback() {
                     throw new Error('No user ID in state parameter')
                 }
 
-                const userId = state // state содержит UUID пользователя
+                const parsedState = parseState(state)
+                if (!parsedState?.userId) {
+                    throw new Error('Invalid state parameter')
+                }
+
+                const userId = parsedState.userId
+                const redirectUriFromState = parsedState.redirectUri
 
                 setStatus('exchanging_token')
 
-                // Обмениваем код на токен
-                const tokenData = await instagramService.exchangeCodeForToken(code)
-                const accessToken = tokenData.accessToken // Используем правильное имя свойства
+                // Обмениваем код на short-lived токен через Instagram API
+                const tokenData = await instagramService.exchangeCodeForToken(code, redirectUriFromState || undefined)
+                const shortLivedToken = tokenData.accessToken
+                const instagramScopedUserId = tokenData.userId // Instagram-scoped user ID из ответа
 
-                console.log('Token received:', accessToken)
+                console.log('Short-lived token received, user_id:', instagramScopedUserId)
+
+                setStatus('getting_long_token')
+
+                // Получаем long-lived токен (60 дней) через серверную функцию
+                let accessToken = shortLivedToken
+                try {
+                    const longLivedData = await instagramService.getLongLivedToken(shortLivedToken)
+                    if (longLivedData?.accessToken) {
+                        accessToken = longLivedData.accessToken
+                        console.log('Long-lived token received, expires_in:', longLivedData.expiresIn)
+                    }
+                } catch (err) {
+                    console.warn('Could not get long-lived token, using short-lived:', err)
+                }
 
                 setStatus('fetching_instagram_account')
 
-                // Получаем Instagram Business Account ID и Page Access Token через Facebook Pages API
-                let instagramUserId = null
+                // Получаем Instagram профиль напрямую через Instagram Graph API (без Facebook)
+                let instagramUserId = instagramScopedUserId
                 let instagramUsername = null
-                let pageAccessToken = accessToken // По умолчанию используем user token
 
                 try {
-                    const accountsResponse = await fetch(
-                        `https://graph.facebook.com/v18.0/me/accounts?fields=access_token,instagram_business_account{id,username}&access_token=${accessToken}`
+                    const profileResponse = await fetch(
+                        `https://graph.instagram.com/v22.0/me?fields=user_id,username&access_token=${accessToken}`
                     )
-                    const accountsData = await accountsResponse.json()
-                    console.log('Facebook Pages with Instagram:', accountsData)
+                    const profileData = await profileResponse.json()
+                    console.log('Instagram profile data:', profileData)
 
-                    if (accountsData.data && accountsData.data.length > 0) {
-                        for (const page of accountsData.data) {
-                            if (page.instagram_business_account) {
-                                instagramUserId = page.instagram_business_account.id
-                                instagramUsername = page.instagram_business_account.username
-                                pageAccessToken = page.access_token // Используем Page Access Token!
-                                console.log('Found Instagram Business Account:', instagramUserId, instagramUsername)
-                                console.log('Page Access Token length:', pageAccessToken?.length)
-                                console.log('Page Access Token (first 50 chars):', pageAccessToken?.substring(0, 50))
-                                break
-                            }
-                        }
+                    if (profileData.data && profileData.data.length > 0) {
+                        instagramUserId = profileData.data[0].user_id || instagramUserId
+                        instagramUsername = profileData.data[0].username
+                    } else if (profileData.user_id) {
+                        instagramUserId = profileData.user_id
+                        instagramUsername = profileData.username
                     }
+
+                    console.log('Instagram User ID:', instagramUserId, 'Username:', instagramUsername)
                 } catch (err) {
-                    console.error('Error fetching Instagram Business Account:', err)
+                    console.error('Error fetching Instagram profile:', err)
                 }
 
                 setStatus('saving_to_database')
@@ -86,7 +159,7 @@ export default function InstagramCallback() {
                 if (existingProfile) {
                     // Обновляем существующий профиль
                     const updateData = {
-                        instagram_access_token: pageAccessToken, // Используем Page Access Token
+                        instagram_access_token: accessToken, // Instagram User Access Token
                         instagram_token_expires_at: expiresAt.toISOString(),
                         instagram_connected: true,
                         last_stats_update: new Date().toISOString()
@@ -110,7 +183,7 @@ export default function InstagramCallback() {
                     // Создаем новый профиль
                     const insertData = {
                         user_id: userId,
-                        instagram_access_token: pageAccessToken, // Используем Page Access Token
+                        instagram_access_token: accessToken, // Instagram User Access Token
                         instagram_token_expires_at: expiresAt.toISOString(),
                         instagram_connected: true,
                         last_stats_update: new Date().toISOString()
@@ -238,9 +311,18 @@ export default function InstagramCallback() {
                             <p className="text-gray-600 dark:text-gray-400 mb-4">
                                 Вернитесь в Telegram и обновите профиль, чтобы увидеть изменения.
                             </p>
-                            <p className="text-sm text-gray-500 dark:text-gray-500">
-                                Можете закрыть эту вкладку браузера.
-                            </p>
+                            {telegramHttpLink ? (
+                                <a
+                                    href={telegramHttpLink}
+                                    className="inline-flex items-center justify-center bg-purple-600 hover:bg-purple-700 text-white px-6 py-2 rounded-lg transition-colors"
+                                >
+                                    Вернуться в Telegram
+                                </a>
+                            ) : (
+                                <p className="text-sm text-gray-500 dark:text-gray-500">
+                                    Можете закрыть эту вкладку браузера и вернуться в Telegram.
+                                </p>
+                            )}
                         </>
                     )}
 
