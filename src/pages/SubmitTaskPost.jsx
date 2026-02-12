@@ -18,10 +18,30 @@ function SubmitTaskPost() {
     const [application, setApplication] = useState(null)
     const [submission, setSubmission] = useState(null)
     const [postUrl, setPostUrl] = useState('')
+    const [isManualMode, setIsManualMode] = useState(false)
 
     useEffect(() => {
         loadTaskAndApplication()
+        loadMetricsMode()
     }, [taskId])
+
+    const loadMetricsMode = async () => {
+        try {
+            const { data, error } = await supabase
+                .from('app_settings')
+                .select('value')
+                .eq('key', 'instagram_metrics_mode')
+                .maybeSingle()
+
+            if (!error && data) {
+                // value хранится как JSON строка "manual" или "auto"
+                const mode = typeof data.value === 'string' ? data.value : JSON.parse(data.value)
+                setIsManualMode(mode === 'manual')
+            }
+        } catch (e) {
+            console.warn('Could not load metrics mode:', e)
+        }
+    }
 
     const loadTaskAndApplication = async () => {
         try {
@@ -83,38 +103,50 @@ function SubmitTaskPost() {
 
         setLoading(true)
         try {
-            // Получаем Instagram токен и IG user id из профиля инфлюенсера
-            const { data: influencerProfile, error: influencerProfileError } = await supabase
-                .from('influencer_profiles')
-                .select('instagram_connected, instagram_access_token, instagram_user_id, instagram_username')
-                .eq('user_id', profile.id)
-                .maybeSingle()
-
-            if (influencerProfileError) throw influencerProfileError
-
-            if (!influencerProfile?.instagram_connected || !influencerProfile?.instagram_access_token) {
-                showAlert?.('Сначала подключите Instagram в профиле')
-                return
-            }
-
-            // Пытаемся получить media_id + базовые метрики на момент отправки
-            let metrics = null
-            try {
-                metrics = await instagramMetricsService.getPostMetrics(
-                    influencerProfile.instagram_access_token,
-                    postUrl,
-                    influencerProfile.instagram_user_id
-                )
-            } catch (e) {
-                console.warn('Could not fetch initial instagram metrics:', e)
-            }
-
-            const instagramMediaId = metrics?.media_id || null
-            const initialMetrics = {
-                views: metrics?.views || 0,
-                likes: metrics?.likes_count || 0,
-                comments: metrics?.comments_count || 0,
+            let instagramMediaId = null
+            let initialMetrics = {
+                views: 0,
+                likes: 0,
+                comments: 0,
                 captured_at: Math.floor(Date.now() / 1000)
+            }
+
+            // В автоматическом режиме требуем Instagram подключение
+            if (!isManualMode) {
+                // Получаем Instagram токен и IG user id из профиля инфлюенсера
+                const { data: influencerProfile, error: influencerProfileError } = await supabase
+                    .from('influencer_profiles')
+                    .select('instagram_connected, instagram_access_token, instagram_user_id, instagram_username')
+                    .eq('user_id', profile.id)
+                    .maybeSingle()
+
+                if (influencerProfileError) throw influencerProfileError
+
+                if (!influencerProfile?.instagram_connected || !influencerProfile?.instagram_access_token) {
+                    showAlert?.('Сначала подключите Instagram в профиле')
+                    setLoading(false)
+                    return
+                }
+
+                // Пытаемся получить media_id + базовые метрики на момент отправки
+                let metrics = null
+                try {
+                    metrics = await instagramMetricsService.getPostMetrics(
+                        influencerProfile.instagram_access_token,
+                        postUrl,
+                        influencerProfile.instagram_user_id
+                    )
+                } catch (e) {
+                    console.warn('Could not fetch initial instagram metrics:', e)
+                }
+
+                instagramMediaId = metrics?.media_id || null
+                initialMetrics = {
+                    views: metrics?.views || 0,
+                    likes: metrics?.likes_count || 0,
+                    comments: metrics?.comments_count || 0,
+                    captured_at: Math.floor(Date.now() / 1000)
+                }
             }
 
             if (submission) {
@@ -223,7 +255,10 @@ function SubmitTaskPost() {
                                 )}
                             </div>
                             <p className="text-xs text-tg-hint mt-3">
-                                ℹ️ Система автоматически отслеживает прогресс и фиксирует оплату по достигнутым порогам
+                                ℹ️ {isManualMode
+                                    ? 'Заказчик введёт метрики вручную при проверке'
+                                    : 'Система автоматически отслеживает прогресс и фиксирует оплату по достигнутым порогам'
+                                }
                             </p>
                         </div>
                     )}
@@ -290,8 +325,17 @@ function SubmitTaskPost() {
                             <li>Создайте публикацию в Instagram согласно заданию</li>
                             <li>Скопируйте ссылку на публикацию (кнопка "Поделиться" → "Скопировать ссылку")</li>
                             <li>Вставьте ссылку в поле выше и нажмите "Отправить"</li>
-                            <li>Система начнет автоматически отслеживать метрики</li>
-                            <li>При достижении целей задание автоматически завершится и вы получите оплату</li>
+                            {isManualMode ? (
+                                <>
+                                    <li>Заказчик проверит публикацию и введёт метрики</li>
+                                    <li>После подтверждения вы получите оплату</li>
+                                </>
+                            ) : (
+                                <>
+                                    <li>Система начнет автоматически отслеживать метрики</li>
+                                    <li>При достижении целей задание автоматически завершится и вы получите оплату</li>
+                                </>
+                            )}
                         </ol>
                     </div>
                 </div>

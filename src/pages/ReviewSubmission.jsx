@@ -15,11 +15,35 @@ function ReviewSubmission() {
     const [loading, setLoading] = useState(false)
     const [task, setTask] = useState(null)
     const [submission, setSubmission] = useState(null)
+    const [isManualMode, setIsManualMode] = useState(false)
+
+    // Ручной ввод метрик
+    const [manualViews, setManualViews] = useState('')
+    const [manualLikes, setManualLikes] = useState('')
+    const [manualComments, setManualComments] = useState('')
 
     useEffect(() => {
         if (!taskId || !profile?.id) return
         loadTaskAndSubmission()
+        loadMetricsMode()
     }, [taskId, profile?.id])
+
+    const loadMetricsMode = async () => {
+        try {
+            const { data, error } = await supabase
+                .from('app_settings')
+                .select('value')
+                .eq('key', 'instagram_metrics_mode')
+                .maybeSingle()
+
+            if (!error && data) {
+                const mode = typeof data.value === 'string' ? data.value : JSON.parse(data.value)
+                setIsManualMode(mode === 'manual')
+            }
+        } catch (e) {
+            console.warn('Could not load metrics mode:', e)
+        }
+    }
 
     const loadTaskAndSubmission = async () => {
         try {
@@ -84,8 +108,42 @@ function ReviewSubmission() {
             return
         }
 
+        // В ручном режиме проверяем ввод метрик
+        if (isManualMode && task?.target_metrics) {
+            const hasViews = task.target_metrics.views && !manualViews
+            const hasLikes = task.target_metrics.likes && !manualLikes
+            const hasComments = task.target_metrics.comments && !manualComments
+
+            if (hasViews || hasLikes || hasComments) {
+                showAlert?.('Заполните все метрики перед одобрением')
+                return
+            }
+        }
+
         setLoading(true)
         try {
+            // В ручном режиме сохраняем метрики
+            if (isManualMode) {
+                const manualMetrics = {
+                    views: parseInt(manualViews) || 0,
+                    likes: parseInt(manualLikes) || 0,
+                    comments: parseInt(manualComments) || 0,
+                    captured_at: Math.floor(Date.now() / 1000),
+                    manual_entry: true
+                }
+
+                // Сохраняем метрики в submission
+                const { error: updateError } = await supabase
+                    .from('task_submissions')
+                    .update({
+                        current_metrics: manualMetrics,
+                        initial_metrics: submission.initial_metrics || { views: 0, likes: 0, comments: 0 }
+                    })
+                    .eq('id', submission.id)
+
+                if (updateError) throw updateError
+            }
+
             const { data, error } = await supabase.rpc('approve_submission', {
                 p_submission_id: submission.id,
                 p_client_id: profile.id,
@@ -100,7 +158,11 @@ function ReviewSubmission() {
                 .update({ status: 'in_progress' })
                 .eq('id', taskId)
 
-            showAlert?.('Публикация одобрена! Началось отслеживание метрик.')
+            showAlert?.(
+                isManualMode
+                    ? 'Публикация одобрена! Метрики сохранены.'
+                    : 'Публикация одобрена! Началось отслеживание метрик.'
+            )
             navigate(`/client/task/${taskId}`)
         } catch (error) {
             console.error('Error approving:', error)
@@ -238,6 +300,65 @@ function ReviewSubmission() {
 
                     {submission.status === 'pending' && (
                         <div className="space-y-3">
+                            {/* Форма ручного ввода метрик */}
+                            {isManualMode && task?.target_metrics && (
+                                <div className="bg-orange-50 dark:bg-orange-900/20 rounded-xl p-4 border border-orange-200 dark:border-orange-800 mb-4">
+                                    <h4 className="font-semibold text-orange-900 dark:text-orange-200 mb-3">
+                                        ✍️ Ручной ввод метрик
+                                    </h4>
+                                    <p className="text-sm text-orange-800 dark:text-orange-300 mb-4">
+                                        Instagram API на проверке. Откройте публикацию и введите текущие метрики вручную.
+                                    </p>
+                                    <div className="space-y-3">
+                                        {task.target_metrics.views && (
+                                            <div>
+                                                <label className="block text-sm font-medium mb-1">
+                                                    👁 Просмотры
+                                                </label>
+                                                <input
+                                                    type="number"
+                                                    value={manualViews}
+                                                    onChange={(e) => setManualViews(e.target.value)}
+                                                    className="w-full p-2 rounded-lg border dark:bg-gray-700 dark:border-gray-600"
+                                                    placeholder="Введите количество просмотров"
+                                                    min="0"
+                                                />
+                                            </div>
+                                        )}
+                                        {task.target_metrics.likes && (
+                                            <div>
+                                                <label className="block text-sm font-medium mb-1">
+                                                    ❤️ Лайки
+                                                </label>
+                                                <input
+                                                    type="number"
+                                                    value={manualLikes}
+                                                    onChange={(e) => setManualLikes(e.target.value)}
+                                                    className="w-full p-2 rounded-lg border dark:bg-gray-700 dark:border-gray-600"
+                                                    placeholder="Введите количество лайков"
+                                                    min="0"
+                                                />
+                                            </div>
+                                        )}
+                                        {task.target_metrics.comments && (
+                                            <div>
+                                                <label className="block text-sm font-medium mb-1">
+                                                    💬 Комментарии
+                                                </label>
+                                                <input
+                                                    type="number"
+                                                    value={manualComments}
+                                                    onChange={(e) => setManualComments(e.target.value)}
+                                                    className="w-full p-2 rounded-lg border dark:bg-gray-700 dark:border-gray-600"
+                                                    placeholder="Введите количество комментариев"
+                                                    min="0"
+                                                />
+                                            </div>
+                                        )}
+                                    </div>
+                                </div>
+                            )}
+
                             <div className="bg-amber-50 dark:bg-amber-900/20 rounded-xl p-4 border border-amber-200 dark:border-amber-800 mb-4">
                                 <h4 className="font-semibold text-amber-900 dark:text-amber-200 mb-2">
                                     ⚠️ Важно проверить
@@ -247,24 +368,35 @@ function ReviewSubmission() {
                                     <li><strong>Проверьте автора</strong> - публикация должна быть с аккаунта инфлюенсера</li>
                                     <li><strong>Проверьте дату</strong> - пост должен быть новым (созданным после принятия задания)</li>
                                     <li><strong>Проверьте контент</strong> - соответствие заданию и качество</li>
-                                    <li>После одобрения начнется автоматическое отслеживание метрик</li>
-                                    <li>При достижении целей инфлюенсер автоматически получит оплату</li>
+                                    {isManualMode ? (
+                                        <>
+                                            <li>Введите текущие метрики публикации вручную</li>
+                                            <li>После одобрения вы сможете обновлять метрики позже</li>
+                                        </>
+                                    ) : (
+                                        <>
+                                            <li>После одобрения начнется автоматическое отслеживание метрик</li>
+                                            <li>При достижении целей инфлюенсер автоматически получит оплату</li>
+                                        </>
+                                    )}
                                 </ul>
                             </div>
 
-                            <div className="bg-red-50 dark:bg-red-900/20 rounded-xl p-3 border border-red-200 dark:border-red-800 mb-4">
-                                <p className="text-xs text-red-800 dark:text-red-200">
-                                    🛡️ <strong>Защита от мошенничества:</strong> Система автоматически проверяет владельца поста через Instagram API.
-                                    Если пост чужой - он будет автоматически отклонен.
-                                </p>
-                            </div>
+                            {!isManualMode && (
+                                <div className="bg-red-50 dark:bg-red-900/20 rounded-xl p-3 border border-red-200 dark:border-red-800 mb-4">
+                                    <p className="text-xs text-red-800 dark:text-red-200">
+                                        🛡️ <strong>Защита от мошенничества:</strong> Система автоматически проверяет владельца поста через Instagram API.
+                                        Если пост чужой - он будет автоматически отклонен.
+                                    </p>
+                                </div>
+                            )}
 
                             <button
                                 onClick={handleApprove}
                                 disabled={loading}
                                 className="w-full bg-green-500 text-white py-4 rounded-xl font-semibold hover:bg-green-600 disabled:opacity-50"
                             >
-                                ✅ Одобрить и начать отслеживание
+                                {isManualMode ? '✅ Одобрить и сохранить метрики' : '✅ Одобрить и начать отслеживание'}
                             </button>
 
                             <button

@@ -13,8 +13,9 @@ function AdminPanel() {
     const [tasks, setTasks] = useState([])
     const [stats, setStats] = useState(null)
     const [withdrawals, setWithdrawals] = useState([])
+    const [settings, setSettings] = useState({})
     const [loading, setLoading] = useState(false)
-    const [activeTab, setActiveTab] = useState('users') // users, tasks, stats, withdrawals
+    const [activeTab, setActiveTab] = useState('users') // users, tasks, stats, withdrawals, settings
 
     // Проверка прав доступа
     useEffect(() => {
@@ -36,6 +37,8 @@ function AdminPanel() {
             loadStats()
         } else if (activeTab === 'withdrawals') {
             loadWithdrawals()
+        } else if (activeTab === 'settings') {
+            loadSettings()
         }
     }, [user, activeTab])
 
@@ -123,6 +126,54 @@ function AdminPanel() {
             console.error('Ошибка загрузки заявок:', error)
         } finally {
             setLoading(false)
+        }
+    }
+
+    const loadSettings = async () => {
+        setLoading(true)
+        try {
+            const { data, error } = await supabase
+                .from('app_settings')
+                .select('*')
+
+            if (error) throw error
+
+            // Преобразуем в объект key -> value
+            const settingsObj = {}
+            data?.forEach(row => {
+                settingsObj[row.key] = row.value
+            })
+            setSettings(settingsObj)
+        } catch (error) {
+            console.error('Ошибка загрузки настроек:', error)
+        } finally {
+            setLoading(false)
+        }
+    }
+
+    const toggleMetricsMode = async () => {
+        const currentMode = settings.instagram_metrics_mode || 'auto'
+        const newMode = currentMode === 'auto' ? 'manual' : 'auto'
+
+        try {
+            const { error } = await supabase.rpc('set_app_setting', {
+                p_key: 'instagram_metrics_mode',
+                p_value: JSON.stringify(newMode),
+                p_admin_telegram_id: user.id
+            })
+
+            if (error) throw error
+
+            setSettings({ ...settings, instagram_metrics_mode: newMode })
+            showAlert?.(`Режим метрик изменен на: ${newMode === 'auto' ? 'Автоматический' : 'Ручной'}`)
+
+            await sendAdminNotification(
+                `⛔️ <b>Изменен режим метрик Instagram</b>\n\n` +
+                `Новый режим: ${newMode === 'auto' ? '🤖 Автоматический (через Instagram API)' : '✍️ Ручной (ввод заказчиком)'}`
+            )
+        } catch (error) {
+            console.error('Ошибка изменения настройки:', error)
+            showAlert?.('Ошибка при изменении настройки')
         }
     }
 
@@ -390,6 +441,15 @@ function AdminPanel() {
                         }`}
                 >
                     📊 Статистика
+                </button>
+                <button
+                    onClick={() => setActiveTab('settings')}
+                    className={`px-4 py-2 rounded-full whitespace-nowrap transition-colors ${activeTab === 'settings'
+                        ? 'bg-brand text-white'
+                        : 'bg-gray-200 dark:bg-gray-700'
+                        }`}
+                >
+                    ⚙️ Настройки
                 </button>
             </div>
 
@@ -695,6 +755,60 @@ function AdminPanel() {
                             Загрузка статистики...
                         </div>
                     )
+                ) : activeTab === 'settings' ? (
+                    <div className="space-y-4">
+                        <div className="bg-white dark:bg-gray-800 rounded-xl p-4 shadow-md">
+                            <h3 className="font-semibold mb-4">📸 Instagram метрики</h3>
+
+                            <div className="bg-yellow-50 dark:bg-yellow-900/30 rounded-lg p-3 mb-4">
+                                <p className="text-sm text-yellow-800 dark:text-yellow-200">
+                                    ⚠️ <strong>Instagram API на проверке</strong><br />
+                                    Если автоматический сбор метрик не работает, включите ручной режим.
+                                    Заказчики будут вводить метрики вручную при проверке публикаций.
+                                </p>
+                            </div>
+
+                            <div className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-700/50 rounded-lg">
+                                <div>
+                                    <p className="font-medium">Режим сбора метрик</p>
+                                    <p className="text-sm text-tg-hint">
+                                        {
+                                            settings.instagram_metrics_mode === 'manual'
+                                                ? '✍️ Ручной ввод заказчиком'
+                                                : '🤖 Автоматический (через Instagram API)'
+                                        }
+                                    </p>
+                                </div>
+                                <button
+                                    onClick={toggleMetricsMode}
+                                    className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${settings.instagram_metrics_mode === 'manual'
+                                            ? 'bg-orange-500'
+                                            : 'bg-green-500'
+                                        }`}
+                                >
+                                    <span
+                                        className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${settings.instagram_metrics_mode === 'manual' ? 'translate-x-6' : 'translate-x-1'
+                                            }`}
+                                    />
+                                </button>
+                            </div>
+
+                            <div className="mt-4 text-sm text-tg-hint">
+                                <p className="mb-2"><strong>Автоматический режим:</strong></p>
+                                <ul className="list-disc list-inside mb-3 space-y-1">
+                                    <li>Инфлюенсер должен подключить Instagram</li>
+                                    <li>Метрики собираются автоматически через API</li>
+                                    <li>Требуется одобрение Instagram приложения</li>
+                                </ul>
+                                <p className="mb-2"><strong>Ручной режим:</strong></p>
+                                <ul className="list-disc list-inside space-y-1">
+                                    <li>Подключение Instagram не требуется</li>
+                                    <li>Заказчик вводит метрики вручную</li>
+                                    <li>Работает без Instagram API</li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
                 ) : null}
             </div>
         </div>
