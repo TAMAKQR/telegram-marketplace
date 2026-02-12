@@ -14,12 +14,31 @@ function InfluencerProfile() {
     const [influencerProfile, setInfluencerProfile] = useState(null)
     const [instagramStats, setInstagramStats] = useState(null)
     const [loadingStats, setLoadingStats] = useState(false)
+    const [isManualMode, setIsManualMode] = useState(false)
 
     useEffect(() => {
         if (profile?.id) {
             loadProfile()
+            loadMetricsMode()
         }
     }, [profile])
+
+    const loadMetricsMode = async () => {
+        try {
+            const { data, error } = await supabase
+                .from('app_settings')
+                .select('value')
+                .eq('key', 'instagram_metrics_mode')
+                .maybeSingle()
+
+            if (!error && data) {
+                const mode = typeof data.value === 'string' ? data.value : JSON.parse(data.value)
+                setIsManualMode(mode === 'manual')
+            }
+        } catch (e) {
+            console.warn('Could not load metrics mode:', e)
+        }
+    }
 
     const loadProfile = async () => {
         try {
@@ -179,13 +198,18 @@ function InfluencerProfile() {
     const handleSubmit = async (e) => {
         e.preventDefault()
 
-        if (!influencerProfile?.instagram_connected) {
+        // В ручном режиме не требуем подключения Instagram
+        if (!isManualMode && !influencerProfile?.instagram_connected) {
             showAlert?.('Сначала подключите Instagram')
             return
         }
 
-        // Обновляем статистику
-        await handleRefreshStats()
+        // Обновляем статистику только если Instagram подключен
+        if (influencerProfile?.instagram_connected) {
+            await handleRefreshStats()
+        } else {
+            showAlert?.('Профиль сохранён')
+        }
     }
 
     return (
@@ -208,7 +232,23 @@ function InfluencerProfile() {
             <form onSubmit={handleSubmit} className="p-4 space-y-4 max-w-full">
                 {/* Instagram Connection Status */}
                 <div className="bg-gradient-to-r from-purple-100 to-pink-100 dark:from-purple-900/30 dark:to-pink-900/30 p-4 rounded-xl border border-purple-300 dark:border-purple-700">
-                    {influencerProfile?.instagram_connected ? (
+                    {isManualMode ? (
+                        // Ручной режим - подключение Instagram не требуется
+                        <div className="flex items-start gap-3">
+                            <div className="text-2xl">✅</div>
+                            <div className="flex-1">
+                                <p className="font-semibold text-green-700 dark:text-green-400 mb-1">
+                                    Подключение Instagram не требуется
+                                </p>
+                                <p className="text-xs text-gray-600 dark:text-gray-400">
+                                    Платформа работает в ручном режиме. Заказчики будут вводить метрики публикаций вручную при проверке.
+                                </p>
+                                <p className="text-xs text-gray-500 mt-2">
+                                    Просто отправляйте ссылки на ваши публикации!
+                                </p>
+                            </div>
+                        </div>
+                    ) : influencerProfile?.instagram_connected ? (
                         <div className="flex items-center justify-between">
                             <div className="flex items-center gap-3">
                                 <div className="text-2xl">✓</div>
