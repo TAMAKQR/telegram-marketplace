@@ -183,21 +183,32 @@ function WebClientDashboard() {
             if (newTask.targetLikes) targetMetrics.likes = parseInt(newTask.targetLikes)
             if (newTask.targetComments) targetMetrics.comments = parseInt(newTask.targetComments)
 
+            // Преобразуем deadline в ISO формат
+            const deadlineDate = new Date(newTask.deadline)
+            deadlineDate.setHours(23, 59, 59, 0)
+            const deadlineISO = deadlineDate.toISOString()
+
+            const taskData = {
+                client_id: profile.id,
+                title: newTask.title,
+                description: newTask.description,
+                budget: parseFloat(newTask.budget),
+                target_metrics: Object.keys(targetMetrics).length > 0 ? targetMetrics : null,
+                metric_deadline_days: parseInt(newTask.metricDeadlineDays) || 7,
+                deadline: deadlineISO,
+                status: 'open',
+                accepted_count: 0
+            }
+
+            console.log('Creating task:', taskData)
+
             const { data, error } = await supabase
                 .from('tasks')
-                .insert([{
-                    client_id: profile.id,
-                    title: newTask.title,
-                    description: newTask.description,
-                    budget: parseFloat(newTask.budget),
-                    target_metrics: Object.keys(targetMetrics).length > 0 ? targetMetrics : null,
-                    metric_deadline_days: parseInt(newTask.metricDeadlineDays) || 7,
-                    deadline: newTask.deadline,
-                    status: 'open',
-                    accepted_count: 0
-                }])
+                .insert([taskData])
                 .select()
                 .single()
+
+            console.log('Create result:', { data, error })
 
             if (error) throw error
 
@@ -396,8 +407,8 @@ function WebClientDashboard() {
                                         )}
                                     </div>
                                     <span className={`text-xs px-2 py-1 rounded-full whitespace-nowrap ${task.status === 'open' ? 'bg-green-100 text-green-800' :
-                                            task.status === 'in_progress' ? 'bg-blue-100 text-blue-800' :
-                                                task.status === 'completed' ? 'bg-gray-100 text-gray-800' : 'bg-red-100 text-red-800'
+                                        task.status === 'in_progress' ? 'bg-blue-100 text-blue-800' :
+                                            task.status === 'completed' ? 'bg-gray-100 text-gray-800' : 'bg-red-100 text-red-800'
                                         }`}>
                                         {task.status === 'open' ? '🟢 Открыт' :
                                             task.status === 'in_progress' ? '🔵 В работе' :
@@ -438,8 +449,8 @@ function WebClientDashboard() {
                                         </p>
                                     </div>
                                     <span className={`text-xs px-2 py-1 rounded-full ${sub.status === 'pending' ? 'bg-yellow-100 text-yellow-800' :
-                                            sub.status === 'in_progress' ? 'bg-blue-100 text-blue-800' :
-                                                sub.status === 'completed' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
+                                        sub.status === 'in_progress' ? 'bg-blue-100 text-blue-800' :
+                                            sub.status === 'completed' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
                                         }`}>
                                         {sub.status === 'pending' ? '⏳ Ожидает' :
                                             sub.status === 'in_progress' ? '🔵 В работе' :

@@ -341,21 +341,32 @@ function WebAdminSettings() {
             if (newTask.targetLikes) targetMetrics.likes = parseInt(newTask.targetLikes)
             if (newTask.targetComments) targetMetrics.comments = parseInt(newTask.targetComments)
 
+            // Преобразуем deadline в ISO формат с временем
+            const deadlineDate = new Date(newTask.deadline)
+            deadlineDate.setHours(23, 59, 59, 0)
+            const deadlineISO = deadlineDate.toISOString()
+
+            const taskData = {
+                client_id: newTask.clientId,
+                title: newTask.title,
+                description: newTask.description,
+                budget: parseFloat(newTask.budget),
+                target_metrics: Object.keys(targetMetrics).length > 0 ? targetMetrics : null,
+                metric_deadline_days: parseInt(newTask.metricDeadlineDays) || 7,
+                deadline: deadlineISO,
+                status: 'open',
+                accepted_count: 0
+            }
+
+            console.log('Creating task with data:', taskData)
+
             const { data, error } = await supabase
                 .from('tasks')
-                .insert([{
-                    client_id: newTask.clientId,
-                    title: newTask.title,
-                    description: newTask.description,
-                    budget: parseFloat(newTask.budget),
-                    target_metrics: Object.keys(targetMetrics).length > 0 ? targetMetrics : null,
-                    metric_deadline_days: parseInt(newTask.metricDeadlineDays) || 7,
-                    deadline: newTask.deadline,
-                    status: 'open',
-                    accepted_count: 0
-                }])
+                .insert([taskData])
                 .select()
                 .single()
+
+            console.log('Create task result:', { data, error })
 
             if (error) throw error
 
