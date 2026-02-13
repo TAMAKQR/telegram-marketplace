@@ -1160,7 +1160,7 @@ function TaskDetails() {
                                             >
                                                 📸 Загрузить мои посты из Instagram
                                             </button>
-                                        )
+                                        )}
 
                                         {loadingPosts && (
                                             <div className="text-center py-4">
