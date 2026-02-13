@@ -72,6 +72,19 @@ function UserTypeSelection() {
 
                 if (error) throw error
 
+                // Очищаем старые Instagram данные при восстановлении
+                await supabase
+                    .from('influencer_profiles')
+                    .update({
+                        instagram_username: null,
+                        instagram_url: null,
+                        instagram_access_token: null,
+                        instagram_token_expires_at: null,
+                        instagram_user_id: null,
+                        instagram_connected: false
+                    })
+                    .eq('user_id', deletedUser.id)
+
                 setUserType('influencer')
                 setProfile(data)
                 navigate('/influencer')
