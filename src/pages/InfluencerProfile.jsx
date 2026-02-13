@@ -16,6 +16,13 @@ function InfluencerProfile() {
     const [loadingStats, setLoadingStats] = useState(false)
     const [isManualMode, setIsManualMode] = useState(false)
 
+    // Ручной ввод данных Instagram
+    const [manualData, setManualData] = useState({
+        instagram_username: '',
+        followers_count: '',
+        engagement_rate: ''
+    })
+
     useEffect(() => {
         if (profile?.id) {
             loadProfile()
@@ -50,6 +57,13 @@ function InfluencerProfile() {
 
             if (data) {
                 setInfluencerProfile(data)
+
+                // Заполняем форму ручного ввода текущими данными
+                setManualData({
+                    instagram_username: data.instagram_username || '',
+                    followers_count: data.followers_count?.toString() || '',
+                    engagement_rate: data.engagement_rate?.toString() || ''
+                })
 
                 // Загружаем сохраненную статистику (без обращения к Instagram API)
                 if (data.instagram_connected) {
@@ -198,18 +212,57 @@ function InfluencerProfile() {
     const handleSubmit = async (e) => {
         e.preventDefault()
 
-        // В ручном режиме не требуем подключения Instagram
-        if (!isManualMode && !influencerProfile?.instagram_connected) {
+        // В ручном режиме сохраняем введённые данные
+        if (isManualMode) {
+            if (!manualData.instagram_username) {
+                showAlert?.('Введите Instagram username')
+                return
+            }
+
+            setLoading(true)
+            try {
+                const updateData = {
+                    instagram_username: manualData.instagram_username.replace('@', ''),
+                    followers_count: manualData.followers_count ? parseInt(manualData.followers_count) : 0,
+                    engagement_rate: manualData.engagement_rate ? parseFloat(manualData.engagement_rate) : 0
+                }
+
+                if (influencerProfile?.id) {
+                    // Обновляем существующий профиль
+                    const { error } = await supabase
+                        .from('influencer_profiles')
+                        .update(updateData)
+                        .eq('id', influencerProfile.id)
+
+                    if (error) throw error
+                } else {
+                    // Создаём новый профиль
+                    const { error } = await supabase
+                        .from('influencer_profiles')
+                        .insert({ ...updateData, user_id: profile.id })
+
+                    if (error) throw error
+                }
+
+                await loadProfile()
+                showAlert?.('Данные сохранены!')
+            } catch (error) {
+                console.error('Ошибка сохранения:', error)
+                showAlert?.('Ошибка сохранения: ' + error.message)
+            } finally {
+                setLoading(false)
+            }
+            return
+        }
+
+        // В авто-режиме требуем подключение Instagram
+        if (!influencerProfile?.instagram_connected) {
             showAlert?.('Сначала подключите Instagram')
             return
         }
 
         // Обновляем статистику только если Instagram подключен
-        if (influencerProfile?.instagram_connected) {
-            await handleRefreshStats()
-        } else {
-            showAlert?.('Профиль сохранён')
-        }
+        await handleRefreshStats()
     }
 
     return (
@@ -233,18 +286,70 @@ function InfluencerProfile() {
                 {/* Instagram Connection Status */}
                 <div className="bg-gradient-to-r from-purple-100 to-pink-100 dark:from-purple-900/30 dark:to-pink-900/30 p-4 rounded-xl border border-purple-300 dark:border-purple-700">
                     {isManualMode ? (
-                        // Ручной режим - подключение Instagram не требуется
-                        <div className="flex items-start gap-3">
-                            <div className="text-2xl">✅</div>
-                            <div className="flex-1">
-                                <p className="font-semibold text-green-700 dark:text-green-400 mb-1">
-                                    Подключение Instagram не требуется
-                                </p>
-                                <p className="text-xs text-gray-600 dark:text-gray-400">
-                                    Платформа работает в ручном режиме. Заказчики будут вводить метрики публикаций вручную при проверке.
-                                </p>
-                                <p className="text-xs text-gray-500 mt-2">
-                                    Просто отправляйте ссылки на ваши публикации!
+                        // Ручной режим - форма ввода данных Instagram
+                        <div className="space-y-4">
+                            <div className="flex items-start gap-3">
+                                <div className="text-2xl">✍️</div>
+                                <div className="flex-1">
+                                    <p className="font-semibold text-purple-700 dark:text-purple-400 mb-1">
+                                        Ручной режим
+                                    </p>
+                                    <p className="text-xs text-gray-600 dark:text-gray-400">
+                                        Введите данные вашего Instagram профиля для отображения заказчикам
+                                    </p>
+                                </div>
+                            </div>
+
+                            <div className="space-y-3">
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                                        Instagram username *
+                                    </label>
+                                    <div className="flex items-center">
+                                        <span className="px-3 py-2 bg-gray-200 dark:bg-gray-700 rounded-l-lg text-gray-600 dark:text-gray-400 border border-r-0 border-gray-300 dark:border-gray-600">@</span>
+                                        <input
+                                            type="text"
+                                            value={manualData.instagram_username}
+                                            onChange={(e) => setManualData({ ...manualData, instagram_username: e.target.value.replace('@', '') })}
+                                            className="flex-1 p-2 border border-gray-300 dark:border-gray-600 rounded-r-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
+                                            placeholder="username"
+                                        />
+                                    </div>
+                                </div>
+
+                                <div className="grid grid-cols-2 gap-3">
+                                    <div>
+                                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                                            👥 Подписчики
+                                        </label>
+                                        <input
+                                            type="number"
+                                            value={manualData.followers_count}
+                                            onChange={(e) => setManualData({ ...manualData, followers_count: e.target.value })}
+                                            className="w-full p-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
+                                            placeholder="10000"
+                                            min="0"
+                                        />
+                                    </div>
+                                    <div>
+                                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                                            📊 ER (%)
+                                        </label>
+                                        <input
+                                            type="number"
+                                            step="0.01"
+                                            value={manualData.engagement_rate}
+                                            onChange={(e) => setManualData({ ...manualData, engagement_rate: e.target.value })}
+                                            className="w-full p-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
+                                            placeholder="3.5"
+                                            min="0"
+                                            max="100"
+                                        />
+                                    </div>
+                                </div>
+
+                                <p className="text-xs text-gray-500 dark:text-gray-400">
+                                    💡 Engagement Rate можно посчитать: (лайки + комменты) / подписчики × 100
                                 </p>
                             </div>
                         </div>
@@ -299,18 +404,21 @@ function InfluencerProfile() {
                     )}
                 </div>
 
-                <div>
-                    <label className="block text-sm font-medium mb-1">
-                        Instagram username *
-                    </label>
-                    <div className="flex items-center gap-2 px-4 py-3 rounded-xl bg-gray-100 dark:bg-gray-700 border border-gray-300 dark:border-gray-600">
-                        <span className="text-tg-hint">@</span>
-                        <span className="flex-1 text-gray-900 dark:text-white">
-                            {influencerProfile?.instagram_username || 'Не подключен'}
-                        </span>
-                        <span className="text-xs text-gray-500">Автоматически из Instagram</span>
+                {/* Показываем read-only поле username только в авто-режиме */}
+                {!isManualMode && (
+                    <div>
+                        <label className="block text-sm font-medium mb-1">
+                            Instagram username *
+                        </label>
+                        <div className="flex items-center gap-2 px-4 py-3 rounded-xl bg-gray-100 dark:bg-gray-700 border border-gray-300 dark:border-gray-600">
+                            <span className="text-tg-hint">@</span>
+                            <span className="flex-1 text-gray-900 dark:text-white">
+                                {influencerProfile?.instagram_username || 'Не подключен'}
+                            </span>
+                            <span className="text-xs text-gray-500">Автоматически из Instagram</span>
+                        </div>
                     </div>
-                </div>
+                )}
 
                 {/* Instagram Statistics */}
                 {influencerProfile?.instagram_connected && loadingStats && !instagramStats && (
@@ -407,7 +515,26 @@ function InfluencerProfile() {
                     </div>
                 )}
 
-                {influencerProfile?.instagram_connected ? (
+                {isManualMode ? (
+                    // Кнопка сохранения для ручного режима
+                    <button
+                        type="submit"
+                        disabled={loading}
+                        className="w-full bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white py-4 rounded-xl font-semibold transition-all disabled:opacity-50 flex items-center justify-center gap-2"
+                    >
+                        {loading ? (
+                            <>
+                                <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
+                                Сохранение...
+                            </>
+                        ) : (
+                            <>
+                                <span>💾</span>
+                                Сохранить данные
+                            </>
+                        )}
+                    </button>
+                ) : influencerProfile?.instagram_connected ? (
                     <button
                         type="button"
                         onClick={handleRefreshStats}
