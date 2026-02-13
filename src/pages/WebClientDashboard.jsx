@@ -438,24 +438,32 @@ function WebClientDashboard() {
     // Форма авторизации
     if (!isAuthenticated) {
         return (
-            <div className="min-h-screen bg-gray-100 flex items-center justify-center p-4">
-                <div className="bg-white rounded-2xl shadow-xl p-8 w-full max-w-md">
+            <div className="min-h-screen bg-gradient-to-br from-slate-100 via-blue-50 to-purple-50 flex items-center justify-center p-4">
+                <div className="bg-white/80 backdrop-blur-sm rounded-3xl shadow-2xl p-8 w-full max-w-md border border-white/50">
                     <div className="text-center mb-8">
-                        <Logo className="h-12 mx-auto mb-4" />
-                        <h1 className="text-2xl font-bold text-gray-800">💼 Кабинет заказчика</h1>
-                        <p className="text-gray-500 mt-2">Вход через Telegram ID</p>
+                        <div className="w-16 h-16 bg-gradient-to-br from-blue-500 to-purple-600 rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-lg">
+                            <span className="text-3xl">💼</span>
+                        </div>
+                        <h1 className="text-2xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
+                            Кабинет заказчика
+                        </h1>
+                        <p className="text-slate-500 mt-2">Вход через Telegram ID</p>
                     </div>
 
-                    <div className="flex gap-2 mb-6">
+                    <div className="flex gap-2 mb-6 p-1 bg-slate-100 rounded-xl">
                         <button
                             onClick={() => setLoginMethod('telegram')}
-                            className={`flex-1 py-2 rounded-lg font-medium ${loginMethod === 'telegram' ? 'bg-blue-600 text-white' : 'bg-gray-100'}`}
+                            className={`flex-1 py-2.5 rounded-lg font-medium transition-all ${loginMethod === 'telegram'
+                                ? 'bg-white text-blue-600 shadow-sm'
+                                : 'text-slate-500 hover:text-slate-700'}`}
                         >
                             Telegram ID
                         </button>
                         <button
                             onClick={() => setLoginMethod('phone')}
-                            className={`flex-1 py-2 rounded-lg font-medium ${loginMethod === 'phone' ? 'bg-blue-600 text-white' : 'bg-gray-100'}`}
+                            className={`flex-1 py-2.5 rounded-lg font-medium transition-all ${loginMethod === 'phone'
+                                ? 'bg-white text-blue-600 shadow-sm'
+                                : 'text-slate-500 hover:text-slate-700'}`}
                         >
                             Телефон
                         </button>
@@ -464,46 +472,58 @@ function WebClientDashboard() {
                     <form onSubmit={handleLogin} className="space-y-4">
                         {loginMethod === 'telegram' ? (
                             <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-1">Telegram ID</label>
+                                <label className="block text-sm font-medium text-slate-700 mb-2">Telegram ID</label>
                                 <input
                                     type="number"
                                     value={telegramId}
                                     onChange={(e) => setTelegramId(e.target.value)}
-                                    className="w-full p-3 border border-gray-300 rounded-lg"
+                                    className="w-full p-3.5 border border-slate-200 rounded-xl bg-slate-50 focus:bg-white focus:border-blue-400 focus:ring-2 focus:ring-blue-100 transition-all outline-none"
                                     placeholder="Например: 123456789"
                                     required
                                 />
-                                <p className="text-xs text-gray-500 mt-1">
+                                <p className="text-xs text-slate-500 mt-2">
                                     Узнать свой ID можно у бота @userinfobot
                                 </p>
                             </div>
                         ) : (
                             <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-1">Номер телефона</label>
+                                <label className="block text-sm font-medium text-slate-700 mb-2">Номер телефона</label>
                                 <input
                                     type="tel"
                                     value={phone}
                                     onChange={(e) => setPhone(e.target.value)}
-                                    className="w-full p-3 border border-gray-300 rounded-lg"
+                                    className="w-full p-3.5 border border-slate-200 rounded-xl bg-slate-50 focus:bg-white focus:border-blue-400 focus:ring-2 focus:ring-blue-100 transition-all outline-none"
                                     placeholder="+7 999 123 45 67"
                                     required
                                 />
                             </div>
                         )}
 
-                        {authError && <div className="bg-red-50 text-red-600 p-3 rounded-lg text-sm">{authError}</div>}
+                        {authError && (
+                            <div className="bg-red-50 text-red-600 p-4 rounded-xl text-sm border border-red-100">
+                                {authError}
+                            </div>
+                        )}
 
                         <button
                             type="submit"
                             disabled={loading}
-                            className="w-full bg-blue-600 text-white py-3 rounded-lg font-semibold hover:bg-blue-700 disabled:opacity-50"
+                            className="w-full bg-gradient-to-r from-blue-600 to-purple-600 text-white py-3.5 rounded-xl font-semibold hover:shadow-lg hover:scale-[1.02] transition-all disabled:opacity-50 disabled:hover:scale-100"
                         >
-                            {loading ? 'Вход...' : 'Войти'}
+                            {loading ? (
+                                <span className="flex items-center justify-center gap-2">
+                                    <span className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent"></span>
+                                    Вход...
+                                </span>
+                            ) : 'Войти'}
                         </button>
                     </form>
 
-                    <p className="text-center text-sm text-gray-500 mt-6">
-                        Нет аккаунта? Зарегистрируйтесь через <a href="https://t.me/your_bot" className="text-blue-600 hover:underline">Telegram бота</a>
+                    <p className="text-center text-sm text-slate-500 mt-6">
+                        Нет аккаунта? Зарегистрируйтесь через{' '}
+                        <a href="https://t.me/your_bot" className="text-blue-600 hover:underline font-medium">
+                            Telegram бота
+                        </a>
                     </p>
                 </div>
             </div>
@@ -512,22 +532,27 @@ function WebClientDashboard() {
 
     // Кабинет заказчика
     return (
-        <div className="min-h-screen bg-gray-100">
+        <div className="min-h-screen bg-gradient-to-br from-slate-100 via-blue-50 to-purple-50">
             {/* Header */}
-            <header className="bg-gradient-to-r from-blue-600 to-purple-600 text-white shadow-lg">
-                <div className="max-w-4xl mx-auto px-4 py-4 flex items-center justify-between">
-                    <div className="flex items-center gap-3">
-                        <Logo className="h-8" />
+            <header className="bg-white/80 backdrop-blur-md border-b border-slate-200/50 sticky top-0 z-40">
+                <div className="max-w-5xl mx-auto px-4 py-4 flex items-center justify-between">
+                    <div className="flex items-center gap-4">
+                        <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-purple-600 rounded-xl flex items-center justify-center shadow-lg">
+                            <span className="text-xl">💼</span>
+                        </div>
                         <div>
-                            <h1 className="text-lg font-bold">💼 Кабинет заказчика</h1>
-                            <p className="text-xs text-white/80">{profile?.first_name} {profile?.last_name || ''}</p>
+                            <h1 className="text-lg font-bold text-slate-800">Кабинет заказчика</h1>
+                            <p className="text-xs text-slate-500">{profile?.first_name} {profile?.last_name || ''}</p>
                         </div>
                     </div>
                     <div className="flex items-center gap-3">
-                        <span className="text-sm bg-white/20 px-3 py-1 rounded-full">
+                        <span className="text-sm bg-gradient-to-r from-blue-500 to-purple-600 text-white px-4 py-1.5 rounded-full font-medium shadow-sm">
                             💰 {profile?.balance?.toLocaleString() || 0} сом
                         </span>
-                        <button onClick={handleLogout} className="text-white/80 hover:text-white px-3 py-1 hover:bg-white/10 rounded-lg">
+                        <button
+                            onClick={handleLogout}
+                            className="text-slate-500 hover:text-slate-700 px-3 py-1.5 hover:bg-slate-100 rounded-xl transition-colors"
+                        >
                             Выйти
                         </button>
                     </div>
@@ -535,24 +560,30 @@ function WebClientDashboard() {
             </header>
 
             {/* Tabs */}
-            <div className="bg-white shadow-sm">
-                <div className="max-w-4xl mx-auto px-4">
-                    <div className="flex gap-2 py-2">
+            <div className="bg-white/60 backdrop-blur-sm border-b border-slate-200/50">
+                <div className="max-w-5xl mx-auto px-4">
+                    <div className="flex items-center gap-2 py-3 overflow-x-auto">
                         <button
                             onClick={() => setActiveTab('tasks')}
-                            className={`px-4 py-2 rounded-lg font-medium ${activeTab === 'tasks' ? 'bg-blue-600 text-white' : 'text-gray-600 hover:bg-gray-100'}`}
+                            className={`px-5 py-2.5 rounded-xl font-medium transition-all whitespace-nowrap ${activeTab === 'tasks'
+                                ? 'bg-gradient-to-r from-blue-600 to-purple-600 text-white shadow-md'
+                                : 'text-slate-600 hover:bg-white hover:shadow-sm'
+                                }`}
                         >
                             📋 Мои заказы ({tasks.length})
                         </button>
                         <button
                             onClick={() => setActiveTab('submissions')}
-                            className={`px-4 py-2 rounded-lg font-medium ${activeTab === 'submissions' ? 'bg-blue-600 text-white' : 'text-gray-600 hover:bg-gray-100'}`}
+                            className={`px-5 py-2.5 rounded-xl font-medium transition-all whitespace-nowrap ${activeTab === 'submissions'
+                                ? 'bg-gradient-to-r from-blue-600 to-purple-600 text-white shadow-md'
+                                : 'text-slate-600 hover:bg-white hover:shadow-sm'
+                                }`}
                         >
                             📝 На проверке ({submissions.filter(s => s.status === 'pending').length})
                         </button>
                         <button
                             onClick={() => setShowCreateForm(true)}
-                            className="ml-auto px-4 py-2 bg-green-600 text-white rounded-lg font-medium hover:bg-green-700"
+                            className="ml-auto px-5 py-2.5 bg-gradient-to-r from-green-500 to-emerald-600 text-white rounded-xl font-medium hover:shadow-lg hover:scale-[1.02] transition-all"
                         >
                             ➕ Новый заказ
                         </button>
@@ -561,49 +592,89 @@ function WebClientDashboard() {
             </div>
 
             {/* Content */}
-            <main className="max-w-4xl mx-auto p-4 mt-4">
+            <main className="max-w-5xl mx-auto p-4 mt-4">
                 {loading ? (
-                    <div className="text-center py-20 text-gray-500">Загрузка...</div>
+                    <div className="flex items-center justify-center h-64">
+                        <div className="text-center">
+                            <div className="animate-spin rounded-full h-12 w-12 border-4 border-blue-500 border-t-transparent mx-auto mb-4"></div>
+                            <p className="text-slate-500">Загрузка...</p>
+                        </div>
+                    </div>
                 ) : activeTab === 'tasks' ? (
                     // === Мои заказы ===
-                    <div className="space-y-3">
+                    <div className="grid gap-4 sm:grid-cols-2">
                         {tasks.map(task => (
-                            <div key={task.id} className="bg-white rounded-xl p-4 shadow-sm">
-                                <div className="flex justify-between items-start mb-3">
-                                    <div className="flex-1">
-                                        <h3 className="font-semibold mb-1">{task.title}</h3>
-                                        <p className="text-sm text-gray-500 mb-2">{task.description?.slice(0, 150)}...</p>
-                                        {task.influencer && (
-                                            <p className="text-sm">📸 Инфлюенсер: {task.influencer.first_name} {task.influencer.last_name || ''}</p>
-                                        )}
-                                        <p className="text-sm">💰 Бюджет: {formatTaskBudget(task, { prefix: '' })}</p>
+                            <div key={task.id} className="bg-white rounded-2xl border border-slate-200/50 shadow-sm hover:shadow-md transition-shadow overflow-hidden">
+                                <div className={`px-4 py-3 border-b ${task.status === 'open' ? 'bg-gradient-to-r from-green-50 to-emerald-50' :
+                                    task.status === 'in_progress' ? 'bg-gradient-to-r from-blue-50 to-indigo-50' :
+                                        task.status === 'completed' ? 'bg-gradient-to-r from-slate-50 to-slate-100' :
+                                            'bg-gradient-to-r from-red-50 to-orange-50'
+                                    }`}>
+                                    <div className="flex items-center justify-between">
+                                        <h3 className="font-bold text-slate-800 truncate flex-1 mr-2">{task.title}</h3>
+                                        <span className={`text-xs px-2.5 py-1 rounded-full font-medium whitespace-nowrap ${task.status === 'open' ? 'bg-green-100 text-green-700' :
+                                            task.status === 'in_progress' ? 'bg-blue-100 text-blue-700' :
+                                                task.status === 'completed' ? 'bg-slate-200 text-slate-600' : 'bg-red-100 text-red-700'
+                                            }`}>
+                                            {task.status === 'open' ? '🟢 Открыт' :
+                                                task.status === 'in_progress' ? '🔵 В работе' :
+                                                    task.status === 'completed' ? '✅ Завершен' : task.status}
+                                        </span>
+                                    </div>
+                                </div>
+                                <div className="p-4 space-y-3">
+                                    <p className="text-sm text-slate-600 line-clamp-2">{task.description?.slice(0, 150)}...</p>
+
+                                    {task.influencer && (
+                                        <div className="flex items-center gap-2 text-sm text-slate-700">
+                                            <span className="w-6 h-6 bg-pink-100 rounded-full flex items-center justify-center text-xs">📸</span>
+                                            {task.influencer.first_name} {task.influencer.last_name || ''}
+                                        </div>
+                                    )}
+
+                                    <div className="flex flex-wrap gap-2">
+                                        <span className="text-xs bg-purple-100 text-purple-700 px-2 py-1 rounded-lg">
+                                            💰 {formatTaskBudget(task, { prefix: '' })}
+                                        </span>
                                         {task.target_metrics && (
-                                            <p className="text-sm text-gray-600">
-                                                🎯 Цели: {task.target_metrics.views && `👁${task.target_metrics.views}`} {task.target_metrics.likes && `❤️${task.target_metrics.likes}`} {task.target_metrics.comments && `💬${task.target_metrics.comments}`}
-                                            </p>
+                                            <>
+                                                {task.target_metrics.views && (
+                                                    <span className="text-xs bg-blue-100 text-blue-700 px-2 py-1 rounded-lg">
+                                                        👁 {task.target_metrics.views.toLocaleString()}
+                                                    </span>
+                                                )}
+                                                {task.target_metrics.likes && (
+                                                    <span className="text-xs bg-pink-100 text-pink-700 px-2 py-1 rounded-lg">
+                                                        ❤️ {task.target_metrics.likes.toLocaleString()}
+                                                    </span>
+                                                )}
+                                                {task.target_metrics.comments && (
+                                                    <span className="text-xs bg-green-100 text-green-700 px-2 py-1 rounded-lg">
+                                                        💬 {task.target_metrics.comments.toLocaleString()}
+                                                    </span>
+                                                )}
+                                            </>
                                         )}
                                     </div>
-                                    <span className={`text-xs px-2 py-1 rounded-full whitespace-nowrap ${task.status === 'open' ? 'bg-green-100 text-green-800' :
-                                        task.status === 'in_progress' ? 'bg-blue-100 text-blue-800' :
-                                            task.status === 'completed' ? 'bg-gray-100 text-gray-800' : 'bg-red-100 text-red-800'
-                                        }`}>
-                                        {task.status === 'open' ? '🟢 Открыт' :
-                                            task.status === 'in_progress' ? '🔵 В работе' :
-                                                task.status === 'completed' ? '✅ Завершен' : task.status}
-                                    </span>
+
+                                    <div className="flex items-center justify-between text-xs text-slate-400 pt-2 border-t border-slate-100">
+                                        <span>📅 {new Date(task.created_at).toLocaleDateString('ru')}</span>
+                                        {task.deadline && (
+                                            <span>⏰ до {new Date(task.deadline).toLocaleDateString('ru')}</span>
+                                        )}
+                                    </div>
                                 </div>
-                                <p className="text-xs text-gray-400">
-                                    Создан: {new Date(task.created_at).toLocaleDateString('ru')}
-                                    {task.deadline && ` • Дедлайн: ${new Date(task.deadline).toLocaleDateString('ru')}`}
-                                </p>
                             </div>
                         ))}
                         {tasks.length === 0 && (
-                            <div className="text-center py-10">
-                                <p className="text-gray-500 mb-4">У вас пока нет заказов</p>
+                            <div className="col-span-full text-center py-16">
+                                <div className="w-16 h-16 bg-slate-100 rounded-2xl flex items-center justify-center mx-auto mb-4">
+                                    <span className="text-3xl">📋</span>
+                                </div>
+                                <p className="text-slate-500 mb-4">У вас пока нет заказов</p>
                                 <button
                                     onClick={() => setShowCreateForm(true)}
-                                    className="bg-green-600 text-white px-6 py-3 rounded-lg font-medium hover:bg-green-700"
+                                    className="bg-gradient-to-r from-green-500 to-emerald-600 text-white px-6 py-3 rounded-xl font-medium hover:shadow-lg hover:scale-[1.02] transition-all"
                                 >
                                     ➕ Создать первый заказ
                                 </button>
@@ -612,104 +683,130 @@ function WebClientDashboard() {
                     </div>
                 ) : activeTab === 'submissions' ? (
                     // === Публикации на проверке ===
-                    <div className="space-y-3">
+                    <div className="grid gap-4 sm:grid-cols-2">
                         {submissions.map(sub => (
-                            <div key={sub.id} className="bg-white rounded-xl p-4 shadow-sm">
-                                <div className="flex justify-between items-start mb-3">
-                                    <div className="flex-1">
-                                        <h3 className="font-semibold mb-1">{sub.task?.title || 'Задание'}</h3>
-                                        <p className="text-sm">📸 Инфлюенсер: {sub.influencer?.first_name} {sub.influencer?.last_name || ''}</p>
-                                        <p className="text-sm text-blue-600 break-all">
-                                            🔗 <a href={sub.post_url} target="_blank" rel="noopener noreferrer" className="hover:underline">
-                                                {sub.post_url}
-                                            </a>
-                                        </p>
+                            <div key={sub.id} className="bg-white rounded-2xl border border-slate-200/50 shadow-sm hover:shadow-md transition-shadow overflow-hidden">
+                                <div className={`px-4 py-3 border-b ${sub.status === 'pending' ? 'bg-gradient-to-r from-amber-50 to-yellow-50' :
+                                    sub.status === 'in_progress' ? 'bg-gradient-to-r from-blue-50 to-indigo-50' :
+                                        sub.status === 'completed' ? 'bg-gradient-to-r from-green-50 to-emerald-50' :
+                                            'bg-gradient-to-r from-red-50 to-orange-50'
+                                    }`}>
+                                    <div className="flex items-center justify-between">
+                                        <h3 className="font-bold text-slate-800 truncate flex-1 mr-2">{sub.task?.title || 'Задание'}</h3>
+                                        <span className={`text-xs px-2.5 py-1 rounded-full font-medium ${sub.status === 'pending' ? 'bg-amber-100 text-amber-700' :
+                                            sub.status === 'in_progress' ? 'bg-blue-100 text-blue-700' :
+                                                sub.status === 'completed' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'
+                                            }`}>
+                                            {sub.status === 'pending' ? '⏳ Ожидает' :
+                                                sub.status === 'in_progress' ? '🔵 В работе' :
+                                                    sub.status === 'completed' ? '✅ Завершено' : sub.status}
+                                        </span>
                                     </div>
-                                    <span className={`text-xs px-2 py-1 rounded-full ${sub.status === 'pending' ? 'bg-yellow-100 text-yellow-800' :
-                                        sub.status === 'in_progress' ? 'bg-blue-100 text-blue-800' :
-                                            sub.status === 'completed' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
-                                        }`}>
-                                        {sub.status === 'pending' ? '⏳ Ожидает' :
-                                            sub.status === 'in_progress' ? '🔵 В работе' :
-                                                sub.status === 'completed' ? '✅ Завершено' : sub.status}
-                                    </span>
                                 </div>
+                                <div className="p-4 space-y-3">
+                                    <div className="flex items-center gap-2 text-sm text-slate-700">
+                                        <span className="w-6 h-6 bg-pink-100 rounded-full flex items-center justify-center text-xs">📸</span>
+                                        {sub.influencer?.first_name} {sub.influencer?.last_name || ''}
+                                    </div>
 
-                                {/* Метрики */}
-                                {sub.current_metrics && (
-                                    <div className="bg-gray-50 rounded-lg p-3 mb-3">
-                                        <div className="grid grid-cols-3 gap-2 text-center">
-                                            <div>
-                                                <div className="text-lg font-bold">{sub.current_metrics?.views?.toLocaleString() || 0}</div>
-                                                <div className="text-xs text-gray-500">👁 Просмотры</div>
+                                    <a
+                                        href={sub.post_url}
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        className="text-sm text-blue-600 hover:underline break-all flex items-center gap-1"
+                                    >
+                                        🔗 {sub.post_url?.slice(0, 40)}...
+                                    </a>
+
+                                    {/* Метрики */}
+                                    {sub.current_metrics && (
+                                        <div className="grid grid-cols-3 gap-2">
+                                            <div className="bg-slate-50 rounded-xl p-2 text-center">
+                                                <div className="text-lg font-bold text-slate-800">{sub.current_metrics?.views?.toLocaleString() || 0}</div>
+                                                <div className="text-xs text-slate-500">👁 Просмотры</div>
                                             </div>
-                                            <div>
-                                                <div className="text-lg font-bold">{sub.current_metrics?.likes?.toLocaleString() || 0}</div>
-                                                <div className="text-xs text-gray-500">❤️ Лайки</div>
+                                            <div className="bg-slate-50 rounded-xl p-2 text-center">
+                                                <div className="text-lg font-bold text-slate-800">{sub.current_metrics?.likes?.toLocaleString() || 0}</div>
+                                                <div className="text-xs text-slate-500">❤️ Лайки</div>
                                             </div>
-                                            <div>
-                                                <div className="text-lg font-bold">{sub.current_metrics?.comments?.toLocaleString() || 0}</div>
-                                                <div className="text-xs text-gray-500">💬 Комменты</div>
+                                            <div className="bg-slate-50 rounded-xl p-2 text-center">
+                                                <div className="text-lg font-bold text-slate-800">{sub.current_metrics?.comments?.toLocaleString() || 0}</div>
+                                                <div className="text-xs text-slate-500">💬 Комменты</div>
                                             </div>
                                         </div>
-                                    </div>
-                                )}
+                                    )}
 
-                                {sub.status === 'pending' && (
-                                    <div className="flex gap-2">
-                                        <button
-                                            onClick={() => approveSubmission(sub.id, true)}
-                                            className="flex-1 bg-green-500 text-white py-2 rounded-lg hover:bg-green-600 font-medium"
-                                        >
-                                            ✅ Одобрить
-                                        </button>
-                                        <button
-                                            onClick={() => approveSubmission(sub.id, false)}
-                                            className="flex-1 bg-red-500 text-white py-2 rounded-lg hover:bg-red-600 font-medium"
-                                        >
-                                            ❌ Отклонить
-                                        </button>
-                                    </div>
-                                )}
+                                    {sub.status === 'pending' && (
+                                        <div className="flex gap-2 pt-2">
+                                            <button
+                                                onClick={() => approveSubmission(sub.id, true)}
+                                                className="flex-1 bg-gradient-to-r from-green-500 to-emerald-600 text-white py-2.5 rounded-xl hover:shadow-md transition-all font-medium"
+                                            >
+                                                ✅ Одобрить
+                                            </button>
+                                            <button
+                                                onClick={() => approveSubmission(sub.id, false)}
+                                                className="flex-1 bg-gradient-to-r from-red-500 to-rose-600 text-white py-2.5 rounded-xl hover:shadow-md transition-all font-medium"
+                                            >
+                                                ❌ Отклонить
+                                            </button>
+                                        </div>
+                                    )}
 
-                                <p className="text-xs text-gray-400 mt-2">
-                                    Отправлено: {new Date(sub.submitted_at || sub.created_at).toLocaleString('ru')}
-                                </p>
+                                    <p className="text-xs text-slate-400 pt-2 border-t border-slate-100">
+                                        📅 {new Date(sub.submitted_at || sub.created_at).toLocaleString('ru')}
+                                    </p>
+                                </div>
                             </div>
                         ))}
-                        {submissions.length === 0 && <p className="text-center py-10 text-gray-500">Нет публикаций на проверке</p>}
+                        {submissions.length === 0 && (
+                            <div className="col-span-full text-center py-16 text-slate-400">
+                                <span className="text-4xl">📝</span>
+                                <p className="mt-2">Нет публикаций на проверке</p>
+                            </div>
+                        )}
                     </div>
                 ) : null}
             </main>
 
             {/* Модалка создания заказа */}
             {showCreateForm && (
-                <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
-                    <div className="bg-white rounded-2xl shadow-xl p-6 w-full max-w-2xl max-h-[90vh] overflow-y-auto">
-                        <div className="flex justify-between items-center mb-4">
-                            <h2 className="text-lg font-semibold">➕ Новый заказ</h2>
-                            <button onClick={() => setShowCreateForm(false)} className="text-gray-400 hover:text-gray-600 text-2xl">&times;</button>
+                <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 z-50">
+                    <div className="bg-white rounded-3xl shadow-2xl p-6 w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+                        <div className="flex justify-between items-center mb-6">
+                            <div className="flex items-center gap-3">
+                                <div className="w-10 h-10 bg-gradient-to-br from-green-500 to-emerald-600 rounded-xl flex items-center justify-center">
+                                    <span className="text-xl">➕</span>
+                                </div>
+                                <h2 className="text-xl font-bold text-slate-800">Новый заказ</h2>
+                            </div>
+                            <button
+                                onClick={() => setShowCreateForm(false)}
+                                className="w-10 h-10 rounded-full bg-slate-100 hover:bg-slate-200 flex items-center justify-center text-slate-500 transition-colors"
+                            >
+                                ✕
+                            </button>
                         </div>
 
-                        <form onSubmit={createTask} className="space-y-4">
+                        <form onSubmit={createTask} className="space-y-5">
                             <div>
-                                <label className="block text-sm font-medium mb-1">Название задания *</label>
+                                <label className="block text-sm font-medium text-slate-700 mb-2">Название задания *</label>
                                 <input
                                     type="text"
                                     value={newTask.title}
                                     onChange={(e) => setNewTask({ ...newTask, title: e.target.value })}
-                                    className="w-full p-3 border border-gray-300 rounded-lg"
+                                    className="w-full p-3.5 border border-slate-200 rounded-xl bg-slate-50 focus:bg-white focus:border-blue-400 focus:ring-2 focus:ring-blue-100 transition-all outline-none"
                                     placeholder="Например: Реклама нового продукта"
                                     required
                                 />
                             </div>
 
                             <div>
-                                <label className="block text-sm font-medium mb-1">Описание *</label>
+                                <label className="block text-sm font-medium text-slate-700 mb-2">Описание *</label>
                                 <textarea
                                     value={newTask.description}
                                     onChange={(e) => setNewTask({ ...newTask, description: e.target.value })}
-                                    className="w-full p-3 border border-gray-300 rounded-lg h-24"
+                                    className="w-full p-3.5 border border-slate-200 rounded-xl bg-slate-50 focus:bg-white focus:border-blue-400 focus:ring-2 focus:ring-blue-100 transition-all outline-none h-28 resize-none"
                                     placeholder="Подробное описание задания..."
                                     required
                                 />
@@ -718,12 +815,12 @@ function WebClientDashboard() {
                             <div className="grid grid-cols-2 gap-4">
                                 {!newTask.usePricingTiers && (
                                     <div>
-                                        <label className="block text-sm font-medium mb-1">💰 Бюджет (сом) *</label>
+                                        <label className="block text-sm font-medium text-slate-700 mb-2">💰 Бюджет (сом) *</label>
                                         <input
                                             type="number"
                                             value={newTask.budget}
                                             onChange={(e) => setNewTask({ ...newTask, budget: e.target.value })}
-                                            className="w-full p-3 border border-gray-300 rounded-lg"
+                                            className="w-full p-3.5 border border-slate-200 rounded-xl bg-slate-50 focus:bg-white focus:border-blue-400 focus:ring-2 focus:ring-blue-100 transition-all outline-none"
                                             placeholder="5000"
                                             min="100"
                                             required={!newTask.usePricingTiers}
@@ -731,30 +828,35 @@ function WebClientDashboard() {
                                     </div>
                                 )}
                                 <div className={newTask.usePricingTiers ? "col-span-2" : ""}>
-                                    <label className="block text-sm font-medium mb-1">📅 Дедлайн *</label>
+                                    <label className="block text-sm font-medium text-slate-700 mb-2">📅 Дедлайн *</label>
                                     <input
                                         type="date"
                                         value={newTask.deadline}
                                         onChange={(e) => setNewTask({ ...newTask, deadline: e.target.value })}
-                                        className="w-full p-3 border border-gray-300 rounded-lg"
+                                        className="w-full p-3.5 border border-slate-200 rounded-xl bg-slate-50 focus:bg-white focus:border-blue-400 focus:ring-2 focus:ring-blue-100 transition-all outline-none"
                                         required
                                     />
                                 </div>
                             </div>
 
                             {/* Переключатель режима оплаты */}
-                            <div className="bg-blue-50 rounded-lg p-4 border border-blue-200">
-                                <label className="flex items-center gap-3 cursor-pointer">
-                                    <input
-                                        type="checkbox"
-                                        checked={newTask.usePricingTiers}
-                                        onChange={(e) => setNewTask({ ...newTask, usePricingTiers: e.target.checked })}
-                                        className="w-5 h-5"
-                                    />
+                            <div className="bg-gradient-to-r from-blue-50 to-purple-50 rounded-2xl p-5 border border-blue-100">
+                                <label className="flex items-center gap-4 cursor-pointer">
+                                    <div className="relative">
+                                        <input
+                                            type="checkbox"
+                                            checked={newTask.usePricingTiers}
+                                            onChange={(e) => setNewTask({ ...newTask, usePricingTiers: e.target.checked })}
+                                            className="sr-only"
+                                        />
+                                        <div className={`w-12 h-7 rounded-full transition-colors ${newTask.usePricingTiers ? 'bg-gradient-to-r from-blue-600 to-purple-600' : 'bg-slate-300'}`}>
+                                            <div className={`absolute top-0.5 left-0.5 w-6 h-6 bg-white rounded-full shadow-sm transition-transform ${newTask.usePricingTiers ? 'translate-x-5' : ''}`}></div>
+                                        </div>
+                                    </div>
                                     <div>
-                                        <div className="font-medium">💰 Ценовые диапазоны (лесенка)</div>
-                                        <div className="text-xs text-gray-600">
-                                            Оплата зависит от количества метрик (рекомендуется для масштабирования)
+                                        <div className="font-semibold text-slate-800">💰 Ценовые диапазоны (лесенка)</div>
+                                        <div className="text-sm text-slate-500">
+                                            Оплата зависит от количества метрик
                                         </div>
                                     </div>
                                 </label>
@@ -762,105 +864,107 @@ function WebClientDashboard() {
 
                             {/* Pricing Tiers UI */}
                             {newTask.usePricingTiers && (
-                                <div className="space-y-3 bg-gray-50 rounded-lg p-4">
-                                    <div className="flex items-center justify-between mb-2">
-                                        <h3 className="font-medium">📊 Ценовые диапазоны</h3>
+                                <div className="space-y-4 bg-slate-50 rounded-2xl p-5 border border-slate-200">
+                                    <div className="flex items-center justify-between">
+                                        <h3 className="font-semibold text-slate-800 flex items-center gap-2">
+                                            <span>📊</span> Ценовые диапазоны
+                                        </h3>
                                         <div className="flex gap-2">
                                             <button
                                                 type="button"
                                                 onClick={sortPricingTiers}
-                                                className="text-blue-600 text-sm hover:underline"
+                                                className="text-blue-600 text-sm hover:underline font-medium"
                                             >
-                                                ↕ Сортировать
+                                                ↕ Сорт.
                                             </button>
                                             <button
                                                 type="button"
                                                 onClick={addNextPricingTier}
-                                                className="text-blue-600 text-sm hover:underline"
+                                                className="text-blue-600 text-sm hover:underline font-medium"
                                             >
-                                                + Следующий порог
+                                                + След.
                                             </button>
                                             <button
                                                 type="button"
                                                 onClick={addPricingTier}
-                                                className="text-blue-600 text-sm hover:underline"
+                                                className="text-blue-600 text-sm hover:underline font-medium"
                                             >
                                                 + Добавить
                                             </button>
                                         </div>
                                     </div>
-                                    <p className="text-xs text-gray-500 mb-3">
-                                        📈 Лесенка: выплата начисляется при достижении "От". Поле "До" можно оставить пустым (∞). Цена может быть 0.
+                                    <p className="text-xs text-slate-500">
+                                        📈 Лесенка: выплата при достижении "От". "До" можно оставить пустым (∞).
                                     </p>
 
                                     {pricingTiers.map((tier, index) => {
                                         const { errors } = normalizePricingTiers(pricingTiers)
                                         const rowErrors = errors?.[index] || []
                                         return (
-                                            <div key={index} className="bg-white rounded-lg p-3 border">
-                                                <div className="flex items-center justify-between mb-2">
-                                                    <span className="text-sm font-medium">Диапазон {index + 1}</span>
+                                            <div key={index} className="bg-white rounded-xl p-4 border border-slate-200 shadow-sm">
+                                                <div className="flex items-center justify-between mb-3">
+                                                    <span className="text-sm font-semibold text-slate-700">Порог {index + 1}</span>
                                                     {pricingTiers.length > 1 && (
                                                         <button
                                                             type="button"
                                                             onClick={() => removePricingTier(index)}
-                                                            className="text-red-500 text-sm hover:underline"
+                                                            className="text-red-500 text-sm hover:underline font-medium"
                                                         >
                                                             Удалить
                                                         </button>
                                                     )}
                                                 </div>
 
-                                                <div className="grid grid-cols-4 gap-2">
+                                                <div className="grid grid-cols-4 gap-3">
                                                     <div>
-                                                        <label className="block text-xs text-gray-500 mb-1">От</label>
+                                                        <label className="block text-xs text-slate-500 mb-1">От</label>
                                                         <input
                                                             type="number"
                                                             value={tier.min}
                                                             onChange={(e) => updatePricingTier(index, 'min', e.target.value)}
                                                             placeholder="2000"
                                                             min="0"
-                                                            className="w-full p-2 border rounded text-sm"
+                                                            className="w-full p-2.5 border border-slate-200 rounded-lg bg-slate-50 focus:bg-white focus:border-blue-400 text-sm transition-all outline-none"
                                                         />
                                                     </div>
                                                     <div>
-                                                        <label className="block text-xs text-gray-500 mb-1">До</label>
+                                                        <label className="block text-xs text-slate-500 mb-1">До</label>
                                                         <input
                                                             type="number"
                                                             value={tier.max}
                                                             onChange={(e) => updatePricingTier(index, 'max', e.target.value)}
                                                             placeholder="∞"
                                                             min="0"
-                                                            className="w-full p-2 border rounded text-sm"
+                                                            className="w-full p-2.5 border border-slate-200 rounded-lg bg-slate-50 focus:bg-white focus:border-blue-400 text-sm transition-all outline-none"
                                                         />
                                                     </div>
                                                     <div>
-                                                        <label className="block text-xs text-gray-500 mb-1">Цена (сом)</label>
+                                                        <label className="block text-xs text-slate-500 mb-1">Цена</label>
                                                         <input
                                                             type="number"
                                                             value={tier.price}
                                                             onChange={(e) => updatePricingTier(index, 'price', e.target.value)}
                                                             placeholder="2000"
                                                             min="0"
-                                                            className="w-full p-2 border rounded text-sm"
+                                                            className="w-full p-2.5 border border-slate-200 rounded-lg bg-slate-50 focus:bg-white focus:border-blue-400 text-sm transition-all outline-none"
                                                         />
                                                     </div>
                                                     <div>
-                                                        <label className="block text-xs text-gray-500 mb-1">Метрика</label>
+                                                        <label className="block text-xs text-slate-500 mb-1">Метрика</label>
                                                         <select
                                                             value={tier.metric}
                                                             onChange={(e) => updatePricingTier(index, 'metric', e.target.value)}
-                                                            className="w-full p-2 border rounded text-sm"
+                                                            className="w-full p-2.5 border border-slate-200 rounded-lg bg-slate-50 focus:bg-white focus:border-blue-400 text-sm transition-all outline-none"
                                                         >
                                                             <option value="views">👁 Просмотры</option>
                                                             <option value="likes">❤️ Лайки</option>
-                                                            <option value="comments">💬 Комментарии</option>
+                                                            <option value="comments">💬 Комменты</option>
                                                         </select>
                                                     </div>
                                                 </div>
 
                                                 {rowErrors.length > 0 && (
-                                                    <div className="text-xs text-red-500 mt-2">
+                                                    <div className="text-xs text-red-500 mt-2 bg-red-50 rounded-lg p-2">
                                                         {rowErrors.map((msg, i) => (
                                                             <div key={i}>• {msg}</div>
                                                         ))}
@@ -875,23 +979,23 @@ function WebClientDashboard() {
                             {/* Requirements */}
                             <div className="grid grid-cols-2 gap-4">
                                 <div>
-                                    <label className="block text-sm font-medium mb-1">👥 Мин. подписчиков</label>
+                                    <label className="block text-sm font-medium text-slate-700 mb-2">👥 Мин. подписчиков</label>
                                     <input
                                         type="number"
                                         value={newTask.minFollowers}
                                         onChange={(e) => setNewTask({ ...newTask, minFollowers: e.target.value })}
-                                        className="w-full p-3 border border-gray-300 rounded-lg"
+                                        className="w-full p-3.5 border border-slate-200 rounded-xl bg-slate-50 focus:bg-white focus:border-blue-400 focus:ring-2 focus:ring-blue-100 transition-all outline-none"
                                         placeholder="10000"
                                         min="0"
                                     />
                                 </div>
                                 <div>
-                                    <label className="block text-sm font-medium mb-1">📈 Мин. вовлечённость (%)</label>
+                                    <label className="block text-sm font-medium text-slate-700 mb-2">📈 Мин. вовлечённость (%)</label>
                                     <input
                                         type="number"
                                         value={newTask.minEngagementRate}
                                         onChange={(e) => setNewTask({ ...newTask, minEngagementRate: e.target.value })}
-                                        className="w-full p-3 border border-gray-300 rounded-lg"
+                                        className="w-full p-3.5 border border-slate-200 rounded-xl bg-slate-50 focus:bg-white focus:border-blue-400 focus:ring-2 focus:ring-blue-100 transition-all outline-none"
                                         placeholder="2.5"
                                         min="0"
                                         max="100"
@@ -901,36 +1005,38 @@ function WebClientDashboard() {
                             </div>
 
                             {!newTask.usePricingTiers && (
-                                <div className="bg-gray-50 rounded-lg p-4">
-                                    <h3 className="font-medium mb-3">🎯 Целевые метрики</h3>
+                                <div className="bg-slate-50 rounded-2xl p-5 border border-slate-200">
+                                    <h3 className="font-semibold text-slate-800 mb-4 flex items-center gap-2">
+                                        <span>🎯</span> Целевые метрики
+                                    </h3>
                                     <div className="grid grid-cols-3 gap-3">
                                         <div>
-                                            <label className="block text-xs mb-1">👁 Просмотры</label>
+                                            <label className="block text-xs text-slate-500 mb-1">👁 Просмотры</label>
                                             <input
                                                 type="number"
                                                 value={newTask.targetViews}
                                                 onChange={(e) => setNewTask({ ...newTask, targetViews: e.target.value })}
-                                                className="w-full p-2 border border-gray-300 rounded-lg text-sm"
+                                                className="w-full p-2.5 border border-slate-200 rounded-xl bg-white focus:border-blue-400 text-sm transition-all outline-none"
                                                 placeholder="10000"
                                             />
                                         </div>
                                         <div>
-                                            <label className="block text-xs mb-1">❤️ Лайки</label>
+                                            <label className="block text-xs text-slate-500 mb-1">❤️ Лайки</label>
                                             <input
                                                 type="number"
                                                 value={newTask.targetLikes}
                                                 onChange={(e) => setNewTask({ ...newTask, targetLikes: e.target.value })}
-                                                className="w-full p-2 border border-gray-300 rounded-lg text-sm"
+                                                className="w-full p-2.5 border border-slate-200 rounded-xl bg-white focus:border-blue-400 text-sm transition-all outline-none"
                                                 placeholder="500"
                                             />
                                         </div>
                                         <div>
-                                            <label className="block text-xs mb-1">💬 Комментарии</label>
+                                            <label className="block text-xs text-slate-500 mb-1">💬 Комментарии</label>
                                             <input
                                                 type="number"
                                                 value={newTask.targetComments}
                                                 onChange={(e) => setNewTask({ ...newTask, targetComments: e.target.value })}
-                                                className="w-full p-2 border border-gray-300 rounded-lg text-sm"
+                                                className="w-full p-2.5 border border-slate-200 rounded-xl bg-white focus:border-blue-400 text-sm transition-all outline-none"
                                                 placeholder="50"
                                             />
                                         </div>
@@ -940,44 +1046,49 @@ function WebClientDashboard() {
 
                             <div className="grid grid-cols-2 gap-4">
                                 <div>
-                                    <label className="block text-sm font-medium mb-1">⏱ Дней на набор метрик</label>
+                                    <label className="block text-sm font-medium text-slate-700 mb-2">⏱ Дней на метрики</label>
                                     <input
                                         type="number"
                                         value={newTask.metricDeadlineDays}
                                         onChange={(e) => setNewTask({ ...newTask, metricDeadlineDays: e.target.value })}
-                                        className="w-full p-3 border border-gray-300 rounded-lg"
+                                        className="w-full p-3.5 border border-slate-200 rounded-xl bg-slate-50 focus:bg-white focus:border-blue-400 focus:ring-2 focus:ring-blue-100 transition-all outline-none"
                                         placeholder="7"
                                         min="1"
                                         max="90"
                                     />
                                 </div>
                                 <div>
-                                    <label className="block text-sm font-medium mb-1">👥 Макс. инфлюенсеров</label>
+                                    <label className="block text-sm font-medium text-slate-700 mb-2">👥 Макс. инфлюенсеров</label>
                                     <input
                                         type="number"
                                         value={newTask.maxInfluencers}
                                         onChange={(e) => setNewTask({ ...newTask, maxInfluencers: e.target.value })}
-                                        className="w-full p-3 border border-gray-300 rounded-lg"
-                                        placeholder="Без ограничений"
+                                        className="w-full p-3.5 border border-slate-200 rounded-xl bg-slate-50 focus:bg-white focus:border-blue-400 focus:ring-2 focus:ring-blue-100 transition-all outline-none"
+                                        placeholder="Без ограничения"
                                         min="1"
                                     />
-                                    <p className="text-xs text-gray-500 mt-1">Оставьте пустым для неограниченного количества</p>
+                                    <p className="text-xs text-slate-400 mt-1">Пусто = без ограничений</p>
                                 </div>
                             </div>
 
                             <button
                                 type="submit"
                                 disabled={loading}
-                                className="w-full bg-green-600 text-white py-3 rounded-lg font-semibold hover:bg-green-700 disabled:opacity-50"
+                                className="w-full bg-gradient-to-r from-green-500 to-emerald-600 text-white py-4 rounded-xl font-semibold hover:shadow-lg hover:scale-[1.02] transition-all disabled:opacity-50 disabled:hover:scale-100"
                             >
-                                {loading ? 'Создание...' : '✅ Создать заказ'}
+                                {loading ? (
+                                    <span className="flex items-center justify-center gap-2">
+                                        <span className="animate-spin rounded-full h-5 w-5 border-2 border-white border-t-transparent"></span>
+                                        Создание...
+                                    </span>
+                                ) : '✅ Создать заказ'}
                             </button>
                         </form>
                     </div>
                 </div>
             )}
 
-            <footer className="text-center py-6 text-sm text-gray-400">
+            <footer className="text-center py-8 text-sm text-slate-400">
                 Telegram Influencer Marketplace • Кабинет заказчика
             </footer>
         </div>
