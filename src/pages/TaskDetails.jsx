@@ -76,7 +76,16 @@ function TaskDetails() {
                 .maybeSingle()
 
             if (!error && data) {
-                const mode = typeof data.value === 'string' ? data.value : JSON.parse(data.value)
+                let mode = data.value
+                // Парсим JSON если это строка в кавычках
+                if (typeof mode === 'string') {
+                    try {
+                        mode = JSON.parse(mode)
+                    } catch (e) {
+                        // уже обычная строка
+                    }
+                }
+                console.log('Metrics mode loaded:', mode)
                 setIsManualMode(mode === 'manual')
             }
         } catch (e) {

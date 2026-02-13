@@ -34,8 +34,14 @@ function SubmitTaskPost() {
                 .maybeSingle()
 
             if (!error && data) {
-                // value хранится как JSON строка "manual" или "auto"
-                const mode = typeof data.value === 'string' ? data.value : JSON.parse(data.value)
+                let mode = data.value
+                if (typeof mode === 'string') {
+                    try {
+                        mode = JSON.parse(mode)
+                    } catch (e) {
+                        // уже обычная строка
+                    }
+                }
                 setIsManualMode(mode === 'manual')
             }
         } catch (e) {

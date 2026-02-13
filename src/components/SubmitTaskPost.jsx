@@ -22,7 +22,14 @@ export default function SubmitTaskPost({ task, onSuccess }) {
                 .maybeSingle()
 
             if (!error && data) {
-                const mode = typeof data.value === 'string' ? data.value : JSON.parse(data.value)
+                let mode = data.value
+                if (typeof mode === 'string') {
+                    try {
+                        mode = JSON.parse(mode)
+                    } catch (e) {
+                        // уже обычная строка
+                    }
+                }
                 setIsManualMode(mode === 'manual')
             }
         } catch (e) {
