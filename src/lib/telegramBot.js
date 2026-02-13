@@ -14,12 +14,16 @@ export const sendTelegramNotification = async (message) => {
 
 const sendTelegramNotificationWithOptions = async (message, options = {}) => {
   const { silent = false, chatId } = options
+  console.log('[telegram-notify] Sending notification, initData present:', !!window.Telegram?.WebApp?.initData)
+
   const { data, error } = await supabase.functions.invoke('telegram-notify', {
     body: chatId ? { chatId, message } : { message },
     headers: {
       ...getTelegramInitDataHeader(),
     },
   })
+
+  console.log('[telegram-notify] Response:', { data, error })
 
   if (error) {
     const log = silent ? console.debug : console.warn
