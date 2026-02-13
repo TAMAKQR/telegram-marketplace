@@ -116,10 +116,28 @@ function AppShell() {
     if (!isPublicPage && user && bootstrapping) {
         return (
             <div className="flex items-center justify-center min-h-screen bg-tg-bg">
-                <div className="text-center p-4">
-                    <h2 className="text-xl font-semibold mb-2">Загрузка...</h2>
-                    <p className="text-tg-hint">Загружаем профиль</p>
-                    <p className="text-xs text-tg-hint mt-4">Build: {String(build)}</p>
+                <div className="w-full max-w-sm px-6">
+                    {/* Avatar skeleton */}
+                    <div className="flex justify-center mb-6">
+                        <div className="w-20 h-20 rounded-full skeleton-purple"></div>
+                    </div>
+
+                    {/* Name skeleton */}
+                    <div className="flex justify-center mb-3">
+                        <div className="h-6 w-40 skeleton-purple rounded-lg"></div>
+                    </div>
+
+                    {/* Status skeleton */}
+                    <div className="flex justify-center mb-8">
+                        <div className="h-4 w-28 skeleton-dark rounded-lg"></div>
+                    </div>
+
+                    {/* Cards skeleton */}
+                    <div className="space-y-3">
+                        <div className="h-16 w-full skeleton-purple rounded-xl"></div>
+                        <div className="h-16 w-full skeleton-purple rounded-xl"></div>
+                        <div className="h-12 w-3/4 mx-auto skeleton-dark rounded-xl"></div>
+                    </div>
                 </div>
             </div>
         )
