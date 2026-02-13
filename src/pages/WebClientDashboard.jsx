@@ -229,12 +229,10 @@ function WebClientDashboard() {
         try {
             const { data, error } = await supabase
                 .from('tasks')
-                .select(`
-                    *, 
-                    influencer:influencer_id(id, first_name, last_name, telegram_id)
-                `)
+                .select('*')
                 .eq('client_id', profile.id)
                 .order('created_at', { ascending: false })
+            console.log('loadTasks result:', { data, error, profileId: profile.id })
             if (error) throw error
             setTasks(data || [])
         } catch (error) {
@@ -266,8 +264,7 @@ function WebClientDashboard() {
                 .from('task_submissions')
                 .select(`
                     *,
-                    task:task_id(id, title, target_metrics, budget),
-                    influencer:influencer_id(id, first_name, last_name, telegram_id)
+                    task:task_id(id, title, target_metrics, budget)
                 `)
                 .in('task_id', taskIds)
                 .order('created_at', { ascending: false })

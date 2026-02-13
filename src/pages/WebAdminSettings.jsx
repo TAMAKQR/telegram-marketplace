@@ -262,8 +262,7 @@ function WebAdminSettings() {
                 .from('task_submissions')
                 .select(`
                     *,
-                    task:task_id(id, title, target_metrics, budget),
-                    influencer:influencer_id(id, first_name, last_name, telegram_id)
+                    task:task_id(id, title, target_metrics, budget)
                 `)
                 .order('created_at', { ascending: false })
             if (error) throw error
@@ -280,7 +279,7 @@ function WebAdminSettings() {
         try {
             const { data, error } = await supabase
                 .from('withdrawal_requests')
-                .select(`*, users!withdrawal_requests_influencer_id_fkey(first_name, last_name, telegram_id, balance)`)
+                .select('*')
                 .order('created_at', { ascending: false })
             if (error) throw error
             setWithdrawals(data || [])
