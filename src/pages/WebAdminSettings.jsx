@@ -38,11 +38,14 @@ function WebAdminSettings() {
         metricDeadlineDays: '7'
     })
 
-    // Проверяем сохранённую сессию
+    // Проверяем сохранённую сессию и предзагружаем данные
     useEffect(() => {
         const savedAuth = sessionStorage.getItem('webAdminAuth')
         if (savedAuth === 'true') {
             setIsAuthenticated(true)
+            // Предзагрузка данных при восстановлении сессии
+            loadUsers()
+            loadTasks()
         }
     }, [])
 
@@ -64,6 +67,9 @@ function WebAdminSettings() {
             setIsAuthenticated(true)
             sessionStorage.setItem('webAdminAuth', 'true')
             setAuthError('')
+            // Предзагрузка данных
+            loadUsers()
+            loadTasks()
         } else {
             setAuthError('Неверный логин или пароль')
         }
