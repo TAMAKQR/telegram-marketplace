@@ -14,7 +14,6 @@ export const sendTelegramNotification = async (message) => {
 
 const sendTelegramNotificationWithOptions = async (message, options = {}) => {
   const { silent = false, chatId } = options
-  console.log('[telegram-notify] Sending notification, initData present:', !!window.Telegram?.WebApp?.initData)
 
   const { data, error } = await supabase.functions.invoke('telegram-notify', {
     body: chatId ? { chatId, message } : { message },
@@ -23,20 +22,9 @@ const sendTelegramNotificationWithOptions = async (message, options = {}) => {
     },
   })
 
-  console.log('[telegram-notify] Response:', { data, error })
-
   if (error) {
     const log = silent ? console.debug : console.warn
     log('telegram-notify invoke failed:', error)
-    // Try to get error details from context
-    if (error.context) {
-      try {
-        const body = await error.context.json()
-        console.log('[telegram-notify] Error body:', body)
-      } catch (e) {
-        console.log('[telegram-notify] Could not parse error body')
-      }
-    }
     return null
   }
 
