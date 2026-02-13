@@ -25,6 +25,19 @@ function WebAdminSettings() {
     const [stats, setStats] = useState(null)
     const [saveStatus, setSaveStatus] = useState('')
 
+    // Форма создания заказа
+    const [newTask, setNewTask] = useState({
+        clientId: '',
+        title: '',
+        description: '',
+        budget: '',
+        targetViews: '',
+        targetLikes: '',
+        targetComments: '',
+        deadline: '',
+        metricDeadlineDays: '7'
+    })
+
     // Проверяем сохранённую сессию
     useEffect(() => {
         const savedAuth = sessionStorage.getItem('webAdminAuth')
@@ -39,6 +52,7 @@ function WebAdminSettings() {
         if (activeTab === 'settings') loadSettings()
         else if (activeTab === 'users') loadUsers()
         else if (activeTab === 'tasks') loadTasks()
+        else if (activeTab === 'create-task') loadUsers() // нужны пользователи для выбора клиента
         else if (activeTab === 'submissions') loadSubmissions()
         else if (activeTab === 'withdrawals') loadWithdrawals()
         else if (activeTab === 'stats') loadStats()
@@ -309,6 +323,64 @@ function WebAdminSettings() {
         }
     }
 
+    // === Действия: Создание заказа ===
+    const createTask = async (e) => {
+        e.preventDefault()
+        if (!newTask.title || !newTask.description || !newTask.budget || !newTask.clientId || !newTask.deadline) {
+            alert('Заполните все обязательные поля')
+            return
+        }
+        if (new Date(newTask.deadline) < new Date()) {
+            alert('Дедлайн не может быть в прошлом')
+            return
+        }
+        setLoading(true)
+        try {
+            const targetMetrics = {}
+            if (newTask.targetViews) targetMetrics.views = parseInt(newTask.targetViews)
+            if (newTask.targetLikes) targetMetrics.likes = parseInt(newTask.targetLikes)
+            if (newTask.targetComments) targetMetrics.comments = parseInt(newTask.targetComments)
+
+            const { data, error } = await supabase
+                .from('tasks')
+                .insert([{
+                    client_id: newTask.clientId,
+                    title: newTask.title,
+                    description: newTask.description,
+                    budget: parseFloat(newTask.budget),
+                    target_metrics: Object.keys(targetMetrics).length > 0 ? targetMetrics : null,
+                    metric_deadline_days: parseInt(newTask.metricDeadlineDays) || 7,
+                    deadline: newTask.deadline,
+                    status: 'open',
+                    accepted_count: 0
+                }])
+                .select()
+                .single()
+
+            if (error) throw error
+
+            alert('Заказ успешно создан!')
+            setNewTask({
+                clientId: '',
+                title: '',
+                description: '',
+                budget: '',
+                targetViews: '',
+                targetLikes: '',
+                targetComments: '',
+                deadline: '',
+                metricDeadlineDays: '7'
+            })
+            setActiveTab('tasks')
+            loadTasks()
+        } catch (error) {
+            console.error('Ошибка:', error)
+            alert('Ошибка при создании заказа: ' + error.message)
+        } finally {
+            setLoading(false)
+        }
+    }
+
     // === Действия: Публикации (submissions) ===
     const updateSubmissionMetrics = async (submissionId) => {
         const sub = submissions.find(s => s.id === submissionId)
@@ -459,6 +531,7 @@ function WebAdminSettings() {
                             { id: 'settings', label: '⚙️ Настройки' },
                             { id: 'users', label: `👥 Пользователи (${users.length})` },
                             { id: 'tasks', label: `📋 Заказы (${tasks.length})` },
+                            { id: 'create-task', label: '➕ Создать заказ' },
                             { id: 'submissions', label: `📝 Публикации (${submissions.filter(s => s.status !== 'completed').length})` },
                             { id: 'withdrawals', label: `💰 Выплаты (${withdrawals.filter(w => w.status === 'pending').length})` },
                             { id: 'stats', label: '📊 Статистика' },
@@ -601,8 +674,8 @@ function WebAdminSettings() {
                                         )}
                                     </div>
                                     <span className={`text-xs px-2 py-1 rounded-full whitespace-nowrap ${task.status === 'open' ? 'bg-green-100 text-green-800' :
-                                            task.status === 'in_progress' ? 'bg-blue-100 text-blue-800' :
-                                                task.status === 'completed' ? 'bg-gray-100 text-gray-800' : 'bg-red-100 text-red-800'
+                                        task.status === 'in_progress' ? 'bg-blue-100 text-blue-800' :
+                                            task.status === 'completed' ? 'bg-gray-100 text-gray-800' : 'bg-red-100 text-red-800'
                                         }`}>
                                         {task.status === 'open' ? '🟢 Открыт' :
                                             task.status === 'in_progress' ? '🔵 В работе' :
@@ -619,6 +692,137 @@ function WebAdminSettings() {
                             </div>
                         ))}
                         {tasks.length === 0 && <p className="text-center py-10 text-gray-500">Нет заказов</p>}
+                    </div>
+                ) : activeTab === 'create-task' ? (
+                    // === Создать заказ ===
+                    <div className="max-w-2xl mx-auto">
+                        <div className="bg-white rounded-xl shadow-sm p-6">
+                            <h2 className="text-lg font-semibold mb-4">➕ Создать новый заказ</h2>
+                            <form onSubmit={createTask} className="space-y-4">
+                                <div>
+                                    <label className="block text-sm font-medium mb-1">Заказчик *</label>
+                                    <select
+                                        value={newTask.clientId}
+                                        onChange={(e) => setNewTask({ ...newTask, clientId: e.target.value })}
+                                        className="w-full p-3 border border-gray-300 rounded-lg"
+                                        required
+                                    >
+                                        <option value="">Выберите заказчика</option>
+                                        {users.filter(u => u.user_type === 'client' || u.telegram_id === 7737197594).map(user => (
+                                            <option key={user.id} value={user.id}>
+                                                {user.first_name} {user.last_name || ''} (@{user.username || user.telegram_id})
+                                            </option>
+                                        ))}
+                                    </select>
+                                    <p className="text-xs text-gray-500 mt-1">Можно выбрать себя (админа) или любого заказчика</p>
+                                </div>
+
+                                <div>
+                                    <label className="block text-sm font-medium mb-1">Название задания *</label>
+                                    <input
+                                        type="text"
+                                        value={newTask.title}
+                                        onChange={(e) => setNewTask({ ...newTask, title: e.target.value })}
+                                        className="w-full p-3 border border-gray-300 rounded-lg"
+                                        placeholder="Например: Реклама нового продукта"
+                                        required
+                                    />
+                                </div>
+
+                                <div>
+                                    <label className="block text-sm font-medium mb-1">Описание *</label>
+                                    <textarea
+                                        value={newTask.description}
+                                        onChange={(e) => setNewTask({ ...newTask, description: e.target.value })}
+                                        className="w-full p-3 border border-gray-300 rounded-lg h-32"
+                                        placeholder="Подробное описание задания..."
+                                        required
+                                    />
+                                </div>
+
+                                <div className="grid grid-cols-2 gap-4">
+                                    <div>
+                                        <label className="block text-sm font-medium mb-1">💰 Бюджет (сом) *</label>
+                                        <input
+                                            type="number"
+                                            value={newTask.budget}
+                                            onChange={(e) => setNewTask({ ...newTask, budget: e.target.value })}
+                                            className="w-full p-3 border border-gray-300 rounded-lg"
+                                            placeholder="5000"
+                                            min="100"
+                                            required
+                                        />
+                                    </div>
+                                    <div>
+                                        <label className="block text-sm font-medium mb-1">📅 Дедлайн *</label>
+                                        <input
+                                            type="date"
+                                            value={newTask.deadline}
+                                            onChange={(e) => setNewTask({ ...newTask, deadline: e.target.value })}
+                                            className="w-full p-3 border border-gray-300 rounded-lg"
+                                            required
+                                        />
+                                    </div>
+                                </div>
+
+                                <div className="bg-gray-50 rounded-lg p-4">
+                                    <h3 className="font-medium mb-3">🎯 Целевые метрики (опционально)</h3>
+                                    <div className="grid grid-cols-3 gap-3">
+                                        <div>
+                                            <label className="block text-xs mb-1">👁 Просмотры</label>
+                                            <input
+                                                type="number"
+                                                value={newTask.targetViews}
+                                                onChange={(e) => setNewTask({ ...newTask, targetViews: e.target.value })}
+                                                className="w-full p-2 border border-gray-300 rounded-lg text-sm"
+                                                placeholder="10000"
+                                            />
+                                        </div>
+                                        <div>
+                                            <label className="block text-xs mb-1">❤️ Лайки</label>
+                                            <input
+                                                type="number"
+                                                value={newTask.targetLikes}
+                                                onChange={(e) => setNewTask({ ...newTask, targetLikes: e.target.value })}
+                                                className="w-full p-2 border border-gray-300 rounded-lg text-sm"
+                                                placeholder="500"
+                                            />
+                                        </div>
+                                        <div>
+                                            <label className="block text-xs mb-1">💬 Комментарии</label>
+                                            <input
+                                                type="number"
+                                                value={newTask.targetComments}
+                                                onChange={(e) => setNewTask({ ...newTask, targetComments: e.target.value })}
+                                                className="w-full p-2 border border-gray-300 rounded-lg text-sm"
+                                                placeholder="50"
+                                            />
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div>
+                                    <label className="block text-sm font-medium mb-1">⏱ Дней на набор метрик</label>
+                                    <input
+                                        type="number"
+                                        value={newTask.metricDeadlineDays}
+                                        onChange={(e) => setNewTask({ ...newTask, metricDeadlineDays: e.target.value })}
+                                        className="w-full p-3 border border-gray-300 rounded-lg"
+                                        placeholder="7"
+                                        min="1"
+                                        max="30"
+                                    />
+                                </div>
+
+                                <button
+                                    type="submit"
+                                    disabled={loading}
+                                    className="w-full bg-purple-600 text-white py-3 rounded-lg font-semibold hover:bg-purple-700 disabled:opacity-50"
+                                >
+                                    {loading ? 'Создание...' : '✅ Создать заказ'}
+                                </button>
+                            </form>
+                        </div>
                     </div>
                 ) : activeTab === 'submissions' ? (
                     // === Публикации ===
@@ -643,9 +847,9 @@ function WebAdminSettings() {
                                         </p>
                                     </div>
                                     <span className={`text-xs px-2 py-1 rounded-full whitespace-nowrap ${sub.status === 'pending' ? 'bg-yellow-100 text-yellow-800' :
-                                            sub.status === 'pending_approval' ? 'bg-orange-100 text-orange-800' :
-                                                sub.status === 'in_progress' ? 'bg-blue-100 text-blue-800' :
-                                                    sub.status === 'completed' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
+                                        sub.status === 'pending_approval' ? 'bg-orange-100 text-orange-800' :
+                                            sub.status === 'in_progress' ? 'bg-blue-100 text-blue-800' :
+                                                sub.status === 'completed' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
                                         }`}>
                                         {sub.status === 'pending' ? '⏳ Ожидает' :
                                             sub.status === 'pending_approval' ? '🔍 На проверке' :
@@ -720,7 +924,7 @@ function WebAdminSettings() {
                                     <div className="text-right">
                                         <p className="text-xl font-bold text-green-600">{request.amount?.toLocaleString()} сом</p>
                                         <span className={`text-xs px-2 py-1 rounded-full ${request.status === 'pending' ? 'bg-yellow-100 text-yellow-800' :
-                                                request.status === 'approved' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
+                                            request.status === 'approved' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
                                             }`}>
                                             {request.status === 'pending' ? '⏳ Ожидает' :
                                                 request.status === 'approved' ? '✅ Одобрено' : '❌ Отклонено'}
