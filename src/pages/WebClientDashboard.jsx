@@ -6,14 +6,10 @@ import { sendTelegramNotification, formatNewTaskMessage } from '../lib/telegramB
 
 function WebClientDashboard() {
     const [isAuthenticated, setIsAuthenticated] = useState(false)
-    const [loginMethod, setLoginMethod] = useState('telegram') // telegram or phone
-    const [telegramId, setTelegramId] = useState('')
-    const [phone, setPhone] = useState('')
-    const [authError, setAuthError] = useState('')
-
-    const [loading, setLoading] = useState(false)
+    const [loading, setLoading] = useState(true)
     const [activeTab, setActiveTab] = useState('tasks')
     const [profile, setProfile] = useState(null)
+    const [accessDenied, setAccessDenied] = useState(false)
 
     // Данные
     const [tasks, setTasks] = useState([])
@@ -149,14 +145,45 @@ function WebClientDashboard() {
         setPricingTiers(updated)
     }
 
-    // Проверяем сохранённую сессию
+    // Проверяем client_id из URL параметров
     useEffect(() => {
-        const savedProfile = sessionStorage.getItem('webClientProfile')
-        if (savedProfile) {
-            const parsed = JSON.parse(savedProfile)
-            setProfile(parsed)
-            setIsAuthenticated(true)
+        const loadClientProfile = async () => {
+            const params = new URLSearchParams(window.location.search)
+            const clientId = params.get('client_id')
+
+            if (!clientId) {
+                setAccessDenied(true)
+                setLoading(false)
+                return
+            }
+
+            try {
+                const { data, error } = await supabase
+                    .from('users')
+                    .select('*')
+                    .eq('id', clientId)
+                    .eq('user_type', 'client')
+                    .maybeSingle()
+
+                if (error) throw error
+
+                if (!data) {
+                    setAccessDenied(true)
+                    setLoading(false)
+                    return
+                }
+
+                setProfile(data)
+                setIsAuthenticated(true)
+            } catch (error) {
+                console.error('Ошибка загрузки профиля:', error)
+                setAccessDenied(true)
+            } finally {
+                setLoading(false)
+            }
         }
+
+        loadClientProfile()
     }, [])
 
     // Загрузка данных
@@ -166,63 +193,8 @@ function WebClientDashboard() {
         else if (activeTab === 'submissions') loadSubmissions()
     }, [isAuthenticated, profile, activeTab])
 
-    const handleLogin = async (e) => {
-        e.preventDefault()
-        setAuthError('')
-        setLoading(true)
-
-        try {
-            let query = supabase.from('users').select('*')
-
-            if (loginMethod === 'telegram') {
-                if (!telegramId) {
-                    setAuthError('Введите Telegram ID')
-                    setLoading(false)
-                    return
-                }
-                query = query.eq('telegram_id', parseInt(telegramId))
-            } else {
-                if (!phone) {
-                    setAuthError('Введите номер телефона')
-                    setLoading(false)
-                    return
-                }
-                query = query.eq('phone', phone.replace(/\D/g, ''))
-            }
-
-            const { data, error } = await query.maybeSingle()
-
-            if (error) throw error
-
-            if (!data) {
-                setAuthError('Пользователь не найден. Сначала зарегистрируйтесь через Telegram бота.')
-                setLoading(false)
-                return
-            }
-
-            if (data.user_type !== 'client') {
-                setAuthError('Этот аккаунт не является заказчиком')
-                setLoading(false)
-                return
-            }
-
-            setProfile(data)
-            setIsAuthenticated(true)
-            sessionStorage.setItem('webClientProfile', JSON.stringify(data))
-        } catch (error) {
-            console.error('Ошибка:', error)
-            setAuthError('Ошибка входа: ' + error.message)
-        } finally {
-            setLoading(false)
-        }
-    }
-
     const handleLogout = () => {
-        setIsAuthenticated(false)
-        setProfile(null)
-        sessionStorage.removeItem('webClientProfile')
-        setTelegramId('')
-        setPhone('')
+        window.location.href = '/web-admin'
     }
 
     const loadTasks = async () => {
@@ -443,96 +415,38 @@ function WebClientDashboard() {
         }
     }
 
-    // Форма авторизации
-    if (!isAuthenticated) {
+    // Экран загрузки
+    if (loading && !isAuthenticated) {
         return (
             <div className="min-h-screen bg-gradient-to-br from-slate-100 via-blue-50 to-purple-50 flex items-center justify-center p-4">
-                <div className="bg-white/80 backdrop-blur-sm rounded-3xl shadow-2xl p-8 w-full max-w-md border border-white/50">
-                    <div className="text-center mb-8">
-                        <div className="w-16 h-16 bg-gradient-to-br from-blue-500 to-purple-600 rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-lg">
-                            <span className="text-3xl">💼</span>
-                        </div>
-                        <h1 className="text-2xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
-                            Кабинет заказчика
-                        </h1>
-                        <p className="text-slate-500 mt-2">Вход через Telegram ID</p>
+                <div className="text-center">
+                    <div className="animate-spin rounded-full h-12 w-12 border-4 border-blue-500 border-t-transparent mx-auto mb-4"></div>
+                    <p className="text-slate-600">Загрузка...</p>
+                </div>
+            </div>
+        )
+    }
+
+    // Доступ закрыт
+    if (accessDenied || !isAuthenticated) {
+        return (
+            <div className="min-h-screen bg-gradient-to-br from-slate-100 via-blue-50 to-purple-50 flex items-center justify-center p-4">
+                <div className="bg-white/80 backdrop-blur-sm rounded-3xl shadow-2xl p-8 w-full max-w-md border border-white/50 text-center">
+                    <div className="w-16 h-16 bg-gradient-to-br from-red-400 to-red-600 rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-lg">
+                        <span className="text-3xl">🔒</span>
                     </div>
-
-                    <div className="flex gap-2 mb-6 p-1 bg-slate-100 rounded-xl">
-                        <button
-                            onClick={() => setLoginMethod('telegram')}
-                            className={`flex-1 py-2.5 rounded-lg font-medium transition-all ${loginMethod === 'telegram'
-                                ? 'bg-white text-blue-600 shadow-sm'
-                                : 'text-slate-500 hover:text-slate-700'}`}
-                        >
-                            Telegram ID
-                        </button>
-                        <button
-                            onClick={() => setLoginMethod('phone')}
-                            className={`flex-1 py-2.5 rounded-lg font-medium transition-all ${loginMethod === 'phone'
-                                ? 'bg-white text-blue-600 shadow-sm'
-                                : 'text-slate-500 hover:text-slate-700'}`}
-                        >
-                            Телефон
-                        </button>
-                    </div>
-
-                    <form onSubmit={handleLogin} className="space-y-4">
-                        {loginMethod === 'telegram' ? (
-                            <div>
-                                <label className="block text-sm font-medium text-slate-700 mb-2">Telegram ID</label>
-                                <input
-                                    type="number"
-                                    value={telegramId}
-                                    onChange={(e) => setTelegramId(e.target.value)}
-                                    className="w-full p-3.5 border border-slate-200 rounded-xl bg-white text-gray-900 placeholder-gray-400 focus:border-blue-400 focus:ring-2 focus:ring-blue-100 transition-all outline-none"
-                                    placeholder="Например: 123456789"
-                                    required
-                                />
-                                <p className="text-xs text-slate-500 mt-2">
-                                    Узнать свой ID можно у бота @userinfobot
-                                </p>
-                            </div>
-                        ) : (
-                            <div>
-                                <label className="block text-sm font-medium text-slate-700 mb-2">Номер телефона</label>
-                                <input
-                                    type="tel"
-                                    value={phone}
-                                    onChange={(e) => setPhone(e.target.value)}
-                                    className="w-full p-3.5 border border-slate-200 rounded-xl bg-white text-gray-900 placeholder-gray-400 focus:border-blue-400 focus:ring-2 focus:ring-blue-100 transition-all outline-none"
-                                    placeholder="+7 999 123 45 67"
-                                    required
-                                />
-                            </div>
-                        )}
-
-                        {authError && (
-                            <div className="bg-red-50 text-red-600 p-4 rounded-xl text-sm border border-red-100">
-                                {authError}
-                            </div>
-                        )}
-
-                        <button
-                            type="submit"
-                            disabled={loading}
-                            className="w-full bg-gradient-to-r from-blue-600 to-purple-600 text-white py-3.5 rounded-xl font-semibold hover:shadow-lg hover:scale-[1.02] transition-all disabled:opacity-50 disabled:hover:scale-100"
-                        >
-                            {loading ? (
-                                <span className="flex items-center justify-center gap-2">
-                                    <span className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent"></span>
-                                    Вход...
-                                </span>
-                            ) : 'Войти'}
-                        </button>
-                    </form>
-
-                    <p className="text-center text-sm text-slate-500 mt-6">
-                        Нет аккаунта? Зарегистрируйтесь через{' '}
-                        <a href="https://t.me/your_bot" className="text-blue-600 hover:underline font-medium">
-                            Telegram бота
-                        </a>
+                    <h1 className="text-2xl font-bold text-slate-800 mb-2">
+                        Доступ закрыт
+                    </h1>
+                    <p className="text-slate-500 mb-6">
+                        Кабинет заказчика доступен только через админ-панель
                     </p>
+                    <a
+                        href="/web-admin"
+                        className="inline-block bg-gradient-to-r from-blue-600 to-purple-600 text-white px-6 py-3 rounded-xl font-semibold hover:shadow-lg hover:scale-[1.02] transition-all"
+                    >
+                        Перейти в админку
+                    </a>
                 </div>
             </div>
         )
@@ -561,7 +475,7 @@ function WebClientDashboard() {
                             onClick={handleLogout}
                             className="text-slate-500 hover:text-slate-700 px-3 py-1.5 hover:bg-slate-100 rounded-xl transition-colors"
                         >
-                            Выйти
+                            ← Назад
                         </button>
                     </div>
                 </div>

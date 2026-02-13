@@ -984,6 +984,14 @@ function WebAdminSettings() {
 
                                     {/* Actions */}
                                     <div className="p-3 bg-slate-50 border-t flex flex-wrap gap-2">
+                                        {user.user_type === 'client' && (
+                                            <a
+                                                href={`/web-client?client_id=${user.id}`}
+                                                className="flex-1 text-xs px-3 py-2 bg-blue-100 text-blue-700 rounded-lg hover:bg-blue-200 transition-colors text-center"
+                                            >
+                                                💼 Кабинет
+                                            </a>
+                                        )}
                                         <button onClick={() => toggleUserType(user.id, user.user_type)}
                                             className="flex-1 text-xs px-3 py-2 bg-slate-200 text-slate-700 rounded-lg hover:bg-slate-300 transition-colors">
                                             → {user.user_type === 'client' ? 'Инфл.' : 'Заказ.'}
