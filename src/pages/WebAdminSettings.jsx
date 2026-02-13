@@ -35,8 +35,124 @@ function WebAdminSettings() {
         targetLikes: '',
         targetComments: '',
         deadline: '',
-        metricDeadlineDays: '7'
+        metricDeadlineDays: '7',
+        maxInfluencers: '',
+        minFollowers: '',
+        minEngagementRate: '',
+        usePricingTiers: false
     })
+
+    // Ценовые диапазоны (лесенка)
+    const [pricingTiers, setPricingTiers] = useState([
+        { min: '', max: '', price: '', metric: 'views' }
+    ])
+
+    // === Вспомогательные функции для лесенки ===
+    const parseOptionalInt = (value) => {
+        if (value === null || value === undefined) return null
+        const trimmed = String(value).trim()
+        if (trimmed === '') return null
+        const parsed = parseInt(trimmed, 10)
+        return Number.isFinite(parsed) ? parsed : null
+    }
+
+    const parseOptionalNumber = (value) => {
+        if (value === null || value === undefined) return null
+        const trimmed = String(value).trim()
+        if (trimmed === '') return null
+        const parsed = parseFloat(trimmed)
+        return Number.isFinite(parsed) ? parsed : null
+    }
+
+    const metricLabel = (metric) => {
+        switch (metric) {
+            case 'views': return 'Просмотры'
+            case 'likes': return 'Лайки'
+            case 'comments': return 'Комментарии'
+            default: return metric
+        }
+    }
+
+    const normalizePricingTiers = (tiers) => {
+        const normalized = tiers.map((tier) => {
+            const min = parseOptionalInt(tier.min)
+            const max = parseOptionalInt(tier.max)
+            const price = parseOptionalNumber(tier.price)
+            return { metric: tier.metric || 'views', min, max, price }
+        })
+
+        const errors = Array.from({ length: tiers.length }, () => [])
+
+        normalized.forEach((t, idx) => {
+            if (t.min === null) errors[idx].push('Укажите "От" (min)')
+            if (t.min !== null && t.min < 0) errors[idx].push('"От" не может быть отрицательным')
+            if (t.max !== null && t.max < 0) errors[idx].push('"До" не может быть отрицательным')
+            if (t.min !== null && t.max !== null && t.max < t.min) errors[idx].push('"До" должно быть ≥ "От"')
+            if (t.price === null) errors[idx].push('Укажите цену (можно 0)')
+            if (t.price !== null && t.price < 0) errors[idx].push('Цена не может быть отрицательной')
+        })
+
+        const seen = new Map()
+        normalized.forEach((t, idx) => {
+            if (t.min === null) return
+            const key = `${t.metric}:${t.min}`
+            const list = seen.get(key) || []
+            list.push(idx)
+            seen.set(key, list)
+        })
+        for (const [key, idxs] of seen.entries()) {
+            if (idxs.length <= 1) continue
+            const [metric, min] = key.split(':')
+            idxs.forEach((i) => {
+                errors[i].push(`Дубликат порога: ${metricLabel(metric)} от ${Number(min).toLocaleString()}`)
+            })
+        }
+
+        const valid = normalized.filter((t, idx) => {
+            if (t.min === null && t.price === null && t.max === null) return false
+            return errors[idx].length === 0
+        })
+
+        const hasBlockingErrors = errors.some(e => e.length > 0)
+        return { normalized, errors, valid, hasBlockingErrors }
+    }
+
+    const addPricingTier = () => {
+        setPricingTiers([...pricingTiers, { min: '', max: '', price: '', metric: 'views' }])
+    }
+
+    const addNextPricingTier = () => {
+        const last = pricingTiers[pricingTiers.length - 1] || { min: '', max: '', price: '', metric: 'views' }
+        const lastMin = parseOptionalInt(last.min)
+        const lastMax = parseOptionalInt(last.max)
+        const nextMin = lastMax !== null ? String(lastMax + 1) : (lastMin !== null ? String(lastMin) : '')
+        setPricingTiers([...pricingTiers, { min: nextMin, max: '', price: '', metric: last.metric || 'views' }])
+    }
+
+    const sortPricingTiers = () => {
+        const order = { views: 0, likes: 1, comments: 2 }
+        const sorted = [...pricingTiers].sort((a, b) => {
+            const metricDiff = (order[a.metric] ?? 99) - (order[b.metric] ?? 99)
+            if (metricDiff !== 0) return metricDiff
+            const amin = parseOptionalInt(a.min)
+            const bmin = parseOptionalInt(b.min)
+            if (amin === null && bmin === null) return 0
+            if (amin === null) return 1
+            if (bmin === null) return -1
+            return amin - bmin
+        })
+        setPricingTiers(sorted)
+    }
+
+    const removePricingTier = (index) => {
+        setPricingTiers(pricingTiers.filter((_, i) => i !== index))
+    }
+
+    const updatePricingTier = (index, field, value) => {
+        const updated = [...pricingTiers]
+        updated[index][field] = value
+        setPricingTiers(updated)
+    }
 
     // Проверяем сохранённую сессию и предзагружаем данные
     useEffect(() => {
@@ -332,20 +448,73 @@ function WebAdminSettings() {
     // === Действия: Создание заказа ===
     const createTask = async (e) => {
         e.preventDefault()
-        if (!newTask.title || !newTask.description || !newTask.budget || !newTask.clientId || !newTask.deadline) {
+
+        // Базовая валидация
+        if (!newTask.title || !newTask.description || !newTask.clientId || !newTask.deadline) {
             alert('Заполните все обязательные поля')
             return
         }
+
+        // Проверка бюджета только если НЕ используются pricing tiers
+        if (!newTask.usePricingTiers && !newTask.budget) {
+            alert('Укажите бюджет задания')
+            return
+        }
+
+        // Валидация pricing tiers
+        if (newTask.usePricingTiers) {
+            const { valid, hasBlockingErrors } = normalizePricingTiers(pricingTiers)
+            if (valid.length === 0) {
+                alert('Добавьте хотя бы один корректный порог (min + цена). Поле "До" можно оставить пустым.')
+                return
+            }
+            if (hasBlockingErrors) {
+                alert('Есть ошибки в ценовых диапазонах. Проверьте подсказки под полями.')
+                return
+            }
+        }
+
         if (new Date(newTask.deadline) < new Date()) {
             alert('Дедлайн не может быть в прошлом')
             return
         }
+
         setLoading(true)
         try {
+            // Requirements
+            const requirements = {}
+            if (newTask.minFollowers) requirements.minFollowers = parseInt(newTask.minFollowers)
+            if (newTask.minEngagementRate) requirements.minEngagementRate = parseFloat(newTask.minEngagementRate)
+
+            // Target metrics
             const targetMetrics = {}
             if (newTask.targetViews) targetMetrics.views = parseInt(newTask.targetViews)
             if (newTask.targetLikes) targetMetrics.likes = parseInt(newTask.targetLikes)
             if (newTask.targetComments) targetMetrics.comments = parseInt(newTask.targetComments)
+
+            // Pricing tiers (лесенка)
+            let finalPricingTiers = null
+            if (newTask.usePricingTiers) {
+                const { valid } = normalizePricingTiers(pricingTiers)
+                finalPricingTiers = valid.map(tier => ({
+                    min: tier.min,
+                    max: tier.max,
+                    price: tier.price,
+                    metric: tier.metric
+                }))
+
+                // Автоматически генерируем target_metrics из МИНИМАЛЬНЫХ значений pricing_tiers
+                const minMetrics = {}
+                finalPricingTiers.forEach(tier => {
+                    const currentMin = minMetrics[tier.metric]
+                    if (currentMin === undefined || tier.min < currentMin) {
+                        minMetrics[tier.metric] = tier.min
+                    }
+                })
+                Object.keys(minMetrics).forEach(metric => {
+                    targetMetrics[metric] = minMetrics[metric]
+                })
+            }
 
             // Преобразуем deadline в ISO формат с временем
             const deadlineDate = new Date(newTask.deadline)
@@ -356,9 +525,12 @@ function WebAdminSettings() {
                 client_id: newTask.clientId,
                 title: newTask.title,
                 description: newTask.description,
-                budget: parseFloat(newTask.budget),
+                budget: newTask.usePricingTiers ? 0 : parseFloat(newTask.budget),
+                requirements: Object.keys(requirements).length > 0 ? requirements : null,
                 target_metrics: Object.keys(targetMetrics).length > 0 ? targetMetrics : null,
+                pricing_tiers: finalPricingTiers,
                 metric_deadline_days: parseInt(newTask.metricDeadlineDays) || 7,
+                max_influencers: newTask.maxInfluencers ? parseInt(newTask.maxInfluencers) : null,
                 deadline: deadlineISO,
                 status: 'open',
                 accepted_count: 0
@@ -386,8 +558,13 @@ function WebAdminSettings() {
                 targetLikes: '',
                 targetComments: '',
                 deadline: '',
-                metricDeadlineDays: '7'
+                metricDeadlineDays: '7',
+                maxInfluencers: '',
+                minFollowers: '',
+                minEngagementRate: '',
+                usePricingTiers: false
             })
+            setPricingTiers([{ min: '', max: '', price: '', metric: 'views' }])
             setActiveTab('tasks')
             loadTasks()
         } catch (error) {
@@ -758,19 +935,21 @@ function WebAdminSettings() {
                                 </div>
 
                                 <div className="grid grid-cols-2 gap-4">
-                                    <div>
-                                        <label className="block text-sm font-medium mb-1">💰 Бюджет (сом) *</label>
-                                        <input
-                                            type="number"
-                                            value={newTask.budget}
-                                            onChange={(e) => setNewTask({ ...newTask, budget: e.target.value })}
-                                            className="w-full p-3 border border-gray-300 rounded-lg"
-                                            placeholder="5000"
-                                            min="100"
-                                            required
-                                        />
-                                    </div>
-                                    <div>
+                                    {!newTask.usePricingTiers && (
+                                        <div>
+                                            <label className="block text-sm font-medium mb-1">💰 Бюджет (сом) *</label>
+                                            <input
+                                                type="number"
+                                                value={newTask.budget}
+                                                onChange={(e) => setNewTask({ ...newTask, budget: e.target.value })}
+                                                className="w-full p-3 border border-gray-300 rounded-lg"
+                                                placeholder="5000"
+                                                min="100"
+                                                required={!newTask.usePricingTiers}
+                                            />
+                                        </div>
+                                    )}
+                                    <div className={newTask.usePricingTiers ? "col-span-2" : ""}>
                                         <label className="block text-sm font-medium mb-1">📅 Дедлайн *</label>
                                         <input
                                             type="date"
@@ -782,53 +961,227 @@ function WebAdminSettings() {
                                     </div>
                                 </div>
 
-                                <div className="bg-gray-50 rounded-lg p-4">
-                                    <h3 className="font-medium mb-3">🎯 Целевые метрики (опционально)</h3>
-                                    <div className="grid grid-cols-3 gap-3">
+                                {/* Переключатель режима оплаты */}
+                                <div className="bg-blue-50 rounded-lg p-4 border border-blue-200">
+                                    <label className="flex items-center gap-3 cursor-pointer">
+                                        <input
+                                            type="checkbox"
+                                            checked={newTask.usePricingTiers}
+                                            onChange={(e) => setNewTask({ ...newTask, usePricingTiers: e.target.checked })}
+                                            className="w-5 h-5"
+                                        />
                                         <div>
-                                            <label className="block text-xs mb-1">👁 Просмотры</label>
-                                            <input
-                                                type="number"
-                                                value={newTask.targetViews}
-                                                onChange={(e) => setNewTask({ ...newTask, targetViews: e.target.value })}
-                                                className="w-full p-2 border border-gray-300 rounded-lg text-sm"
-                                                placeholder="10000"
-                                            />
+                                            <div className="font-medium">💰 Ценовые диапазоны (лесенка)</div>
+                                            <div className="text-xs text-gray-600">
+                                                Оплата зависит от количества метрик (рекомендуется для масштабирования)
+                                            </div>
                                         </div>
-                                        <div>
-                                            <label className="block text-xs mb-1">❤️ Лайки</label>
-                                            <input
-                                                type="number"
-                                                value={newTask.targetLikes}
-                                                onChange={(e) => setNewTask({ ...newTask, targetLikes: e.target.value })}
-                                                className="w-full p-2 border border-gray-300 rounded-lg text-sm"
-                                                placeholder="500"
-                                            />
+                                    </label>
+                                </div>
+
+                                {/* Pricing Tiers UI */}
+                                {newTask.usePricingTiers && (
+                                    <div className="space-y-3 bg-gray-50 rounded-lg p-4">
+                                        <div className="flex items-center justify-between mb-2">
+                                            <h3 className="font-medium">📊 Ценовые диапазоны</h3>
+                                            <div className="flex gap-2">
+                                                <button
+                                                    type="button"
+                                                    onClick={sortPricingTiers}
+                                                    className="text-blue-600 text-sm hover:underline"
+                                                >
+                                                    ↕ Сортировать
+                                                </button>
+                                                <button
+                                                    type="button"
+                                                    onClick={addNextPricingTier}
+                                                    className="text-blue-600 text-sm hover:underline"
+                                                >
+                                                    + Следующий порог
+                                                </button>
+                                                <button
+                                                    type="button"
+                                                    onClick={addPricingTier}
+                                                    className="text-blue-600 text-sm hover:underline"
+                                                >
+                                                    + Добавить
+                                                </button>
+                                            </div>
                                         </div>
-                                        <div>
-                                            <label className="block text-xs mb-1">💬 Комментарии</label>
-                                            <input
-                                                type="number"
-                                                value={newTask.targetComments}
-                                                onChange={(e) => setNewTask({ ...newTask, targetComments: e.target.value })}
-                                                className="w-full p-2 border border-gray-300 rounded-lg text-sm"
-                                                placeholder="50"
-                                            />
-                                        </div>
+                                        <p className="text-xs text-gray-500 mb-3">
+                                            📈 Лесенка: выплата начисляется при достижении "От". Поле "До" можно оставить пустым (∞). Цена может быть 0.
+                                        </p>
+
+                                        {pricingTiers.map((tier, index) => {
+                                            const { errors } = normalizePricingTiers(pricingTiers)
+                                            const rowErrors = errors?.[index] || []
+                                            return (
+                                                <div key={index} className="bg-white rounded-lg p-3 border">
+                                                    <div className="flex items-center justify-between mb-2">
+                                                        <span className="text-sm font-medium">Диапазон {index + 1}</span>
+                                                        {pricingTiers.length > 1 && (
+                                                            <button
+                                                                type="button"
+                                                                onClick={() => removePricingTier(index)}
+                                                                className="text-red-500 text-sm hover:underline"
+                                                            >
+                                                                Удалить
+                                                            </button>
+                                                        )}
+                                                    </div>
+
+                                                    <div className="grid grid-cols-4 gap-2">
+                                                        <div>
+                                                            <label className="block text-xs text-gray-500 mb-1">От</label>
+                                                            <input
+                                                                type="number"
+                                                                value={tier.min}
+                                                                onChange={(e) => updatePricingTier(index, 'min', e.target.value)}
+                                                                placeholder="2000"
+                                                                min="0"
+                                                                className="w-full p-2 border rounded text-sm"
+                                                            />
+                                                        </div>
+                                                        <div>
+                                                            <label className="block text-xs text-gray-500 mb-1">До</label>
+                                                            <input
+                                                                type="number"
+                                                                value={tier.max}
+                                                                onChange={(e) => updatePricingTier(index, 'max', e.target.value)}
+                                                                placeholder="∞"
+                                                                min="0"
+                                                                className="w-full p-2 border rounded text-sm"
+                                                            />
+                                                        </div>
+                                                        <div>
+                                                            <label className="block text-xs text-gray-500 mb-1">Цена (сом)</label>
+                                                            <input
+                                                                type="number"
+                                                                value={tier.price}
+                                                                onChange={(e) => updatePricingTier(index, 'price', e.target.value)}
+                                                                placeholder="2000"
+                                                                min="0"
+                                                                className="w-full p-2 border rounded text-sm"
+                                                            />
+                                                        </div>
+                                                        <div>
+                                                            <label className="block text-xs text-gray-500 mb-1">Метрика</label>
+                                                            <select
+                                                                value={tier.metric}
+                                                                onChange={(e) => updatePricingTier(index, 'metric', e.target.value)}
+                                                                className="w-full p-2 border rounded text-sm"
+                                                            >
+                                                                <option value="views">👁 Просмотры</option>
+                                                                <option value="likes">❤️ Лайки</option>
+                                                                <option value="comments">💬 Комментарии</option>
+                                                            </select>
+                                                        </div>
+                                                    </div>
+
+                                                    {rowErrors.length > 0 && (
+                                                        <div className="text-xs text-red-500 mt-2">
+                                                            {rowErrors.map((msg, i) => (
+                                                                <div key={i}>• {msg}</div>
+                                                            ))}
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            )
+                                        })}
+                                    </div>
+                                )}
+
+                                {/* Requirements */}
+                                <div className="grid grid-cols-2 gap-4">
+                                    <div>
+                                        <label className="block text-sm font-medium mb-1">👥 Мин. подписчиков</label>
+                                        <input
+                                            type="number"
+                                            value={newTask.minFollowers}
+                                            onChange={(e) => setNewTask({ ...newTask, minFollowers: e.target.value })}
+                                            className="w-full p-3 border border-gray-300 rounded-lg"
+                                            placeholder="10000"
+                                            min="0"
+                                        />
+                                    </div>
+                                    <div>
+                                        <label className="block text-sm font-medium mb-1">📈 Мин. вовлечённость (%)</label>
+                                        <input
+                                            type="number"
+                                            value={newTask.minEngagementRate}
+                                            onChange={(e) => setNewTask({ ...newTask, minEngagementRate: e.target.value })}
+                                            className="w-full p-3 border border-gray-300 rounded-lg"
+                                            placeholder="2.5"
+                                            min="0"
+                                            max="100"
+                                            step="0.1"
+                                        />
                                     </div>
                                 </div>
 
-                                <div>
-                                    <label className="block text-sm font-medium mb-1">⏱ Дней на набор метрик</label>
-                                    <input
-                                        type="number"
-                                        value={newTask.metricDeadlineDays}
-                                        onChange={(e) => setNewTask({ ...newTask, metricDeadlineDays: e.target.value })}
-                                        className="w-full p-3 border border-gray-300 rounded-lg"
-                                        placeholder="7"
-                                        min="1"
-                                        max="30"
-                                    />
+                                {!newTask.usePricingTiers && (
+                                    <div className="bg-gray-50 rounded-lg p-4">
+                                        <h3 className="font-medium mb-3">🎯 Целевые метрики (опционально)</h3>
+                                        <div className="grid grid-cols-3 gap-3">
+                                            <div>
+                                                <label className="block text-xs mb-1">👁 Просмотры</label>
+                                                <input
+                                                    type="number"
+                                                    value={newTask.targetViews}
+                                                    onChange={(e) => setNewTask({ ...newTask, targetViews: e.target.value })}
+                                                    className="w-full p-2 border border-gray-300 rounded-lg text-sm"
+                                                    placeholder="10000"
+                                                />
+                                            </div>
+                                            <div>
+                                                <label className="block text-xs mb-1">❤️ Лайки</label>
+                                                <input
+                                                    type="number"
+                                                    value={newTask.targetLikes}
+                                                    onChange={(e) => setNewTask({ ...newTask, targetLikes: e.target.value })}
+                                                    className="w-full p-2 border border-gray-300 rounded-lg text-sm"
+                                                    placeholder="500"
+                                                />
+                                            </div>
+                                            <div>
+                                                <label className="block text-xs mb-1">💬 Комментарии</label>
+                                                <input
+                                                    type="number"
+                                                    value={newTask.targetComments}
+                                                    onChange={(e) => setNewTask({ ...newTask, targetComments: e.target.value })}
+                                                    className="w-full p-2 border border-gray-300 rounded-lg text-sm"
+                                                    placeholder="50"
+                                                />
+                                            </div>
+                                        </div>
+                                    </div>
+                                )}
+
+                                <div className="grid grid-cols-2 gap-4">
+                                    <div>
+                                        <label className="block text-sm font-medium mb-1">⏱ Дней на набор метрик</label>
+                                        <input
+                                            type="number"
+                                            value={newTask.metricDeadlineDays}
+                                            onChange={(e) => setNewTask({ ...newTask, metricDeadlineDays: e.target.value })}
+                                            className="w-full p-3 border border-gray-300 rounded-lg"
+                                            placeholder="7"
+                                            min="1"
+                                            max="90"
+                                        />
+                                    </div>
+                                    <div>
+                                        <label className="block text-sm font-medium mb-1">👥 Макс. инфлюенсеров</label>
+                                        <input
+                                            type="number"
+                                            value={newTask.maxInfluencers}
+                                            onChange={(e) => setNewTask({ ...newTask, maxInfluencers: e.target.value })}
+                                            className="w-full p-3 border border-gray-300 rounded-lg"
+                                            placeholder="Без ограничений"
+                                            min="1"
+                                        />
+                                        <p className="text-xs text-gray-500 mt-1">Оставьте пустым для неограниченного количества</p>
+                                    </div>
                                 </div>
 
                                 <button
