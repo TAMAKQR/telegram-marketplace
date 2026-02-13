@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { supabase } from '../lib/supabase'
 import Logo from '../components/Logo'
 import { formatTaskBudget } from '../lib/taskBudget'
+import { sendTelegramNotification, formatNewTaskMessage } from '../lib/telegramBot'
 
 // Учётные данные для веб-доступа
 const WEB_ADMIN_LOGIN = 'Daison'
@@ -547,6 +548,16 @@ function WebAdminSettings() {
             console.log('Create task result:', { data, error })
 
             if (error) throw error
+
+            // Отправляем уведомление в канал
+            try {
+                const client = users.find(u => u.id === newTask.clientId)
+                const clientName = client ? `${client.first_name} ${client.last_name || ''}`.trim() : 'Заказчик'
+                const message = formatNewTaskMessage(data, clientName)
+                await sendTelegramNotification(message)
+            } catch (notifyError) {
+                console.warn('Не удалось отправить уведомление:', notifyError)
+            }
 
             alert('Заказ успешно создан!')
             setNewTask({

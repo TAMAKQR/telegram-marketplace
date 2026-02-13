@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { supabase } from '../lib/supabase'
 import Logo from '../components/Logo'
 import { formatTaskBudget } from '../lib/taskBudget'
+import { sendTelegramNotification, formatNewTaskMessage } from '../lib/telegramBot'
 
 function WebClientDashboard() {
     const [isAuthenticated, setIsAuthenticated] = useState(false)
@@ -380,6 +381,15 @@ function WebClientDashboard() {
             console.log('Create result:', { data, error })
 
             if (error) throw error
+
+            // Отправляем уведомление в канал
+            try {
+                const clientName = profile ? `${profile.first_name} ${profile.last_name || ''}`.trim() : 'Заказчик'
+                const message = formatNewTaskMessage(data, clientName)
+                await sendTelegramNotification(message)
+            } catch (notifyError) {
+                console.warn('Не удалось отправить уведомление:', notifyError)
+            }
 
             alert('Заказ успешно создан!')
             setNewTask({
