@@ -540,38 +540,42 @@ function TaskDetails() {
             }
 
             // Best-effort: capture instagram_media_id + initial metrics on submit
+            // В ручном режиме пропускаем автоматический сбор метрик
             let instagramMediaId = null
             let initialMetrics = {
                 views: 0,
                 likes: 0,
                 comments: 0,
-                captured_at: Math.floor(Date.now() / 1000)
+                captured_at: Math.floor(Date.now() / 1000),
+                manual_entry: isManualMode // Помечаем что это ручной режим
             }
 
-            try {
-                const { data: influencerProfile, error: influencerProfileError } = await supabase
-                    .from('influencer_profiles')
-                    .select('instagram_connected, instagram_access_token, instagram_user_id')
-                    .eq('user_id', profile.id)
-                    .maybeSingle()
+            if (!isManualMode) {
+                try {
+                    const { data: influencerProfile, error: influencerProfileError } = await supabase
+                        .from('influencer_profiles')
+                        .select('instagram_connected, instagram_access_token, instagram_user_id')
+                        .eq('user_id', profile.id)
+                        .maybeSingle()
 
-                if (!influencerProfileError && influencerProfile?.instagram_connected && influencerProfile?.instagram_access_token && influencerProfile?.instagram_user_id) {
-                    const metrics = await instagramMetricsService.getPostMetrics(
-                        influencerProfile.instagram_access_token,
-                        effectivePostUrl,
-                        influencerProfile.instagram_user_id
-                    )
+                    if (!influencerProfileError && influencerProfile?.instagram_connected && influencerProfile?.instagram_access_token && influencerProfile?.instagram_user_id) {
+                        const metrics = await instagramMetricsService.getPostMetrics(
+                            influencerProfile.instagram_access_token,
+                            effectivePostUrl,
+                            influencerProfile.instagram_user_id
+                        )
 
-                    instagramMediaId = metrics?.media_id || null
-                    initialMetrics = {
-                        views: metrics?.views || 0,
-                        likes: metrics?.likes_count || 0,
-                        comments: metrics?.comments_count || 0,
-                        captured_at: Math.floor(Date.now() / 1000)
+                        instagramMediaId = metrics?.media_id || null
+                        initialMetrics = {
+                            views: metrics?.views || 0,
+                            likes: metrics?.likes_count || 0,
+                            comments: metrics?.comments_count || 0,
+                            captured_at: Math.floor(Date.now() / 1000)
+                        }
                     }
+                } catch (e) {
+                    console.warn('Could not fetch initial instagram metrics on submit:', e)
                 }
-            } catch (e) {
-                console.warn('Could not fetch initial instagram metrics on submit:', e)
             }
 
             const { error } = await supabase
@@ -591,7 +595,11 @@ function TaskDetails() {
 
             if (error) throw error
 
-            showAlert?.('✅ Отчет отправлен!\n\nМетрики будут автоматически отслеживаться каждый час. Оплата произойдет при достижении целей.')
+            if (isManualMode) {
+                showAlert?.('✅ Отчет отправлен!\n\nЗаказчик проверит публикацию и введёт метрики вручную.')
+            } else {
+                showAlert?.('✅ Отчет отправлен!\n\nМетрики будут автоматически отслеживаться каждый час. Оплата произойдет при достижении целей.')
+            }
             setShowSubmissionForm(false)
             setPostUrl('')
             setWorkDescription('')

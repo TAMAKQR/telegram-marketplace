@@ -114,7 +114,8 @@ function SubmitTaskPost() {
                 views: 0,
                 likes: 0,
                 comments: 0,
-                captured_at: Math.floor(Date.now() / 1000)
+                captured_at: Math.floor(Date.now() / 1000),
+                manual_entry: isManualMode
             }
 
             // В автоматическом режиме требуем Instagram подключение
