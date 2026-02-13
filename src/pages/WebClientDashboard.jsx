@@ -18,6 +18,7 @@ function WebClientDashboard() {
     // Данные
     const [tasks, setTasks] = useState([])
     const [submissions, setSubmissions] = useState([])
+    const [selectedTask, setSelectedTask] = useState(null)
 
     // Форма создания заказа
     const [showCreateForm, setShowCreateForm] = useState(false)
@@ -611,7 +612,11 @@ function WebClientDashboard() {
                     // === Мои заказы ===
                     <div className="grid gap-4 sm:grid-cols-2">
                         {tasks.map(task => (
-                            <div key={task.id} className="bg-white rounded-2xl border border-slate-200/50 shadow-sm hover:shadow-md transition-shadow overflow-hidden">
+                            <div
+                                key={task.id}
+                                className="bg-white rounded-2xl border border-slate-200/50 shadow-sm hover:shadow-md transition-shadow overflow-hidden cursor-pointer"
+                                onClick={() => setSelectedTask(task)}
+                            >
                                 <div className={`px-4 py-3 border-b ${task.status === 'open' ? 'bg-gradient-to-r from-green-50 to-emerald-50' :
                                     task.status === 'in_progress' ? 'bg-gradient-to-r from-blue-50 to-indigo-50' :
                                         task.status === 'completed' ? 'bg-gradient-to-r from-slate-50 to-slate-100' :
@@ -1091,6 +1096,138 @@ function WebClientDashboard() {
                                 ) : '✅ Создать заказ'}
                             </button>
                         </form>
+                    </div>
+                </div>
+            )}
+
+            {/* Модальное окно деталей задания */}
+            {selectedTask && (
+                <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+                    <div className="bg-white rounded-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto">
+                        <div className={`px-6 py-4 border-b ${selectedTask.status === 'open' ? 'bg-gradient-to-r from-green-50 to-emerald-50' :
+                            selectedTask.status === 'in_progress' ? 'bg-gradient-to-r from-blue-50 to-indigo-50' :
+                                selectedTask.status === 'completed' ? 'bg-gradient-to-r from-slate-50 to-slate-100' :
+                                    'bg-gradient-to-r from-red-50 to-orange-50'
+                            }`}>
+                            <div className="flex items-center justify-between">
+                                <h2 className="text-xl font-bold text-slate-800">{selectedTask.title}</h2>
+                                <button
+                                    onClick={() => setSelectedTask(null)}
+                                    className="w-8 h-8 flex items-center justify-center rounded-full bg-white/50 hover:bg-white text-slate-500 hover:text-slate-700 transition-colors"
+                                >
+                                    ✕
+                                </button>
+                            </div>
+                            <span className={`inline-block text-xs px-2.5 py-1 rounded-full font-medium mt-2 ${selectedTask.status === 'open' ? 'bg-green-100 text-green-700' :
+                                selectedTask.status === 'in_progress' ? 'bg-blue-100 text-blue-700' :
+                                    selectedTask.status === 'completed' ? 'bg-slate-200 text-slate-600' : 'bg-red-100 text-red-700'
+                                }`}>
+                                {selectedTask.status === 'open' ? '🟢 Открыт' :
+                                    selectedTask.status === 'in_progress' ? '🔵 В работе' :
+                                        selectedTask.status === 'completed' ? '✅ Завершен' : selectedTask.status}
+                            </span>
+                        </div>
+
+                        <div className="p-6 space-y-4">
+                            <div>
+                                <h3 className="text-sm font-medium text-slate-500 mb-1">Описание</h3>
+                                <p className="text-slate-700 whitespace-pre-wrap">{selectedTask.description}</p>
+                            </div>
+
+                            <div className="grid grid-cols-2 gap-4">
+                                <div className="bg-purple-50 rounded-xl p-3">
+                                    <span className="text-xs text-purple-600">Бюджет</span>
+                                    <p className="text-lg font-bold text-purple-700">{formatTaskBudget(selectedTask, { prefix: '' })}</p>
+                                </div>
+                                {selectedTask.deadline && (
+                                    <div className="bg-amber-50 rounded-xl p-3">
+                                        <span className="text-xs text-amber-600">Дедлайн</span>
+                                        <p className="text-lg font-bold text-amber-700">{new Date(selectedTask.deadline).toLocaleDateString('ru')}</p>
+                                    </div>
+                                )}
+                            </div>
+
+                            {selectedTask.target_metrics && (
+                                <div>
+                                    <h3 className="text-sm font-medium text-slate-500 mb-2">Целевые метрики</h3>
+                                    <div className="flex flex-wrap gap-2">
+                                        {selectedTask.target_metrics.views && (
+                                            <span className="bg-blue-100 text-blue-700 px-3 py-1.5 rounded-lg text-sm">
+                                                👁 {selectedTask.target_metrics.views.toLocaleString()} просмотров
+                                            </span>
+                                        )}
+                                        {selectedTask.target_metrics.likes && (
+                                            <span className="bg-pink-100 text-pink-700 px-3 py-1.5 rounded-lg text-sm">
+                                                ❤️ {selectedTask.target_metrics.likes.toLocaleString()} лайков
+                                            </span>
+                                        )}
+                                        {selectedTask.target_metrics.comments && (
+                                            <span className="bg-green-100 text-green-700 px-3 py-1.5 rounded-lg text-sm">
+                                                💬 {selectedTask.target_metrics.comments.toLocaleString()} комментов
+                                            </span>
+                                        )}
+                                    </div>
+                                </div>
+                            )}
+
+                            {selectedTask.requirements && (
+                                <div>
+                                    <h3 className="text-sm font-medium text-slate-500 mb-2">Требования</h3>
+                                    <div className="flex flex-wrap gap-2">
+                                        {selectedTask.requirements.minFollowers && (
+                                            <span className="bg-slate-100 text-slate-700 px-3 py-1.5 rounded-lg text-sm">
+                                                👥 от {selectedTask.requirements.minFollowers.toLocaleString()} подписчиков
+                                            </span>
+                                        )}
+                                        {selectedTask.requirements.minEngagement && (
+                                            <span className="bg-slate-100 text-slate-700 px-3 py-1.5 rounded-lg text-sm">
+                                                📈 ER от {selectedTask.requirements.minEngagement}%
+                                            </span>
+                                        )}
+                                    </div>
+                                </div>
+                            )}
+
+                            {selectedTask.influencer && (
+                                <div className="bg-pink-50 rounded-xl p-4">
+                                    <h3 className="text-sm font-medium text-pink-600 mb-2">Исполнитель</h3>
+                                    <div className="flex items-center gap-3">
+                                        <div className="w-10 h-10 bg-pink-200 rounded-full flex items-center justify-center">
+                                            📸
+                                        </div>
+                                        <div>
+                                            <p className="font-medium text-slate-800">{selectedTask.influencer.first_name} {selectedTask.influencer.last_name || ''}</p>
+                                            {selectedTask.influencer.instagram_username && (
+                                                <a
+                                                    href={`https://instagram.com/${selectedTask.influencer.instagram_username}`}
+                                                    target="_blank"
+                                                    rel="noopener noreferrer"
+                                                    className="text-sm text-pink-600 hover:underline"
+                                                >
+                                                    @{selectedTask.influencer.instagram_username}
+                                                </a>
+                                            )}
+                                        </div>
+                                    </div>
+                                </div>
+                            )}
+
+                            <div className="flex items-center justify-between text-sm text-slate-400 pt-4 border-t">
+                                <span>Создано: {new Date(selectedTask.created_at).toLocaleDateString('ru')}</span>
+                                {selectedTask.accepted_count > 0 && (
+                                    <span>Откликов: {selectedTask.accepted_count}</span>
+                                )}
+                            </div>
+                        </div>
+
+                        <div className="px-6 pb-6">
+                            <button
+                                onClick={() => setSelectedTask(null)}
+                                className="w-full bg-slate-100 text-slate-700 py-3 rounded-xl font-medium hover:bg-slate-200 transition-colors"
+                            >
+                                Закрыть
+                            </button>
+                        </div>
                     </div>
                 </div>
             )}
