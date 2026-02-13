@@ -474,7 +474,7 @@ function WebClientDashboard() {
                                     type="number"
                                     value={telegramId}
                                     onChange={(e) => setTelegramId(e.target.value)}
-                                    className="w-full p-3.5 border border-slate-200 rounded-xl bg-slate-50 focus:bg-white focus:border-blue-400 focus:ring-2 focus:ring-blue-100 transition-all outline-none"
+                                    className="w-full p-3.5 border border-slate-200 rounded-xl bg-white text-gray-900 placeholder-gray-400 focus:border-blue-400 focus:ring-2 focus:ring-blue-100 transition-all outline-none"
                                     placeholder="Например: 123456789"
                                     required
                                 />
@@ -489,7 +489,7 @@ function WebClientDashboard() {
                                     type="tel"
                                     value={phone}
                                     onChange={(e) => setPhone(e.target.value)}
-                                    className="w-full p-3.5 border border-slate-200 rounded-xl bg-slate-50 focus:bg-white focus:border-blue-400 focus:ring-2 focus:ring-blue-100 transition-all outline-none"
+                                    className="w-full p-3.5 border border-slate-200 rounded-xl bg-white text-gray-900 placeholder-gray-400 focus:border-blue-400 focus:ring-2 focus:ring-blue-100 transition-all outline-none"
                                     placeholder="+7 999 123 45 67"
                                     required
                                 />
@@ -792,7 +792,7 @@ function WebClientDashboard() {
                                     type="text"
                                     value={newTask.title}
                                     onChange={(e) => setNewTask({ ...newTask, title: e.target.value })}
-                                    className="w-full p-3.5 border border-slate-200 rounded-xl bg-slate-50 focus:bg-white focus:border-blue-400 focus:ring-2 focus:ring-blue-100 transition-all outline-none"
+                                    className="w-full p-3.5 border border-slate-200 rounded-xl bg-white text-gray-900 placeholder-gray-400 focus:border-blue-400 focus:ring-2 focus:ring-blue-100 transition-all outline-none"
                                     placeholder="Например: Реклама нового продукта"
                                     required
                                 />
@@ -803,7 +803,7 @@ function WebClientDashboard() {
                                 <textarea
                                     value={newTask.description}
                                     onChange={(e) => setNewTask({ ...newTask, description: e.target.value })}
-                                    className="w-full p-3.5 border border-slate-200 rounded-xl bg-slate-50 focus:bg-white focus:border-blue-400 focus:ring-2 focus:ring-blue-100 transition-all outline-none h-28 resize-none"
+                                    className="w-full p-3.5 border border-slate-200 rounded-xl bg-white text-gray-900 placeholder-gray-400 focus:border-blue-400 focus:ring-2 focus:ring-blue-100 transition-all outline-none h-28 resize-none"
                                     placeholder="Подробное описание задания..."
                                     required
                                 />
@@ -817,7 +817,7 @@ function WebClientDashboard() {
                                             type="number"
                                             value={newTask.budget}
                                             onChange={(e) => setNewTask({ ...newTask, budget: e.target.value })}
-                                            className="w-full p-3.5 border border-slate-200 rounded-xl bg-slate-50 focus:bg-white focus:border-blue-400 focus:ring-2 focus:ring-blue-100 transition-all outline-none"
+                                            className="w-full p-3.5 border border-slate-200 rounded-xl bg-white text-gray-900 placeholder-gray-400 focus:border-blue-400 focus:ring-2 focus:ring-blue-100 transition-all outline-none"
                                             placeholder="5000"
                                             min="100"
                                             required={!newTask.usePricingTiers}
@@ -830,7 +830,7 @@ function WebClientDashboard() {
                                         type="date"
                                         value={newTask.deadline}
                                         onChange={(e) => setNewTask({ ...newTask, deadline: e.target.value })}
-                                        className="w-full p-3.5 border border-slate-200 rounded-xl bg-slate-50 focus:bg-white focus:border-blue-400 focus:ring-2 focus:ring-blue-100 transition-all outline-none"
+                                        className="w-full p-3.5 border border-slate-200 rounded-xl bg-white text-gray-900 placeholder-gray-400 focus:border-blue-400 focus:ring-2 focus:ring-blue-100 transition-all outline-none"
                                         required
                                     />
                                 </div>
@@ -921,7 +921,7 @@ function WebClientDashboard() {
                                                             onChange={(e) => updatePricingTier(index, 'min', e.target.value)}
                                                             placeholder="2000"
                                                             min="0"
-                                                            className="w-full p-2.5 border border-slate-200 rounded-lg bg-slate-50 focus:bg-white focus:border-blue-400 text-sm transition-all outline-none"
+                                                            className="w-full p-2.5 border border-slate-200 rounded-lg bg-white text-gray-900 placeholder-gray-400 focus:border-blue-400 text-sm transition-all outline-none"
                                                         />
                                                     </div>
                                                     <div>
@@ -932,7 +932,7 @@ function WebClientDashboard() {
                                                             onChange={(e) => updatePricingTier(index, 'max', e.target.value)}
                                                             placeholder="∞"
                                                             min="0"
-                                                            className="w-full p-2.5 border border-slate-200 rounded-lg bg-slate-50 focus:bg-white focus:border-blue-400 text-sm transition-all outline-none"
+                                                            className="w-full p-2.5 border border-slate-200 rounded-lg bg-white text-gray-900 placeholder-gray-400 focus:border-blue-400 text-sm transition-all outline-none"
                                                         />
                                                     </div>
                                                     <div>
@@ -943,7 +943,7 @@ function WebClientDashboard() {
                                                             onChange={(e) => updatePricingTier(index, 'price', e.target.value)}
                                                             placeholder="2000"
                                                             min="0"
-                                                            className="w-full p-2.5 border border-slate-200 rounded-lg bg-slate-50 focus:bg-white focus:border-blue-400 text-sm transition-all outline-none"
+                                                            className="w-full p-2.5 border border-slate-200 rounded-lg bg-white text-gray-900 placeholder-gray-400 focus:border-blue-400 text-sm transition-all outline-none"
                                                         />
                                                     </div>
                                                     <div>
@@ -951,7 +951,7 @@ function WebClientDashboard() {
                                                         <select
                                                             value={tier.metric}
                                                             onChange={(e) => updatePricingTier(index, 'metric', e.target.value)}
-                                                            className="w-full p-2.5 border border-slate-200 rounded-lg bg-slate-50 focus:bg-white focus:border-blue-400 text-sm transition-all outline-none"
+                                                            className="w-full p-2.5 border border-slate-200 rounded-lg bg-white text-gray-900 placeholder-gray-400 focus:border-blue-400 text-sm transition-all outline-none"
                                                         >
                                                             <option value="views">👁 Просмотры</option>
                                                             <option value="likes">❤️ Лайки</option>
@@ -981,7 +981,7 @@ function WebClientDashboard() {
                                         type="number"
                                         value={newTask.minFollowers}
                                         onChange={(e) => setNewTask({ ...newTask, minFollowers: e.target.value })}
-                                        className="w-full p-3.5 border border-slate-200 rounded-xl bg-slate-50 focus:bg-white focus:border-blue-400 focus:ring-2 focus:ring-blue-100 transition-all outline-none"
+                                        className="w-full p-3.5 border border-slate-200 rounded-xl bg-white text-gray-900 placeholder-gray-400 focus:border-blue-400 focus:ring-2 focus:ring-blue-100 transition-all outline-none"
                                         placeholder="10000"
                                         min="0"
                                     />
@@ -992,7 +992,7 @@ function WebClientDashboard() {
                                         type="number"
                                         value={newTask.minEngagementRate}
                                         onChange={(e) => setNewTask({ ...newTask, minEngagementRate: e.target.value })}
-                                        className="w-full p-3.5 border border-slate-200 rounded-xl bg-slate-50 focus:bg-white focus:border-blue-400 focus:ring-2 focus:ring-blue-100 transition-all outline-none"
+                                        className="w-full p-3.5 border border-slate-200 rounded-xl bg-white text-gray-900 placeholder-gray-400 focus:border-blue-400 focus:ring-2 focus:ring-blue-100 transition-all outline-none"
                                         placeholder="2.5"
                                         min="0"
                                         max="100"
@@ -1048,7 +1048,7 @@ function WebClientDashboard() {
                                         type="number"
                                         value={newTask.metricDeadlineDays}
                                         onChange={(e) => setNewTask({ ...newTask, metricDeadlineDays: e.target.value })}
-                                        className="w-full p-3.5 border border-slate-200 rounded-xl bg-slate-50 focus:bg-white focus:border-blue-400 focus:ring-2 focus:ring-blue-100 transition-all outline-none"
+                                        className="w-full p-3.5 border border-slate-200 rounded-xl bg-white text-gray-900 placeholder-gray-400 focus:border-blue-400 focus:ring-2 focus:ring-blue-100 transition-all outline-none"
                                         placeholder="7"
                                         min="1"
                                         max="90"
@@ -1060,7 +1060,7 @@ function WebClientDashboard() {
                                         type="number"
                                         value={newTask.maxInfluencers}
                                         onChange={(e) => setNewTask({ ...newTask, maxInfluencers: e.target.value })}
-                                        className="w-full p-3.5 border border-slate-200 rounded-xl bg-slate-50 focus:bg-white focus:border-blue-400 focus:ring-2 focus:ring-blue-100 transition-all outline-none"
+                                        className="w-full p-3.5 border border-slate-200 rounded-xl bg-white text-gray-900 placeholder-gray-400 focus:border-blue-400 focus:ring-2 focus:ring-blue-100 transition-all outline-none"
                                         placeholder="Без ограничения"
                                         min="1"
                                     />

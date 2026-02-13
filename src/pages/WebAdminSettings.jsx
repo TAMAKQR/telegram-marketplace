@@ -683,12 +683,12 @@ function WebAdminSettings() {
                         <div>
                             <label className="block text-sm font-medium text-gray-700 mb-1">Логин</label>
                             <input type="text" value={login} onChange={(e) => setLogin(e.target.value)}
-                                className="w-full p-3 border border-gray-300 rounded-lg" placeholder="Введите логин" required />
+                                className="w-full p-3 border border-gray-300 rounded-lg bg-white text-gray-900 placeholder-gray-400" placeholder="Введите логин" required />
                         </div>
                         <div>
                             <label className="block text-sm font-medium text-gray-700 mb-1">Пароль</label>
                             <input type="password" value={password} onChange={(e) => setPassword(e.target.value)}
-                                className="w-full p-3 border border-gray-300 rounded-lg" placeholder="Введите пароль" required />
+                                className="w-full p-3 border border-gray-300 rounded-lg bg-white text-gray-900 placeholder-gray-400" placeholder="Введите пароль" required />
                         </div>
                         {authError && <div className="bg-red-50 text-red-600 p-3 rounded-lg text-sm">{authError}</div>}
                         <button type="submit" className="w-full bg-blue-600 text-white py-3 rounded-lg font-semibold hover:bg-blue-700">Войти</button>
@@ -1073,7 +1073,7 @@ function WebAdminSettings() {
                                         <select
                                             value={newTask.clientId}
                                             onChange={(e) => setNewTask({ ...newTask, clientId: e.target.value })}
-                                            className="w-full p-3 border border-slate-200 rounded-xl bg-slate-50 focus:bg-white focus:border-purple-400 focus:ring-2 focus:ring-purple-100 transition-all outline-none"
+                                            className="w-full p-3 border border-slate-200 rounded-xl bg-white text-gray-900 placeholder-gray-400 focus:border-purple-400 focus:ring-2 focus:ring-purple-100 transition-all outline-none"
                                             required
                                         >
                                             <option value="">Выберите заказчика</option>
@@ -1092,7 +1092,7 @@ function WebAdminSettings() {
                                             type="text"
                                             value={newTask.title}
                                             onChange={(e) => setNewTask({ ...newTask, title: e.target.value })}
-                                            className="w-full p-3 border border-slate-200 rounded-xl bg-slate-50 focus:bg-white focus:border-purple-400 focus:ring-2 focus:ring-purple-100 transition-all outline-none"
+                                            className="w-full p-3 border border-slate-200 rounded-xl bg-white text-gray-900 placeholder-gray-400 focus:border-purple-400 focus:ring-2 focus:ring-purple-100 transition-all outline-none"
                                             placeholder="Например: Реклама нового продукта"
                                             required
                                         />
@@ -1103,7 +1103,7 @@ function WebAdminSettings() {
                                         <textarea
                                             value={newTask.description}
                                             onChange={(e) => setNewTask({ ...newTask, description: e.target.value })}
-                                            className="w-full p-3 border border-slate-200 rounded-xl bg-slate-50 focus:bg-white focus:border-purple-400 focus:ring-2 focus:ring-purple-100 transition-all outline-none h-32 resize-none"
+                                            className="w-full p-3 border border-slate-200 rounded-xl bg-white text-gray-900 placeholder-gray-400 focus:border-purple-400 focus:ring-2 focus:ring-purple-100 transition-all outline-none h-32 resize-none"
                                             placeholder="Подробное описание задания..."
                                             required
                                         />
@@ -1117,7 +1117,7 @@ function WebAdminSettings() {
                                                     type="number"
                                                     value={newTask.budget}
                                                     onChange={(e) => setNewTask({ ...newTask, budget: e.target.value })}
-                                                    className="w-full p-3 border border-slate-200 rounded-xl bg-slate-50 focus:bg-white focus:border-purple-400 focus:ring-2 focus:ring-purple-100 transition-all outline-none"
+                                                    className="w-full p-3 border border-slate-200 rounded-xl bg-white text-gray-900 placeholder-gray-400 focus:border-purple-400 focus:ring-2 focus:ring-purple-100 transition-all outline-none"
                                                     placeholder="5000"
                                                     min="100"
                                                     required={!newTask.usePricingTiers}
@@ -1130,7 +1130,7 @@ function WebAdminSettings() {
                                                 type="date"
                                                 value={newTask.deadline}
                                                 onChange={(e) => setNewTask({ ...newTask, deadline: e.target.value })}
-                                                className="w-full p-3 border border-gray-300 rounded-lg"
+                                                className="w-full p-3 border border-gray-300 rounded-lg bg-white text-gray-900 placeholder-gray-400"
                                                 required
                                             />
                                         </div>
@@ -1274,7 +1274,7 @@ function WebAdminSettings() {
                                                 type="number"
                                                 value={newTask.minFollowers}
                                                 onChange={(e) => setNewTask({ ...newTask, minFollowers: e.target.value })}
-                                                className="w-full p-3 border border-gray-300 rounded-lg"
+                                                className="w-full p-3 border border-gray-300 rounded-lg bg-white text-gray-900 placeholder-gray-400"
                                                 placeholder="10000"
                                                 min="0"
                                             />
@@ -1285,7 +1285,7 @@ function WebAdminSettings() {
                                                 type="number"
                                                 value={newTask.minEngagementRate}
                                                 onChange={(e) => setNewTask({ ...newTask, minEngagementRate: e.target.value })}
-                                                className="w-full p-3 border border-gray-300 rounded-lg"
+                                                className="w-full p-3 border border-gray-300 rounded-lg bg-white text-gray-900 placeholder-gray-400"
                                                 placeholder="2.5"
                                                 min="0"
                                                 max="100"
@@ -1339,7 +1339,7 @@ function WebAdminSettings() {
                                                 type="number"
                                                 value={newTask.metricDeadlineDays}
                                                 onChange={(e) => setNewTask({ ...newTask, metricDeadlineDays: e.target.value })}
-                                                className="w-full p-3 border border-gray-300 rounded-lg"
+                                                className="w-full p-3 border border-gray-300 rounded-lg bg-white text-gray-900 placeholder-gray-400"
                                                 placeholder="7"
                                                 min="1"
                                                 max="90"
@@ -1351,7 +1351,7 @@ function WebAdminSettings() {
                                                 type="number"
                                                 value={newTask.maxInfluencers}
                                                 onChange={(e) => setNewTask({ ...newTask, maxInfluencers: e.target.value })}
-                                                className="w-full p-3 border border-slate-200 rounded-xl bg-slate-50 focus:bg-white focus:border-purple-400 focus:ring-2 focus:ring-purple-100 transition-all outline-none"
+                                                className="w-full p-3 border border-slate-200 rounded-xl bg-white text-gray-900 placeholder-gray-400 focus:border-purple-400 focus:ring-2 focus:ring-purple-100 transition-all outline-none"
                                                 placeholder="Без ограничений"
                                                 min="1"
                                             />
