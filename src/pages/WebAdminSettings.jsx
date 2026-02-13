@@ -955,10 +955,15 @@ function WebAdminSettings() {
                                         {user.influencer_profiles?.[0]?.instagram_username && (
                                             <div className="flex items-center justify-between text-sm">
                                                 <span className="text-slate-500">Instagram</span>
-                                                <span className="text-pink-600 font-medium">
+                                                <a
+                                                    href={`https://instagram.com/${user.influencer_profiles[0].instagram_username}`}
+                                                    target="_blank"
+                                                    rel="noopener noreferrer"
+                                                    className="text-pink-600 font-medium hover:text-pink-700 hover:underline transition-colors"
+                                                >
                                                     @{user.influencer_profiles[0].instagram_username}
                                                     {user.influencer_profiles[0].instagram_connected && ' ✓'}
-                                                </span>
+                                                </a>
                                             </div>
                                         )}
                                         <p className="text-xs text-slate-400 pt-2 border-t">
