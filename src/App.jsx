@@ -66,8 +66,8 @@ function AppShell() {
     }, [isPublicPage, user, bootstrapping])
 
     // Debug: показываем что происходит
-    console.log('App render:', { user, userType, build, telegram: window.Telegram?.WebApp })
-    console.log('Path check:', { currentPath, isPublicPage, publicPaths })
+    console.log('App render:', { user, userType, build, telegram: !!window.Telegram?.WebApp })
+    console.log('Path check:', { currentPath, isPublicPage, publicPaths, shouldSkipAuth: isPublicPage })
 
     // Ключевой фикс: Telegram может открыть приложение на последнем маршруте,
     // а zustand store при этом пустой (userType/profile = null). Поэтому всегда
@@ -86,6 +86,7 @@ function AppShell() {
                     .from('users')
                     .select('*')
                     .eq('telegram_id', user.id)
+                    .eq('is_deleted', false)
                     .maybeSingle()
 
                 if (error) throw error

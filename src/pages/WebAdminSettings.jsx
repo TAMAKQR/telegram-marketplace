@@ -179,6 +179,7 @@ function WebAdminSettings() {
 
     const handleLogin = (e) => {
         e.preventDefault()
+        console.log('Login attempt:', { login, password, expected: { WEB_ADMIN_LOGIN, WEB_ADMIN_PASSWORD } })
         if (login === WEB_ADMIN_LOGIN && password === WEB_ADMIN_PASSWORD) {
             setIsAuthenticated(true)
             sessionStorage.setItem('webAdminAuth', 'true')
@@ -241,10 +242,10 @@ function WebAdminSettings() {
                 .from('tasks')
                 .select(`
                     *, 
-                    client:client_id(id, first_name, last_name, telegram_id),
-                    influencer:influencer_id(id, first_name, last_name, telegram_id)
+                    client:client_id(id, first_name, last_name, telegram_id)
                 `)
                 .order('created_at', { ascending: false })
+            console.log('loadTasks result:', { data, error, count: data?.length })
             if (error) throw error
             setTasks(data || [])
         } catch (error) {
@@ -1390,9 +1391,9 @@ function WebAdminSettings() {
                                     <div key={sub.id} className="bg-white rounded-2xl border border-slate-200/50 shadow-sm hover:shadow-md transition-shadow overflow-hidden">
                                         {/* Status Header */}
                                         <div className={`px-4 py-2 text-sm font-medium flex items-center justify-between ${sub.status === 'pending' ? 'bg-yellow-50 text-yellow-700' :
-                                                sub.status === 'pending_approval' ? 'bg-orange-50 text-orange-700' :
-                                                    sub.status === 'in_progress' ? 'bg-blue-50 text-blue-700' :
-                                                        sub.status === 'completed' ? 'bg-green-50 text-green-700' : 'bg-red-50 text-red-700'
+                                            sub.status === 'pending_approval' ? 'bg-orange-50 text-orange-700' :
+                                                sub.status === 'in_progress' ? 'bg-blue-50 text-blue-700' :
+                                                    sub.status === 'completed' ? 'bg-green-50 text-green-700' : 'bg-red-50 text-red-700'
                                             }`}>
                                             <span>
                                                 {sub.status === 'pending' ? '⏳ Ожидает' :
@@ -1470,7 +1471,7 @@ function WebAdminSettings() {
                                 <div key={request.id} className="bg-white rounded-2xl border border-slate-200/50 shadow-sm hover:shadow-md transition-shadow overflow-hidden">
                                     {/* Status Header */}
                                     <div className={`px-4 py-2 text-sm font-medium flex items-center justify-between ${request.status === 'pending' ? 'bg-yellow-50 text-yellow-700' :
-                                            request.status === 'approved' ? 'bg-green-50 text-green-700' : 'bg-red-50 text-red-700'
+                                        request.status === 'approved' ? 'bg-green-50 text-green-700' : 'bg-red-50 text-red-700'
                                         }`}>
                                         <span>
                                             {request.status === 'pending' ? '⏳ Ожидает' :

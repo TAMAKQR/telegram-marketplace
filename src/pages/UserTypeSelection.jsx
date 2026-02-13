@@ -23,6 +23,7 @@ function UserTypeSelection() {
                 .from('users')
                 .select('*')
                 .eq('telegram_id', user.id)
+                .eq('is_deleted', false)
                 .single()
 
             if (data) {
@@ -46,6 +47,20 @@ function UserTypeSelection() {
 
         setLoading(true)
         try {
+            // Проверяем, не был ли аккаунт удалён
+            const { data: deletedUser } = await supabase
+                .from('users')
+                .select('id, is_deleted')
+                .eq('telegram_id', user.id)
+                .eq('is_deleted', true)
+                .maybeSingle()
+
+            if (deletedUser) {
+                alert('Ваш аккаунт был удалён. Обратитесь к администратору для восстановления.')
+                setLoading(false)
+                return
+            }
+
             // Создаем пользователя в БД как инфлюенсера по умолчанию
             const { data, error } = await supabase
                 .from('users')
