@@ -1028,7 +1028,7 @@ function WebClientDashboard() {
                                                 type="number"
                                                 value={newTask.targetViews}
                                                 onChange={(e) => setNewTask({ ...newTask, targetViews: e.target.value })}
-                                                className="w-full p-2.5 border border-slate-200 rounded-xl bg-white focus:border-blue-400 text-sm transition-all outline-none"
+                                                className="w-full p-2.5 border border-slate-200 rounded-xl bg-white text-gray-900 placeholder-gray-400 focus:border-blue-400 text-sm transition-all outline-none"
                                                 placeholder="10000"
                                             />
                                         </div>
@@ -1038,7 +1038,7 @@ function WebClientDashboard() {
                                                 type="number"
                                                 value={newTask.targetLikes}
                                                 onChange={(e) => setNewTask({ ...newTask, targetLikes: e.target.value })}
-                                                className="w-full p-2.5 border border-slate-200 rounded-xl bg-white focus:border-blue-400 text-sm transition-all outline-none"
+                                                className="w-full p-2.5 border border-slate-200 rounded-xl bg-white text-gray-900 placeholder-gray-400 focus:border-blue-400 text-sm transition-all outline-none"
                                                 placeholder="500"
                                             />
                                         </div>
@@ -1048,7 +1048,7 @@ function WebClientDashboard() {
                                                 type="number"
                                                 value={newTask.targetComments}
                                                 onChange={(e) => setNewTask({ ...newTask, targetComments: e.target.value })}
-                                                className="w-full p-2.5 border border-slate-200 rounded-xl bg-white focus:border-blue-400 text-sm transition-all outline-none"
+                                                className="w-full p-2.5 border border-slate-200 rounded-xl bg-white text-gray-900 placeholder-gray-400 focus:border-blue-400 text-sm transition-all outline-none"
                                                 placeholder="50"
                                             />
                                         </div>

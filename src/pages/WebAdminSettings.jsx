@@ -1230,7 +1230,7 @@ function WebAdminSettings() {
                                                                     onChange={(e) => updatePricingTier(index, 'min', e.target.value)}
                                                                     placeholder="2000"
                                                                     min="0"
-                                                                    className="w-full p-2 border rounded text-sm"
+                                                                    className="w-full p-2 border rounded bg-white text-gray-900 placeholder-gray-400 text-sm"
                                                                 />
                                                             </div>
                                                             <div>
@@ -1241,7 +1241,7 @@ function WebAdminSettings() {
                                                                     onChange={(e) => updatePricingTier(index, 'max', e.target.value)}
                                                                     placeholder="∞"
                                                                     min="0"
-                                                                    className="w-full p-2 border rounded text-sm"
+                                                                    className="w-full p-2 border rounded bg-white text-gray-900 placeholder-gray-400 text-sm"
                                                                 />
                                                             </div>
                                                             <div>
@@ -1252,7 +1252,7 @@ function WebAdminSettings() {
                                                                     onChange={(e) => updatePricingTier(index, 'price', e.target.value)}
                                                                     placeholder="2000"
                                                                     min="0"
-                                                                    className="w-full p-2 border rounded text-sm"
+                                                                    className="w-full p-2 border rounded bg-white text-gray-900 placeholder-gray-400 text-sm"
                                                                 />
                                                             </div>
                                                             <div>
@@ -1260,7 +1260,7 @@ function WebAdminSettings() {
                                                                 <select
                                                                     value={tier.metric}
                                                                     onChange={(e) => updatePricingTier(index, 'metric', e.target.value)}
-                                                                    className="w-full p-2 border rounded text-sm"
+                                                                    className="w-full p-2 border rounded bg-white text-gray-900 text-sm"
                                                                 >
                                                                     <option value="views">👁 Просмотры</option>
                                                                     <option value="likes">❤️ Лайки</option>
@@ -1320,7 +1320,7 @@ function WebAdminSettings() {
                                                         type="number"
                                                         value={newTask.targetViews}
                                                         onChange={(e) => setNewTask({ ...newTask, targetViews: e.target.value })}
-                                                        className="w-full p-2 border border-gray-300 rounded-lg text-sm"
+                                                        className="w-full p-2 border border-gray-300 rounded-lg bg-white text-gray-900 placeholder-gray-400 text-sm"
                                                         placeholder="10000"
                                                     />
                                                 </div>
@@ -1330,7 +1330,7 @@ function WebAdminSettings() {
                                                         type="number"
                                                         value={newTask.targetLikes}
                                                         onChange={(e) => setNewTask({ ...newTask, targetLikes: e.target.value })}
-                                                        className="w-full p-2 border border-gray-300 rounded-lg text-sm"
+                                                        className="w-full p-2 border border-gray-300 rounded-lg bg-white text-gray-900 placeholder-gray-400 text-sm"
                                                         placeholder="500"
                                                     />
                                                 </div>
@@ -1340,7 +1340,7 @@ function WebAdminSettings() {
                                                         type="number"
                                                         value={newTask.targetComments}
                                                         onChange={(e) => setNewTask({ ...newTask, targetComments: e.target.value })}
-                                                        className="w-full p-2 border border-gray-300 rounded-lg text-sm"
+                                                        className="w-full p-2 border border-gray-300 rounded-lg bg-white text-gray-900 placeholder-gray-400 text-sm"
                                                         placeholder="50"
                                                     />
                                                 </div>

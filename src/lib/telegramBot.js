@@ -39,22 +39,31 @@ const sendTelegramNotificationWithOptions = async (message, options = {}) => {
 }
 
 export const formatNewTaskMessage = (task, clientName) => {
-  let message = ` <b>Новое задание!</b>\n\n`
-  message += ` <b>${task.title}</b>\n`
-  message += ` Бюджет: <b>${formatTaskBudget(task, { prefix: '' })}</b>\n`
+  let message = `🎯 <b>НОВОЕ ЗАДАНИЕ</b>\n`
+  message += `━━━━━━━━━━━━━━━━━━━━\n\n`
+
+  message += `📌 <b>${task.title}</b>\n\n`
+
+  message += `💰 Бюджет: <b>${formatTaskBudget(task, { prefix: '' })}</b>\n`
 
   if (task.requirements?.minFollowers) {
-    message += ` Мин. подписчиков: ${task.requirements.minFollowers.toLocaleString()}\n`
+    message += `👥 Мин. подписчиков: <b>${task.requirements.minFollowers.toLocaleString()}</b>\n`
+  }
+
+  if (task.requirements?.minEngagement) {
+    message += `📈 Мин. ER: <b>${task.requirements.minEngagement}%</b>\n`
   }
 
   if (task.deadline) {
     const deadlineDate = new Date(task.deadline)
-    message += ` Дедлайн: ${deadlineDate.toLocaleDateString('ru-RU')}\n`
+    message += `📅 Дедлайн: <b>${deadlineDate.toLocaleDateString('ru-RU')}</b>\n`
   }
 
-  message += `\n <b>Описание:</b>\n${task.description}\n`
-  message += `\n Заказчик: ${clientName}`
-  message += `\n\n Откликайтесь через бот!`
+  message += `\n📝 <b>Описание:</b>\n<i>${task.description.slice(0, 300)}${task.description.length > 300 ? '...' : ''}</i>\n`
+
+  message += `\n━━━━━━━━━━━━━━━━━━━━\n`
+  message += `👤 Заказчик: ${clientName}\n\n`
+  message += `👉 <a href="https://t.me/romashkacz_bot/ugc">Откликнуться на задание</a>`
 
   return message
 }
