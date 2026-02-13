@@ -28,6 +28,15 @@ const sendTelegramNotificationWithOptions = async (message, options = {}) => {
   if (error) {
     const log = silent ? console.debug : console.warn
     log('telegram-notify invoke failed:', error)
+    // Try to get error details from context
+    if (error.context) {
+      try {
+        const body = await error.context.json()
+        console.log('[telegram-notify] Error body:', body)
+      } catch (e) {
+        console.log('[telegram-notify] Could not parse error body')
+      }
+    }
     return null
   }
 
