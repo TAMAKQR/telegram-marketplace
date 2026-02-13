@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { supabase } from '../lib/supabase'
 import { instagramMetricsService } from '../lib/instagramMetricsService'
 import { useTelegram } from '../hooks/useTelegram'
@@ -7,6 +7,28 @@ export default function SubmitTaskPost({ task, onSuccess }) {
     const { showAlert } = useTelegram()
     const [postUrl, setPostUrl] = useState('')
     const [loading, setLoading] = useState(false)
+    const [isManualMode, setIsManualMode] = useState(false)
+
+    useEffect(() => {
+        loadMetricsMode()
+    }, [])
+
+    const loadMetricsMode = async () => {
+        try {
+            const { data, error } = await supabase
+                .from('app_settings')
+                .select('value')
+                .eq('key', 'instagram_metrics_mode')
+                .maybeSingle()
+
+            if (!error && data) {
+                const mode = typeof data.value === 'string' ? data.value : JSON.parse(data.value)
+                setIsManualMode(mode === 'manual')
+            }
+        } catch (e) {
+            console.warn('Could not load metrics mode:', e)
+        }
+    }
 
     const handleSubmit = async (e) => {
         e.preventDefault()

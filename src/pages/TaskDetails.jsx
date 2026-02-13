@@ -35,6 +35,7 @@ function TaskDetails() {
     const [selectedPost, setSelectedPost] = useState(null)
     const [submittingWork, setSubmittingWork] = useState(false)
     const [refreshingSubmissions, setRefreshingSubmissions] = useState(false)
+    const [isManualMode, setIsManualMode] = useState(false)
 
     const safeJsonArray = (value) => {
         if (Array.isArray(value)) return value
@@ -62,8 +63,26 @@ function TaskDetails() {
     useEffect(() => {
         if (taskId) {
             loadTaskDetails()
+            loadMetricsMode()
         }
     }, [taskId])
+
+    const loadMetricsMode = async () => {
+        try {
+            const { data, error } = await supabase
+                .from('app_settings')
+                .select('value')
+                .eq('key', 'instagram_metrics_mode')
+                .maybeSingle()
+
+            if (!error && data) {
+                const mode = typeof data.value === 'string' ? data.value : JSON.parse(data.value)
+                setIsManualMode(mode === 'manual')
+            }
+        } catch (e) {
+            console.warn('Could not load metrics mode:', e)
+        }
+    }
 
     useEffect(() => {
         if (!loading) {
@@ -1082,102 +1101,144 @@ function TaskDetails() {
                             <div className="bg-white dark:bg-gray-800 rounded-xl p-4 shadow-md space-y-3">
                                 <h3 className="font-semibold">Отправить отчет о выполнении</h3>
 
-                                {/* Кнопка загрузки постов */}
-                                {userPosts.length === 0 && !loadingPosts && (
-                                    <button
-                                        type="button"
-                                        onClick={loadUserPosts}
-                                        disabled={submittingWork}
-                                        className="w-full bg-gradient-to-r from-purple-500 to-pink-500 text-white py-3 rounded-xl font-semibold hover:opacity-90"
-                                    >
-                                        📸 Загрузить мои посты из Instagram
-                                    </button>
-                                )}
-
-                                {loadingPosts && (
-                                    <div className="text-center py-4">
-                                        <p className="text-tg-hint">Загрузка постов...</p>
-                                    </div>
-                                )}
-
-                                {/* Выбор поста из списка */}
-                                {userPosts.length > 0 && (
-                                    <div>
-                                        <label className="block text-sm font-medium mb-2">
-                                            Выберите публикацию
-                                        </label>
-                                        <div className="grid grid-cols-3 gap-2 max-h-96 overflow-y-auto">
-                                            {userPosts
-                                                .filter(post => post && post.id)
-                                                .map(post => (
-                                                    <div
-                                                        key={post.id}
-                                                        onClick={async () => {
-                                                            if (submittingWork) return
-                                                            const permalink = post?.permalink
-                                                            if (!permalink) {
-                                                                showAlert?.('Не удалось получить ссылку на пост (permalink). Попробуйте другой пост.')
-                                                                return
-                                                            }
-
-                                                            setSelectedPost(post)
-                                                            setPostUrl(permalink)
-                                                            setWorkDescription(post.caption?.substring(0, 500) || 'Публикация в Instagram')
-
-                                                            const ok = await showConfirm?.('Отправить выбранный пост как отчет?')
-                                                            if (!ok) return
-
-                                                            await handleSubmitWork({
-                                                                postUrl: permalink,
-                                                                description: post.caption?.substring(0, 500) || 'Публикация в Instagram'
-                                                            })
-                                                        }}
-                                                        className={`cursor-pointer rounded-lg overflow-hidden border-2 transition-all ${selectedPost?.id === post.id
-                                                            ? 'border-tg-button shadow-lg scale-105'
-                                                            : 'border-gray-200 dark:border-gray-700 hover:border-gray-400'
-                                                            }`}
-                                                    >
-                                                        <div className="aspect-square relative">
-                                                            <img
-                                                                src={post.media_type === 'VIDEO' ? post.thumbnail_url : post.media_url}
-                                                                alt={post.caption?.substring(0, 50)}
-                                                                className="w-full h-full object-cover"
-                                                            />
-                                                            {post.media_type === 'VIDEO' && (
-                                                                <div className="absolute top-1 right-1 bg-black/70 text-white text-xs px-1.5 py-0.5 rounded">
-                                                                    ▶️
-                                                                </div>
-                                                            )}
-                                                            {post.media_type === 'CAROUSEL_ALBUM' && (
-                                                                <div className="absolute top-1 right-1 bg-black/70 text-white text-xs px-1.5 py-0.5 rounded">
-                                                                    📚
-                                                                </div>
-                                                            )}
-                                                            {selectedPost?.id === post.id && (
-                                                                <div className="absolute inset-0 bg-tg-button/20 flex items-center justify-center">
-                                                                    <span className="text-3xl">✓</span>
-                                                                </div>
-                                                            )}
-                                                        </div>
-                                                        <div className="text-xs p-1 bg-gray-50 dark:bg-gray-900 truncate">
-                                                            {new Date(post.timestamp).toLocaleDateString('ru')}
-                                                        </div>
-                                                    </div>
-                                                ))}
+                                {/* Ручной режим - поле для ввода URL */}
+                                {isManualMode ? (
+                                    <div className="space-y-3">
+                                        <div>
+                                            <label className="block text-sm font-medium mb-2">
+                                                Ссылка на публикацию Instagram
+                                            </label>
+                                            <input
+                                                type="url"
+                                                value={postUrl}
+                                                onChange={(e) => setPostUrl(e.target.value)}
+                                                placeholder="https://www.instagram.com/p/ABC123/"
+                                                className="w-full px-4 py-3 rounded-xl bg-gray-100 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 focus:outline-none focus:ring-2 focus:ring-purple-500 text-gray-900 dark:text-white"
+                                                disabled={submittingWork}
+                                            />
+                                            <p className="text-xs text-gray-500 mt-1">
+                                                Откройте пост в Instagram → три точки (•••) → "Копировать ссылку"
+                                            </p>
                                         </div>
-                                        <div className="flex gap-2 mt-3">
+                                        <button
+                                            type="button"
+                                            onClick={() => handleSubmitWork({ postUrl, description: 'Публикация в Instagram' })}
+                                            disabled={submittingWork || !postUrl.trim()}
+                                            className="w-full bg-gradient-to-r from-purple-500 to-pink-500 text-white py-3 rounded-xl font-semibold hover:opacity-90 disabled:opacity-50"
+                                        >
+                                            {submittingWork ? 'Отправка...' : '📤 Отправить на проверку'}
+                                        </button>
+                                        <button
+                                            type="button"
+                                            onClick={() => {
+                                                setShowSubmissionForm(false)
+                                                setPostUrl('')
+                                            }}
+                                            className="w-full text-sm text-gray-500 hover:text-gray-700 py-2"
+                                        >
+                                            ← Отмена
+                                        </button>
+                                    </div>
+                                ) : (
+                                    <>
+                                        {/* Кнопка загрузки постов */}
+                                        {userPosts.length === 0 && !loadingPosts && (
                                             <button
                                                 type="button"
-                                                onClick={() => {
-                                                    setUserPosts([])
-                                                    setSelectedPost(null)
-                                                }}
-                                                className="flex-1 text-sm text-tg-hint hover:text-tg-button py-2"
+                                                onClick={loadUserPosts}
+                                                disabled={submittingWork}
+                                                className="w-full bg-gradient-to-r from-purple-500 to-pink-500 text-white py-3 rounded-xl font-semibold hover:opacity-90"
                                             >
-                                                ← Назад
+                                                📸 Загрузить мои посты из Instagram
                                             </button>
-                                        </div>
-                                    </div>
+                                        )
+
+                                        {loadingPosts && (
+                                            <div className="text-center py-4">
+                                                <p className="text-tg-hint">Загрузка постов...</p>
+                                            </div>
+                                        )}
+
+                                        {/* Выбор поста из списка */}
+                                        {userPosts.length > 0 && (
+                                            <div>
+                                                <label className="block text-sm font-medium mb-2">
+                                                    Выберите публикацию
+                                                </label>
+                                                <div className="grid grid-cols-3 gap-2 max-h-96 overflow-y-auto">
+                                                    {userPosts
+                                                        .filter(post => post && post.id)
+                                                        .map(post => (
+                                                            <div
+                                                                key={post.id}
+                                                                onClick={async () => {
+                                                                    if (submittingWork) return
+                                                                    const permalink = post?.permalink
+                                                                    if (!permalink) {
+                                                                        showAlert?.('Не удалось получить ссылку на пост (permalink). Попробуйте другой пост.')
+                                                                        return
+                                                                    }
+
+                                                                    setSelectedPost(post)
+                                                                    setPostUrl(permalink)
+                                                                    setWorkDescription(post.caption?.substring(0, 500) || 'Публикация в Instagram')
+
+                                                                    const ok = await showConfirm?.('Отправить выбранный пост как отчет?')
+                                                                    if (!ok) return
+
+                                                                    await handleSubmitWork({
+                                                                        postUrl: permalink,
+                                                                        description: post.caption?.substring(0, 500) || 'Публикация в Instagram'
+                                                                    })
+                                                                }}
+                                                                className={`cursor-pointer rounded-lg overflow-hidden border-2 transition-all ${selectedPost?.id === post.id
+                                                                    ? 'border-tg-button shadow-lg scale-105'
+                                                                    : 'border-gray-200 dark:border-gray-700 hover:border-gray-400'
+                                                                    }`}
+                                                            >
+                                                                <div className="aspect-square relative">
+                                                                    <img
+                                                                        src={post.media_type === 'VIDEO' ? post.thumbnail_url : post.media_url}
+                                                                        alt={post.caption?.substring(0, 50)}
+                                                                        className="w-full h-full object-cover"
+                                                                    />
+                                                                    {post.media_type === 'VIDEO' && (
+                                                                        <div className="absolute top-1 right-1 bg-black/70 text-white text-xs px-1.5 py-0.5 rounded">
+                                                                            ▶️
+                                                                        </div>
+                                                                    )}
+                                                                    {post.media_type === 'CAROUSEL_ALBUM' && (
+                                                                        <div className="absolute top-1 right-1 bg-black/70 text-white text-xs px-1.5 py-0.5 rounded">
+                                                                            📚
+                                                                        </div>
+                                                                    )}
+                                                                    {selectedPost?.id === post.id && (
+                                                                        <div className="absolute inset-0 bg-tg-button/20 flex items-center justify-center">
+                                                                            <span className="text-3xl">✓</span>
+                                                                        </div>
+                                                                    )}
+                                                                </div>
+                                                                <div className="text-xs p-1 bg-gray-50 dark:bg-gray-900 truncate">
+                                                                    {new Date(post.timestamp).toLocaleDateString('ru')}
+                                                                </div>
+                                                            </div>
+                                                        ))}
+                                                </div>
+                                                <div className="flex gap-2 mt-3">
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => {
+                                                            setUserPosts([])
+                                                            setSelectedPost(null)
+                                                        }}
+                                                        className="flex-1 text-sm text-tg-hint hover:text-tg-button py-2"
+                                                    >
+                                                        ← Назад
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        )}
+                                    </>
                                 )}
                             </div>
                         ) : (
