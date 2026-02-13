@@ -23,6 +23,7 @@ import Terms from './pages/Terms'
 import Privacy from './pages/Privacy'
 import InfluencerGuide from './pages/InfluencerGuide'
 import WebAdminSettings from './pages/WebAdminSettings'
+import WebClientDashboard from './pages/WebClientDashboard'
 
 // Dev-only pages (keep out of production navigation)
 import DebugPage from './pages/_dev/DebugPage'
@@ -35,7 +36,7 @@ function AppShell() {
 
     const build = typeof __BUILD_TIMESTAMP__ !== 'undefined' ? __BUILD_TIMESTAMP__ : 'unknown'
 
-    const publicPaths = ['/instagram/callback', '/instagram/index.html', '/instagram/deauth', '/instagram/delete', '/terms', '/privacy', '/guide', '/web-admin']
+    const publicPaths = ['/instagram/callback', '/instagram/index.html', '/instagram/deauth', '/instagram/delete', '/terms', '/privacy', '/guide', '/web-admin', '/web-client']
     const currentPath = location.pathname.replace(/\/$/, '')
     const isPublicPage = publicPaths.some(path => currentPath === path || currentPath.startsWith(path + '/'))
 
@@ -156,6 +157,9 @@ function AppShell() {
 
                 {/* Веб-панель админа - доступна через браузер */}
                 <Route path="/web-admin" element={<WebAdminSettings />} />
+
+                {/* Веб-кабинет заказчика - доступен через браузер */}
+                <Route path="/web-client" element={<WebClientDashboard />} />
 
                 {/* OAuth Callbacks - доступны без авторизации */}
                 <Route path="/instagram/callback" element={<InstagramCallback />} />
