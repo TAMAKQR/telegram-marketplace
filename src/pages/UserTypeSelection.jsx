@@ -47,17 +47,34 @@ function UserTypeSelection() {
 
         setLoading(true)
         try {
-            // Проверяем, не был ли аккаунт удалён
+            // Проверяем, не был ли аккаунт ранее удалён - если да, восстанавливаем
             const { data: deletedUser } = await supabase
                 .from('users')
-                .select('id, is_deleted')
+                .select('id')
                 .eq('telegram_id', user.id)
                 .eq('is_deleted', true)
                 .maybeSingle()
 
             if (deletedUser) {
-                alert('Ваш аккаунт был удалён. Обратитесь к администратору для восстановления.')
-                setLoading(false)
+                // Восстанавливаем удалённый аккаунт
+                const { data, error } = await supabase
+                    .from('users')
+                    .update({
+                        is_deleted: false,
+                        username: user.username,
+                        first_name: user.first_name,
+                        last_name: user.last_name,
+                        user_type: 'influencer'
+                    })
+                    .eq('id', deletedUser.id)
+                    .select()
+                    .single()
+
+                if (error) throw error
+
+                setUserType('influencer')
+                setProfile(data)
+                navigate('/influencer')
                 return
             }
 
