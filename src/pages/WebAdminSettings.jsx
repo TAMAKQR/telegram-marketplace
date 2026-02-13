@@ -14,12 +14,13 @@ function WebAdminSettings() {
     const [authError, setAuthError] = useState('')
 
     const [loading, setLoading] = useState(false)
-    const [activeTab, setActiveTab] = useState('settings') // settings, users, tasks, withdrawals, stats
+    const [activeTab, setActiveTab] = useState('settings')
 
     // Данные
     const [settings, setSettings] = useState({})
     const [users, setUsers] = useState([])
     const [tasks, setTasks] = useState([])
+    const [submissions, setSubmissions] = useState([])
     const [withdrawals, setWithdrawals] = useState([])
     const [stats, setStats] = useState(null)
     const [saveStatus, setSaveStatus] = useState('')
@@ -35,10 +36,10 @@ function WebAdminSettings() {
     // Загрузка данных при смене вкладки
     useEffect(() => {
         if (!isAuthenticated) return
-
         if (activeTab === 'settings') loadSettings()
         else if (activeTab === 'users') loadUsers()
         else if (activeTab === 'tasks') loadTasks()
+        else if (activeTab === 'submissions') loadSubmissions()
         else if (activeTab === 'withdrawals') loadWithdrawals()
         else if (activeTab === 'stats') loadStats()
     }, [isAuthenticated, activeTab])
@@ -82,9 +83,10 @@ function WebAdminSettings() {
     const loadUsers = async () => {
         setLoading(true)
         try {
+            // Загружаем пользователей с их influencer_profiles
             const { data, error } = await supabase
                 .from('users')
-                .select('*')
+                .select(`*, influencer_profiles(instagram_username, instagram_connected)`)
                 .eq('is_deleted', false)
                 .order('created_at', { ascending: false })
             if (error) throw error
@@ -101,12 +103,36 @@ function WebAdminSettings() {
         try {
             const { data, error } = await supabase
                 .from('tasks')
-                .select(`*, client:client_id(id, first_name, last_name, telegram_id)`)
+                .select(`
+                    *, 
+                    client:client_id(id, first_name, last_name, telegram_id),
+                    influencer:influencer_id(id, first_name, last_name, telegram_id)
+                `)
                 .order('created_at', { ascending: false })
             if (error) throw error
             setTasks(data || [])
         } catch (error) {
             console.error('Ошибка загрузки заказов:', error)
+        } finally {
+            setLoading(false)
+        }
+    }
+
+    const loadSubmissions = async () => {
+        setLoading(true)
+        try {
+            const { data, error } = await supabase
+                .from('task_submissions')
+                .select(`
+                    *,
+                    task:task_id(id, title, target_metrics, budget),
+                    influencer:influencer_id(id, first_name, last_name, telegram_id)
+                `)
+                .order('created_at', { ascending: false })
+            if (error) throw error
+            setSubmissions(data || [])
+        } catch (error) {
+            console.error('Ошибка загрузки публикаций:', error)
         } finally {
             setLoading(false)
         }
@@ -141,7 +167,7 @@ function WebAdminSettings() {
         }
     }
 
-    // === Действия ===
+    // === Действия: Настройки ===
     const toggleMetricsMode = async () => {
         const currentMode = settings.instagram_metrics_mode?.value || 'auto'
         const newMode = currentMode === 'auto' ? 'manual' : 'auto'
@@ -165,6 +191,7 @@ function WebAdminSettings() {
         }
     }
 
+    // === Действия: Пользователи ===
     const toggleUserType = async (userId, currentType) => {
         const newType = currentType === 'client' ? 'influencer' : 'client'
         try {
@@ -175,6 +202,19 @@ function WebAdminSettings() {
         } catch (error) {
             console.error('Ошибка:', error)
             alert('Ошибка при изменении статуса')
+        }
+    }
+
+    const toggleAccountantRole = async (userId, currentRole) => {
+        const newRole = currentRole === 'accountant' ? null : 'accountant'
+        try {
+            const { error } = await supabase.from('users').update({ role: newRole }).eq('id', userId)
+            if (error) throw error
+            setUsers(users.map(u => u.id === userId ? { ...u, role: newRole } : u))
+            alert(newRole === 'accountant' ? 'Назначен бухгалтером' : 'Роль бухгалтера снята')
+        } catch (error) {
+            console.error('Ошибка:', error)
+            alert('Ошибка при изменении роли')
         }
     }
 
@@ -202,8 +242,150 @@ function WebAdminSettings() {
         }
     }
 
+    const deleteUser = async (userId) => {
+        const user = users.find(u => u.id === userId)
+        if (!confirm(`Удалить пользователя ${user.first_name}?\nБаланс: ${user.balance || 0} сом`)) return
+        try {
+            const { error } = await supabase.rpc('admin_soft_delete_user', {
+                p_user_id: userId,
+                p_admin_reason: 'Удален через веб-админ'
+            })
+            if (error) throw error
+            setUsers(users.filter(u => u.id !== userId))
+            alert('Пользователь удален')
+        } catch (error) {
+            console.error('Ошибка:', error)
+            alert('Ошибка при удалении')
+        }
+    }
+
+    const updateInstagramUsername = async (userId) => {
+        const username = prompt('Instagram username (без @):')
+        if (!username) return
+        try {
+            // Проверяем существует ли профиль
+            const { data: existing } = await supabase
+                .from('influencer_profiles')
+                .select('id')
+                .eq('user_id', userId)
+                .maybeSingle()
+
+            if (existing) {
+                const { error } = await supabase
+                    .from('influencer_profiles')
+                    .update({ instagram_username: username.replace('@', '') })
+                    .eq('user_id', userId)
+                if (error) throw error
+            } else {
+                const { error } = await supabase
+                    .from('influencer_profiles')
+                    .insert({ user_id: userId, instagram_username: username.replace('@', '') })
+                if (error) throw error
+            }
+            loadUsers()
+            alert('Instagram username обновлён')
+        } catch (error) {
+            console.error('Ошибка:', error)
+            alert('Ошибка при обновлении')
+        }
+    }
+
+    // === Действия: Заказы ===
+    const deleteTask = async (taskId) => {
+        const reason = prompt('Причина удаления заказа:')
+        if (!reason) return
+        if (!confirm('Удалить заказ? Средства будут возвращены заказчику.')) return
+        try {
+            const { data, error } = await supabase.rpc('admin_delete_task', {
+                p_task_id: taskId,
+                p_admin_reason: reason
+            })
+            if (error) throw error
+            setTasks(tasks.filter(t => t.id !== taskId))
+            alert(data.refunded_amount > 0 ? `Заказ удален. Возвращено ${data.refunded_amount} сом` : 'Заказ удален')
+        } catch (error) {
+            console.error('Ошибка:', error)
+            alert('Ошибка при удалении: ' + error.message)
+        }
+    }
+
+    // === Действия: Публикации (submissions) ===
+    const updateSubmissionMetrics = async (submissionId) => {
+        const sub = submissions.find(s => s.id === submissionId)
+        const views = prompt('Просмотры:', sub?.current_metrics?.views || 0)
+        if (views === null) return
+        const likes = prompt('Лайки:', sub?.current_metrics?.likes || 0)
+        if (likes === null) return
+        const comments = prompt('Комментарии:', sub?.current_metrics?.comments || 0)
+        if (comments === null) return
+
+        try {
+            const metrics = {
+                views: parseInt(views) || 0,
+                likes: parseInt(likes) || 0,
+                comments: parseInt(comments) || 0,
+                captured_at: Math.floor(Date.now() / 1000),
+                manual_entry: true,
+                updated_by_admin: true
+            }
+            const { error } = await supabase
+                .from('task_submissions')
+                .update({ current_metrics: metrics })
+                .eq('id', submissionId)
+            if (error) throw error
+            loadSubmissions()
+            alert('Метрики обновлены')
+        } catch (error) {
+            console.error('Ошибка:', error)
+            alert('Ошибка при обновлении метрик')
+        }
+    }
+
+    const completeSubmission = async (submissionId) => {
+        if (!confirm('Завершить задание и выплатить инфлюенсеру?')) return
+        try {
+            const sub = submissions.find(s => s.id === submissionId)
+            // Обновляем статус submission
+            const { error: subError } = await supabase
+                .from('task_submissions')
+                .update({ status: 'completed' })
+                .eq('id', submissionId)
+            if (subError) throw subError
+
+            // Обновляем статус задания
+            const { error: taskError } = await supabase
+                .from('tasks')
+                .update({ status: 'completed' })
+                .eq('id', sub.task_id)
+            if (taskError) throw taskError
+
+            // Выплата инфлюенсеру (80% бюджета)
+            const payout = Math.floor((sub.task?.budget || 0) * 0.8)
+            if (payout > 0) {
+                await supabase.rpc('increment_balance', {
+                    p_user_id: sub.influencer_id,
+                    p_amount: payout
+                })
+                await supabase.from('transactions').insert({
+                    to_user_id: sub.influencer_id,
+                    amount: payout,
+                    type: 'payout',
+                    status: 'completed',
+                    description: `Выплата за заказ: ${sub.task?.title}`
+                })
+            }
+
+            loadSubmissions()
+            alert(`Задание завершено. Выплачено ${payout} сом`)
+        } catch (error) {
+            console.error('Ошибка:', error)
+            alert('Ошибка: ' + error.message)
+        }
+    }
+
+    // === Действия: Выплаты ===
     const processWithdrawal = async (requestId, status) => {
-        const note = status === 'rejected' ? prompt('Причина отклонения:') : ''
+        const note = status === 'rejected' ? prompt('Причина отклонения:') : prompt('Комментарий (опционально):')
         if (status === 'rejected' && !note) return
         try {
             const { error } = await supabase.rpc('process_withdrawal', {
@@ -250,6 +432,8 @@ function WebAdminSettings() {
         )
     }
 
+    const isManualMode = settings.instagram_metrics_mode?.value === 'manual'
+
     // Панель админа
     return (
         <div className="min-h-screen bg-gray-100">
@@ -259,6 +443,7 @@ function WebAdminSettings() {
                     <div className="flex items-center gap-3">
                         <Logo className="h-8" />
                         <h1 className="text-xl font-bold">🔧 Админ-панель</h1>
+                        {isManualMode && <span className="text-xs bg-orange-500 px-2 py-1 rounded-full">✍️ Ручной режим</span>}
                     </div>
                     <button onClick={handleLogout} className="text-white/80 hover:text-white px-4 py-2 rounded-lg hover:bg-white/10">
                         Выйти
@@ -274,6 +459,7 @@ function WebAdminSettings() {
                             { id: 'settings', label: '⚙️ Настройки' },
                             { id: 'users', label: `👥 Пользователи (${users.length})` },
                             { id: 'tasks', label: `📋 Заказы (${tasks.length})` },
+                            { id: 'submissions', label: `📝 Публикации (${submissions.filter(s => s.status !== 'completed').length})` },
                             { id: 'withdrawals', label: `💰 Выплаты (${withdrawals.filter(w => w.status === 'pending').length})` },
                             { id: 'stats', label: '📊 Статистика' },
                         ].map(tab => (
@@ -306,18 +492,30 @@ function WebAdminSettings() {
                                 <div>
                                     <p className="font-medium">Режим сбора метрик</p>
                                     <p className="text-sm text-gray-500">
-                                        {settings.instagram_metrics_mode?.value === 'manual' ? '✍️ Ручной' : '🤖 Автоматический'}
+                                        {isManualMode ? '✍️ Ручной (ввод админом/заказчиком)' : '🤖 Автоматический (через Instagram API)'}
                                     </p>
                                 </div>
                                 <button onClick={toggleMetricsMode}
-                                    className={`relative inline-flex h-7 w-14 items-center rounded-full transition-colors ${settings.instagram_metrics_mode?.value === 'manual' ? 'bg-orange-500' : 'bg-green-500'
+                                    className={`relative inline-flex h-7 w-14 items-center rounded-full transition-colors ${isManualMode ? 'bg-orange-500' : 'bg-green-500'
                                         }`}>
-                                    <span className={`inline-block h-5 w-5 transform rounded-full bg-white shadow transition-transform ${settings.instagram_metrics_mode?.value === 'manual' ? 'translate-x-8' : 'translate-x-1'
+                                    <span className={`inline-block h-5 w-5 transform rounded-full bg-white shadow transition-transform ${isManualMode ? 'translate-x-8' : 'translate-x-1'
                                         }`} />
                                 </button>
                             </div>
                             {saveStatus && <div className="mt-4 text-center text-sm font-medium">{saveStatus}</div>}
                         </div>
+
+                        {isManualMode && (
+                            <div className="bg-orange-50 border border-orange-200 rounded-xl p-6">
+                                <h3 className="font-semibold text-orange-900 mb-3">📖 Инструкция по ручному режиму</h3>
+                                <ol className="text-sm text-orange-800 space-y-2 list-decimal list-inside">
+                                    <li>Инфлюенсер отправляет ссылку на публикацию (без подключения Instagram)</li>
+                                    <li>Заказчик проверяет публикацию и вводит текущие метрики</li>
+                                    <li>Админ может обновлять метрики в разделе "📝 Публикации"</li>
+                                    <li>Когда цели достигнуты — админ вручную завершает задание и выплачивает</li>
+                                </ol>
+                            </div>
+                        )}
                     </div>
                 ) : activeTab === 'users' ? (
                     // === Пользователи ===
@@ -327,26 +525,55 @@ function WebAdminSettings() {
                                 <div className="flex justify-between items-start mb-3">
                                     <div>
                                         <h3 className="font-semibold">{user.first_name} {user.last_name || ''}</h3>
-                                        <p className="text-sm text-gray-500">@{user.username || 'без username'} • ID: {user.telegram_id}</p>
+                                        <p className="text-sm text-gray-500">
+                                            @{user.username || 'без username'} • Telegram: {user.telegram_id}
+                                        </p>
                                         <p className="text-sm">💰 Баланс: <strong>{user.balance?.toLocaleString() || 0} сом</strong></p>
+                                        {user.influencer_profiles?.[0]?.instagram_username && (
+                                            <p className="text-sm text-pink-600">
+                                                📸 Instagram: @{user.influencer_profiles[0].instagram_username}
+                                                {user.influencer_profiles[0].instagram_connected && ' ✓'}
+                                            </p>
+                                        )}
                                     </div>
-                                    <span className={`text-xs px-2 py-1 rounded-full ${user.user_type === 'client' ? 'bg-blue-100 text-blue-800' : 'bg-purple-100 text-purple-800'
-                                        }`}>
-                                        {user.user_type === 'client' ? '💼 Заказчик' : '📸 Инфлюенсер'}
-                                    </span>
+                                    <div className="text-right">
+                                        <span className={`text-xs px-2 py-1 rounded-full ${user.user_type === 'client' ? 'bg-blue-100 text-blue-800' : 'bg-purple-100 text-purple-800'
+                                            }`}>
+                                            {user.user_type === 'client' ? '💼 Заказчик' : '📸 Инфлюенсер'}
+                                        </span>
+                                        {user.role === 'accountant' && (
+                                            <span className="text-xs px-2 py-1 rounded-full bg-orange-100 text-orange-800 ml-1">
+                                                👔 Бухгалтер
+                                            </span>
+                                        )}
+                                    </div>
                                 </div>
                                 <div className="flex gap-2 flex-wrap">
                                     <button onClick={() => toggleUserType(user.id, user.user_type)}
                                         className="text-xs px-3 py-1 bg-blue-500 text-white rounded-lg hover:bg-blue-600">
-                                        {user.user_type === 'client' ? 'Сделать инфлюенсером' : 'Сделать заказчиком'}
+                                        {user.user_type === 'client' ? '→ Инфлюенсер' : '→ Заказчик'}
+                                    </button>
+                                    <button onClick={() => toggleAccountantRole(user.id, user.role)}
+                                        className={`text-xs px-3 py-1 rounded-lg ${user.role === 'accountant' ? 'bg-orange-500 text-white' : 'bg-purple-500 text-white'
+                                            }`}>
+                                        {user.role === 'accountant' ? '❌ Снять бухгалтера' : '👔 Бухгалтер'}
                                     </button>
                                     <button onClick={() => addBalance(user.id)}
                                         className="text-xs px-3 py-1 bg-green-500 text-white rounded-lg hover:bg-green-600">
                                         💰 Пополнить
                                     </button>
+                                    {user.user_type === 'influencer' && (
+                                        <button onClick={() => updateInstagramUsername(user.id)}
+                                            className="text-xs px-3 py-1 bg-pink-500 text-white rounded-lg hover:bg-pink-600">
+                                            📸 Instagram
+                                        </button>
+                                    )}
+                                    <button onClick={() => deleteUser(user.id)}
+                                        className="text-xs px-3 py-1 bg-red-500 text-white rounded-lg hover:bg-red-600">
+                                        🗑️ Удалить
+                                    </button>
                                 </div>
                                 <p className="text-xs text-gray-400 mt-2">
-                                    {user.role === 'accountant' && <span className="text-orange-600 font-medium mr-2">👔 Бухгалтер</span>}
                                     Создан: {new Date(user.created_at).toLocaleDateString('ru')}
                                 </p>
                             </div>
@@ -358,12 +585,20 @@ function WebAdminSettings() {
                     <div className="space-y-3">
                         {tasks.map(task => (
                             <div key={task.id} className="bg-white rounded-xl p-4 shadow-sm">
-                                <div className="flex justify-between items-start">
+                                <div className="flex justify-between items-start mb-3">
                                     <div className="flex-1">
                                         <h3 className="font-semibold mb-1">{task.title}</h3>
-                                        <p className="text-sm text-gray-500 mb-2">{task.description?.slice(0, 100)}...</p>
+                                        <p className="text-sm text-gray-500 mb-2">{task.description?.slice(0, 150)}...</p>
                                         <p className="text-sm">💼 Заказчик: {task.client?.first_name} {task.client?.last_name || ''}</p>
+                                        {task.influencer && (
+                                            <p className="text-sm">📸 Инфлюенсер: {task.influencer.first_name} {task.influencer.last_name || ''}</p>
+                                        )}
                                         <p className="text-sm">💰 Бюджет: {formatTaskBudget(task, { prefix: '' })}</p>
+                                        {task.target_metrics && (
+                                            <p className="text-sm text-gray-600">
+                                                🎯 Цели: {task.target_metrics.views && `👁${task.target_metrics.views}`} {task.target_metrics.likes && `❤️${task.target_metrics.likes}`} {task.target_metrics.comments && `💬${task.target_metrics.comments}`}
+                                            </p>
+                                        )}
                                     </div>
                                     <span className={`text-xs px-2 py-1 rounded-full whitespace-nowrap ${task.status === 'open' ? 'bg-green-100 text-green-800' :
                                             task.status === 'in_progress' ? 'bg-blue-100 text-blue-800' :
@@ -371,15 +606,105 @@ function WebAdminSettings() {
                                         }`}>
                                         {task.status === 'open' ? '🟢 Открыт' :
                                             task.status === 'in_progress' ? '🔵 В работе' :
-                                                task.status === 'completed' ? '✅ Завершен' : '❌ Отменен'}
+                                                task.status === 'completed' ? '✅ Завершен' : '❌ ' + task.status}
                                     </span>
                                 </div>
-                                <p className="text-xs text-gray-400 mt-2">
-                                    Создан: {new Date(task.created_at).toLocaleDateString('ru')}
-                                </p>
+                                <div className="flex gap-2">
+                                    <button onClick={() => deleteTask(task.id)}
+                                        className="text-xs px-3 py-1 bg-red-500 text-white rounded-lg hover:bg-red-600">
+                                        🗑️ Удалить заказ
+                                    </button>
+                                </div>
+                                <p className="text-xs text-gray-400 mt-2">ID: {task.id} • Создан: {new Date(task.created_at).toLocaleDateString('ru')}</p>
                             </div>
                         ))}
                         {tasks.length === 0 && <p className="text-center py-10 text-gray-500">Нет заказов</p>}
+                    </div>
+                ) : activeTab === 'submissions' ? (
+                    // === Публикации ===
+                    <div className="space-y-3">
+                        {isManualMode && (
+                            <div className="bg-orange-50 border border-orange-200 rounded-lg p-4 mb-4">
+                                <p className="text-sm text-orange-800">
+                                    <strong>✍️ Ручной режим активен.</strong> Вы можете обновлять метрики и завершать задания вручную.
+                                </p>
+                            </div>
+                        )}
+                        {submissions.map(sub => (
+                            <div key={sub.id} className="bg-white rounded-xl p-4 shadow-sm">
+                                <div className="flex justify-between items-start mb-3">
+                                    <div className="flex-1">
+                                        <h3 className="font-semibold mb-1">{sub.task?.title || 'Задание удалено'}</h3>
+                                        <p className="text-sm">📸 Инфлюенсер: {sub.influencer?.first_name} {sub.influencer?.last_name || ''}</p>
+                                        <p className="text-sm text-blue-600 break-all">
+                                            🔗 <a href={sub.post_url} target="_blank" rel="noopener noreferrer" className="hover:underline">
+                                                {sub.post_url}
+                                            </a>
+                                        </p>
+                                    </div>
+                                    <span className={`text-xs px-2 py-1 rounded-full whitespace-nowrap ${sub.status === 'pending' ? 'bg-yellow-100 text-yellow-800' :
+                                            sub.status === 'pending_approval' ? 'bg-orange-100 text-orange-800' :
+                                                sub.status === 'in_progress' ? 'bg-blue-100 text-blue-800' :
+                                                    sub.status === 'completed' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
+                                        }`}>
+                                        {sub.status === 'pending' ? '⏳ Ожидает' :
+                                            sub.status === 'pending_approval' ? '🔍 На проверке' :
+                                                sub.status === 'in_progress' ? '🔵 В работе' :
+                                                    sub.status === 'completed' ? '✅ Завершено' : sub.status}
+                                    </span>
+                                </div>
+
+                                {/* Метрики */}
+                                <div className="bg-gray-50 rounded-lg p-3 mb-3">
+                                    <div className="flex justify-between items-center mb-2">
+                                        <span className="text-sm font-medium">📊 Текущие метрики:</span>
+                                        {sub.current_metrics?.manual_entry && (
+                                            <span className="text-xs text-orange-600">✍️ Ручной ввод</span>
+                                        )}
+                                    </div>
+                                    <div className="grid grid-cols-3 gap-2 text-center">
+                                        <div>
+                                            <div className="text-lg font-bold">{sub.current_metrics?.views?.toLocaleString() || 0}</div>
+                                            <div className="text-xs text-gray-500">👁 Просмотры</div>
+                                        </div>
+                                        <div>
+                                            <div className="text-lg font-bold">{sub.current_metrics?.likes?.toLocaleString() || 0}</div>
+                                            <div className="text-xs text-gray-500">❤️ Лайки</div>
+                                        </div>
+                                        <div>
+                                            <div className="text-lg font-bold">{sub.current_metrics?.comments?.toLocaleString() || 0}</div>
+                                            <div className="text-xs text-gray-500">💬 Комменты</div>
+                                        </div>
+                                    </div>
+                                    {sub.task?.target_metrics && (
+                                        <div className="mt-2 pt-2 border-t text-xs text-gray-500">
+                                            🎯 Цели: {sub.task.target_metrics.views && `👁${sub.task.target_metrics.views}`} {sub.task.target_metrics.likes && `❤️${sub.task.target_metrics.likes}`} {sub.task.target_metrics.comments && `💬${sub.task.target_metrics.comments}`}
+                                        </div>
+                                    )}
+                                </div>
+
+                                {/* Действия */}
+                                {sub.status !== 'completed' && sub.status !== 'rejected' && (
+                                    <div className="flex gap-2 flex-wrap">
+                                        <button onClick={() => updateSubmissionMetrics(sub.id)}
+                                            className="text-xs px-3 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 font-medium">
+                                            ✍️ Обновить метрики
+                                        </button>
+                                        {(sub.status === 'in_progress' || sub.status === 'pending_approval') && (
+                                            <button onClick={() => completeSubmission(sub.id)}
+                                                className="text-xs px-3 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600 font-medium">
+                                                ✅ Завершить и выплатить
+                                            </button>
+                                        )}
+                                    </div>
+                                )}
+
+                                <p className="text-xs text-gray-400 mt-2">
+                                    Отправлено: {new Date(sub.submitted_at || sub.created_at).toLocaleString('ru')}
+                                </p>
+                            </div>
+                        ))}
+                        {submissions.length === 0 && <p className="text-center py-10 text-gray-500">Нет публикаций</p>}
                     </div>
                 ) : activeTab === 'withdrawals' ? (
                     // === Выплаты ===
@@ -390,7 +715,7 @@ function WebAdminSettings() {
                                     <div>
                                         <h3 className="font-semibold">{request.users?.first_name} {request.users?.last_name || ''}</h3>
                                         <p className="text-sm text-gray-500">Telegram: {request.users?.telegram_id}</p>
-                                        <p className="text-sm">💰 Баланс: {request.users?.balance?.toLocaleString()} сом</p>
+                                        <p className="text-sm">💰 Текущий баланс: {request.users?.balance?.toLocaleString()} сом</p>
                                     </div>
                                     <div className="text-right">
                                         <p className="text-xl font-bold text-green-600">{request.amount?.toLocaleString()} сом</p>
@@ -402,14 +727,40 @@ function WebAdminSettings() {
                                         </span>
                                     </div>
                                 </div>
-                                <p className="text-sm text-gray-600 mb-3">
-                                    📱 {request.payment_method}: <strong>{request.payment_details}</strong>
-                                </p>
+
+                                {/* Детали платежа */}
+                                <div className="bg-gray-50 rounded-lg p-3 mb-3">
+                                    <p className="text-sm font-medium mb-2">
+                                        {request.payment_method === 'kaspi' ? '📱 Kaspi Gold' : '💳 Банковская карта'}
+                                    </p>
+                                    {request.payment_method === 'kaspi' && request.payment_details && (
+                                        <div className="text-sm">
+                                            <p>📞 Телефон: <strong>{request.payment_details.phoneNumber || request.payment_details}</strong></p>
+                                        </div>
+                                    )}
+                                    {request.payment_method === 'card' && request.payment_details && (
+                                        <div className="text-sm space-y-1">
+                                            <p>💳 Карта: <strong>{request.payment_details.cardNumber}</strong></p>
+                                            <p>👤 Владелец: <strong>{request.payment_details.cardHolder}</strong></p>
+                                        </div>
+                                    )}
+                                    {typeof request.payment_details === 'string' && (
+                                        <p className="text-sm"><strong>{request.payment_details}</strong></p>
+                                    )}
+                                </div>
+
+                                {request.admin_note && (
+                                    <div className="bg-blue-50 rounded-lg p-3 mb-3">
+                                        <p className="text-xs text-gray-500 mb-1">Комментарий:</p>
+                                        <p className="text-sm">{request.admin_note}</p>
+                                    </div>
+                                )}
+
                                 {request.status === 'pending' && (
                                     <div className="flex gap-2">
                                         <button onClick={() => processWithdrawal(request.id, 'approved')}
                                             className="flex-1 bg-green-500 text-white py-2 rounded-lg hover:bg-green-600 font-medium">
-                                            ✅ Одобрить
+                                            ✅ Одобрить и выплатить
                                         </button>
                                         <button onClick={() => processWithdrawal(request.id, 'rejected')}
                                             className="flex-1 bg-red-500 text-white py-2 rounded-lg hover:bg-red-600 font-medium">
@@ -417,6 +768,7 @@ function WebAdminSettings() {
                                         </button>
                                     </div>
                                 )}
+
                                 <p className="text-xs text-gray-400 mt-2">
                                     Создано: {new Date(request.created_at).toLocaleString('ru')}
                                 </p>
@@ -487,7 +839,7 @@ function WebAdminSettings() {
             </main>
 
             <footer className="text-center py-6 text-sm text-gray-400">
-                Telegram Influencer Marketplace • Админ-панель (веб)
+                Telegram Influencer Marketplace • Веб-админ панель
             </footer>
         </div>
     )
