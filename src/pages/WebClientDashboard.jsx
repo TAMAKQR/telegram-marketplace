@@ -924,31 +924,16 @@ function WebClientDashboard() {
                             )}
 
                             {/* Requirements */}
-                            <div className="grid grid-cols-2 gap-4">
-                                <div>
-                                    <label className="block text-sm font-medium text-slate-700 mb-2">👥 Мин. подписчиков</label>
-                                    <input
-                                        type="number"
-                                        value={newTask.minFollowers}
-                                        onChange={(e) => setNewTask({ ...newTask, minFollowers: e.target.value })}
-                                        className="w-full p-3.5 border border-slate-200 rounded-xl bg-white text-gray-900 placeholder-gray-400 focus:border-blue-400 focus:ring-2 focus:ring-blue-100 transition-all outline-none"
-                                        placeholder="10000"
-                                        min="0"
-                                    />
-                                </div>
-                                <div>
-                                    <label className="block text-sm font-medium text-slate-700 mb-2">📈 Мин. вовлечённость (%)</label>
-                                    <input
-                                        type="number"
-                                        value={newTask.minEngagementRate}
-                                        onChange={(e) => setNewTask({ ...newTask, minEngagementRate: e.target.value })}
-                                        className="w-full p-3.5 border border-slate-200 rounded-xl bg-white text-gray-900 placeholder-gray-400 focus:border-blue-400 focus:ring-2 focus:ring-blue-100 transition-all outline-none"
-                                        placeholder="2.5"
-                                        min="0"
-                                        max="100"
-                                        step="0.1"
-                                    />
-                                </div>
+                            <div>
+                                <label className="block text-sm font-medium text-slate-700 mb-2">👥 Мин. подписчиков</label>
+                                <input
+                                    type="number"
+                                    value={newTask.minFollowers}
+                                    onChange={(e) => setNewTask({ ...newTask, minFollowers: e.target.value })}
+                                    className="w-full p-3.5 border border-slate-200 rounded-xl bg-white text-gray-900 placeholder-gray-400 focus:border-blue-400 focus:ring-2 focus:ring-blue-100 transition-all outline-none"
+                                    placeholder="10000"
+                                    min="0"
+                                />
                             </div>
 
                             {!newTask.usePricingTiers && (
@@ -1107,20 +1092,13 @@ function WebClientDashboard() {
                                     </div>
                                 )}
 
-                                {selectedTask.requirements && (
+                                {selectedTask.requirements && selectedTask.requirements.minFollowers && (
                                     <div>
                                         <h3 className="text-sm font-medium text-slate-500 mb-2">Требования</h3>
                                         <div className="flex flex-wrap gap-2">
-                                            {selectedTask.requirements.minFollowers && (
-                                                <span className="bg-slate-100 text-slate-700 px-3 py-1.5 rounded-lg text-sm">
-                                                    👥 от {selectedTask.requirements.minFollowers.toLocaleString()} подписчиков
-                                                </span>
-                                            )}
-                                            {selectedTask.requirements.minEngagement && (
-                                                <span className="bg-slate-100 text-slate-700 px-3 py-1.5 rounded-lg text-sm">
-                                                    📈 ER от {selectedTask.requirements.minEngagement}%
-                                                </span>
-                                            )}
+                                            <span className="bg-slate-100 text-slate-700 px-3 py-1.5 rounded-lg text-sm">
+                                                👥 от {selectedTask.requirements.minFollowers.toLocaleString()} подписчиков
+                                            </span>
                                         </div>
                                     </div>
                                 )}
