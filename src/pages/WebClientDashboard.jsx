@@ -3,6 +3,27 @@ import { supabase } from '../lib/supabase'
 import Logo from '../components/Logo'
 import { formatTaskBudget } from '../lib/taskBudget'
 import { sendTelegramNotification, formatNewTaskMessage } from '../lib/telegramBot'
+import {
+    BackpackIcon,
+    FileTextIcon,
+    CheckCircledIcon,
+    PlusIcon,
+    Cross2Icon,
+    ArrowLeftIcon,
+    LockClosedIcon,
+    CalendarIcon,
+    ClockIcon,
+    PersonIcon,
+    EyeOpenIcon,
+    HeartIcon,
+    ChatBubbleIcon,
+    CheckIcon,
+    CrossCircledIcon,
+    CameraIcon,
+    RocketIcon,
+    TargetIcon,
+    BarChartIcon
+} from '@radix-ui/react-icons'
 
 function WebClientDashboard() {
     const [isAuthenticated, setIsAuthenticated] = useState(false)
@@ -433,7 +454,7 @@ function WebClientDashboard() {
             <div className="min-h-screen bg-gradient-to-br from-slate-100 via-blue-50 to-purple-50 flex items-center justify-center p-4">
                 <div className="bg-white/80 backdrop-blur-sm rounded-3xl shadow-2xl p-8 w-full max-w-md border border-white/50 text-center">
                     <div className="w-16 h-16 bg-gradient-to-br from-red-400 to-red-600 rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-lg">
-                        <span className="text-3xl">🔒</span>
+                        <LockClosedIcon className="w-8 h-8 text-white" />
                     </div>
                     <h1 className="text-2xl font-bold text-slate-800 mb-2">
                         Доступ закрыт
@@ -460,7 +481,7 @@ function WebClientDashboard() {
                 <div className="max-w-5xl mx-auto px-4 py-4 flex items-center justify-between">
                     <div className="flex items-center gap-4">
                         <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-purple-600 rounded-xl flex items-center justify-center shadow-lg">
-                            <span className="text-xl">💼</span>
+                            <BackpackIcon className="w-5 h-5 text-white" />
                         </div>
                         <div>
                             <h1 className="text-lg font-bold text-slate-800">Кабинет заказчика</h1>
@@ -468,14 +489,14 @@ function WebClientDashboard() {
                         </div>
                     </div>
                     <div className="flex items-center gap-3">
-                        <span className="text-sm bg-gradient-to-r from-blue-500 to-purple-600 text-white px-4 py-1.5 rounded-full font-medium shadow-sm">
-                            💰 {profile?.balance?.toLocaleString() || 0} сом
+                        <span className="text-sm bg-gradient-to-r from-blue-500 to-purple-600 text-white px-4 py-1.5 rounded-full font-medium shadow-sm flex items-center gap-1.5">
+                            <span className="text-xs">₽</span> {profile?.balance?.toLocaleString() || 0} сом
                         </span>
                         <button
                             onClick={handleLogout}
-                            className="text-slate-500 hover:text-slate-700 px-3 py-1.5 hover:bg-slate-100 rounded-xl transition-colors"
+                            className="flex items-center gap-1.5 text-slate-500 hover:text-slate-700 px-3 py-1.5 hover:bg-slate-100 rounded-xl transition-colors"
                         >
-                            ← Назад
+                            <ArrowLeftIcon className="w-4 h-4" /> Назад
                         </button>
                     </div>
                 </div>
@@ -487,27 +508,27 @@ function WebClientDashboard() {
                     <div className="flex items-center gap-2 py-3 overflow-x-auto">
                         <button
                             onClick={() => setActiveTab('tasks')}
-                            className={`px-5 py-2.5 rounded-xl font-medium transition-all whitespace-nowrap ${activeTab === 'tasks'
+                            className={`px-5 py-2.5 rounded-xl font-medium transition-all whitespace-nowrap flex items-center gap-2 ${activeTab === 'tasks'
                                 ? 'bg-gradient-to-r from-blue-600 to-purple-600 text-white shadow-md'
                                 : 'text-slate-600 hover:bg-white hover:shadow-sm'
                                 }`}
                         >
-                            📋 Мои заказы ({tasks.length})
+                            <FileTextIcon className="w-4 h-4" /> Мои заказы ({tasks.length})
                         </button>
                         <button
                             onClick={() => setActiveTab('submissions')}
-                            className={`px-5 py-2.5 rounded-xl font-medium transition-all whitespace-nowrap ${activeTab === 'submissions'
+                            className={`px-5 py-2.5 rounded-xl font-medium transition-all whitespace-nowrap flex items-center gap-2 ${activeTab === 'submissions'
                                 ? 'bg-gradient-to-r from-blue-600 to-purple-600 text-white shadow-md'
                                 : 'text-slate-600 hover:bg-white hover:shadow-sm'
                                 }`}
                         >
-                            📝 На проверке ({submissions.filter(s => s.status === 'pending').length})
+                            <CheckCircledIcon className="w-4 h-4" /> На проверке ({submissions.filter(s => s.status === 'pending').length})
                         </button>
                         <button
                             onClick={() => setShowCreateForm(true)}
-                            className="ml-auto px-5 py-2.5 bg-gradient-to-r from-green-500 to-emerald-600 text-white rounded-xl font-medium hover:shadow-lg hover:scale-[1.02] transition-all"
+                            className="ml-auto px-5 py-2.5 bg-gradient-to-r from-green-500 to-emerald-600 text-white rounded-xl font-medium hover:shadow-lg hover:scale-[1.02] transition-all flex items-center gap-2"
                         >
-                            ➕ Новый заказ
+                            <PlusIcon className="w-4 h-4" /> Новый заказ
                         </button>
                     </div>
                 </div>
@@ -542,9 +563,9 @@ function WebClientDashboard() {
                                             task.status === 'in_progress' ? 'bg-blue-100 text-blue-700' :
                                                 task.status === 'completed' ? 'bg-slate-200 text-slate-600' : 'bg-red-100 text-red-700'
                                             }`}>
-                                            {task.status === 'open' ? '🟢 Открыт' :
-                                                task.status === 'in_progress' ? '🔵 В работе' :
-                                                    task.status === 'completed' ? '✅ Завершен' : task.status}
+                                            {task.status === 'open' ? 'Активен' :
+                                                task.status === 'in_progress' ? 'В работе' :
+                                                    task.status === 'completed' ? 'Завершен' : task.status}
                                         </span>
                                     </div>
                                 </div>
@@ -553,30 +574,30 @@ function WebClientDashboard() {
 
                                     {task.influencer && (
                                         <div className="flex items-center gap-2 text-sm text-slate-700">
-                                            <span className="w-6 h-6 bg-pink-100 rounded-full flex items-center justify-center text-xs">📸</span>
+                                            <span className="w-6 h-6 bg-pink-100 rounded-full flex items-center justify-center"><CameraIcon className="w-3 h-3 text-pink-600" /></span>
                                             {task.influencer.first_name} {task.influencer.last_name || ''}
                                         </div>
                                     )}
 
                                     <div className="flex flex-wrap gap-2">
                                         <span className="text-xs bg-purple-100 text-purple-700 px-2 py-1 rounded-lg">
-                                            💰 {formatTaskBudget(task, { prefix: '' })}
+                                            {formatTaskBudget(task, { prefix: '' })}
                                         </span>
                                         {task.target_metrics && (
                                             <>
                                                 {task.target_metrics.views && (
-                                                    <span className="text-xs bg-blue-100 text-blue-700 px-2 py-1 rounded-lg">
-                                                        👁 {task.target_metrics.views.toLocaleString()}
+                                                    <span className="text-xs bg-blue-100 text-blue-700 px-2 py-1 rounded-lg flex items-center gap-1">
+                                                        <EyeOpenIcon className="w-3 h-3" /> {task.target_metrics.views.toLocaleString()}
                                                     </span>
                                                 )}
                                                 {task.target_metrics.likes && (
-                                                    <span className="text-xs bg-pink-100 text-pink-700 px-2 py-1 rounded-lg">
-                                                        ❤️ {task.target_metrics.likes.toLocaleString()}
+                                                    <span className="text-xs bg-pink-100 text-pink-700 px-2 py-1 rounded-lg flex items-center gap-1">
+                                                        <HeartIcon className="w-3 h-3" /> {task.target_metrics.likes.toLocaleString()}
                                                     </span>
                                                 )}
                                                 {task.target_metrics.comments && (
-                                                    <span className="text-xs bg-green-100 text-green-700 px-2 py-1 rounded-lg">
-                                                        💬 {task.target_metrics.comments.toLocaleString()}
+                                                    <span className="text-xs bg-green-100 text-green-700 px-2 py-1 rounded-lg flex items-center gap-1">
+                                                        <ChatBubbleIcon className="w-3 h-3" /> {task.target_metrics.comments.toLocaleString()}
                                                     </span>
                                                 )}
                                             </>
@@ -584,9 +605,9 @@ function WebClientDashboard() {
                                     </div>
 
                                     <div className="flex items-center justify-between text-xs text-slate-400 pt-2 border-t border-slate-100">
-                                        <span>📅 {new Date(task.created_at).toLocaleDateString('ru')}</span>
+                                        <span className="flex items-center gap-1"><CalendarIcon className="w-3 h-3" /> {new Date(task.created_at).toLocaleDateString('ru')}</span>
                                         {task.deadline && (
-                                            <span>⏰ до {new Date(task.deadline).toLocaleDateString('ru')}</span>
+                                            <span className="flex items-center gap-1"><ClockIcon className="w-3 h-3" /> до {new Date(task.deadline).toLocaleDateString('ru')}</span>
                                         )}
                                     </div>
                                 </div>
@@ -595,14 +616,14 @@ function WebClientDashboard() {
                         {tasks.length === 0 && (
                             <div className="col-span-full text-center py-16">
                                 <div className="w-16 h-16 bg-slate-100 rounded-2xl flex items-center justify-center mx-auto mb-4">
-                                    <span className="text-3xl">📋</span>
+                                    <FileTextIcon className="w-8 h-8 text-slate-400" />
                                 </div>
                                 <p className="text-slate-500 mb-4">У вас пока нет заказов</p>
                                 <button
                                     onClick={() => setShowCreateForm(true)}
-                                    className="bg-gradient-to-r from-green-500 to-emerald-600 text-white px-6 py-3 rounded-xl font-medium hover:shadow-lg hover:scale-[1.02] transition-all"
+                                    className="bg-gradient-to-r from-green-500 to-emerald-600 text-white px-6 py-3 rounded-xl font-medium hover:shadow-lg hover:scale-[1.02] transition-all flex items-center gap-2 mx-auto"
                                 >
-                                    ➕ Создать первый заказ
+                                    <PlusIcon className="w-4 h-4" /> Создать первый заказ
                                 </button>
                             </div>
                         )}
@@ -623,15 +644,15 @@ function WebClientDashboard() {
                                             sub.status === 'in_progress' ? 'bg-blue-100 text-blue-700' :
                                                 sub.status === 'completed' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'
                                             }`}>
-                                            {sub.status === 'pending' ? '⏳ Ожидает' :
-                                                sub.status === 'in_progress' ? '🔵 В работе' :
-                                                    sub.status === 'completed' ? '✅ Завершено' : sub.status}
+                                            {sub.status === 'pending' ? 'Ожидает' :
+                                                sub.status === 'in_progress' ? 'В работе' :
+                                                    sub.status === 'completed' ? 'Завершено' : sub.status}
                                         </span>
                                     </div>
                                 </div>
                                 <div className="p-4 space-y-3">
                                     <div className="flex items-center gap-2 text-sm text-slate-700">
-                                        <span className="w-6 h-6 bg-pink-100 rounded-full flex items-center justify-center text-xs">📸</span>
+                                        <span className="w-6 h-6 bg-pink-100 rounded-full flex items-center justify-center"><CameraIcon className="w-3 h-3 text-pink-600" /></span>
                                         {sub.influencer?.first_name} {sub.influencer?.last_name || ''}
                                     </div>
 
@@ -641,7 +662,7 @@ function WebClientDashboard() {
                                         rel="noopener noreferrer"
                                         className="text-sm text-blue-600 hover:underline break-all flex items-center gap-1"
                                     >
-                                        🔗 {sub.post_url?.slice(0, 40)}...
+                                        <RocketIcon className="w-3 h-3 flex-shrink-0" /> {sub.post_url?.slice(0, 40)}...
                                     </a>
 
                                     {/* Метрики */}
@@ -649,15 +670,15 @@ function WebClientDashboard() {
                                         <div className="grid grid-cols-3 gap-2">
                                             <div className="bg-slate-50 rounded-xl p-2 text-center">
                                                 <div className="text-lg font-bold text-slate-800">{sub.current_metrics?.views?.toLocaleString() || 0}</div>
-                                                <div className="text-xs text-slate-500">👁 Просмотры</div>
+                                                <div className="text-xs text-slate-500 flex items-center justify-center gap-1"><EyeOpenIcon className="w-3 h-3" /> Просм.</div>
                                             </div>
                                             <div className="bg-slate-50 rounded-xl p-2 text-center">
                                                 <div className="text-lg font-bold text-slate-800">{sub.current_metrics?.likes?.toLocaleString() || 0}</div>
-                                                <div className="text-xs text-slate-500">❤️ Лайки</div>
+                                                <div className="text-xs text-slate-500 flex items-center justify-center gap-1"><HeartIcon className="w-3 h-3" /> Лайки</div>
                                             </div>
                                             <div className="bg-slate-50 rounded-xl p-2 text-center">
                                                 <div className="text-lg font-bold text-slate-800">{sub.current_metrics?.comments?.toLocaleString() || 0}</div>
-                                                <div className="text-xs text-slate-500">💬 Комменты</div>
+                                                <div className="text-xs text-slate-500 flex items-center justify-center gap-1"><ChatBubbleIcon className="w-3 h-3" /> Комм.</div>
                                             </div>
                                         </div>
                                     )}
@@ -666,28 +687,28 @@ function WebClientDashboard() {
                                         <div className="flex gap-2 pt-2">
                                             <button
                                                 onClick={() => approveSubmission(sub.id, true)}
-                                                className="flex-1 bg-gradient-to-r from-green-500 to-emerald-600 text-white py-2.5 rounded-xl hover:shadow-md transition-all font-medium"
+                                                className="flex-1 bg-gradient-to-r from-green-500 to-emerald-600 text-white py-2.5 rounded-xl hover:shadow-md transition-all font-medium flex items-center justify-center gap-1"
                                             >
-                                                ✅ Одобрить
+                                                <CheckCircledIcon className="w-4 h-4" /> Одобрить
                                             </button>
                                             <button
                                                 onClick={() => approveSubmission(sub.id, false)}
-                                                className="flex-1 bg-gradient-to-r from-red-500 to-rose-600 text-white py-2.5 rounded-xl hover:shadow-md transition-all font-medium"
+                                                className="flex-1 bg-gradient-to-r from-red-500 to-rose-600 text-white py-2.5 rounded-xl hover:shadow-md transition-all font-medium flex items-center justify-center gap-1"
                                             >
-                                                ❌ Отклонить
+                                                <CrossCircledIcon className="w-4 h-4" /> Отклонить
                                             </button>
                                         </div>
                                     )}
 
-                                    <p className="text-xs text-slate-400 pt-2 border-t border-slate-100">
-                                        📅 {new Date(sub.submitted_at || sub.created_at).toLocaleString('ru')}
+                                    <p className="text-xs text-slate-400 pt-2 border-t border-slate-100 flex items-center gap-1">
+                                        <CalendarIcon className="w-3 h-3" /> {new Date(sub.submitted_at || sub.created_at).toLocaleString('ru')}
                                     </p>
                                 </div>
                             </div>
                         ))}
                         {submissions.length === 0 && (
                             <div className="col-span-full text-center py-16 text-slate-400">
-                                <span className="text-4xl">📝</span>
+                                <CheckCircledIcon className="w-12 h-12 mx-auto text-slate-300" />
                                 <p className="mt-2">Нет публикаций на проверке</p>
                             </div>
                         )}
@@ -701,8 +722,8 @@ function WebClientDashboard() {
                     <div className="bg-white rounded-3xl shadow-2xl p-6 w-full max-w-2xl max-h-[90vh] overflow-y-auto">
                         <div className="flex justify-between items-center mb-6">
                             <div className="flex items-center gap-3">
-                                <div className="w-10 h-10 bg-gradient-to-br from-green-500 to-emerald-600 rounded-xl flex items-center justify-center">
-                                    <span className="text-xl">➕</span>
+                                <div className="w-10 h-10 bg-gradient-to-br from-green-500 to-emerald-600 rounded-xl flex items-center justify-center text-white">
+                                    <PlusIcon className="w-5 h-5" />
                                 </div>
                                 <h2 className="text-xl font-bold text-slate-800">Новый заказ</h2>
                             </div>
@@ -710,7 +731,7 @@ function WebClientDashboard() {
                                 onClick={() => setShowCreateForm(false)}
                                 className="w-10 h-10 rounded-full bg-slate-100 hover:bg-slate-200 flex items-center justify-center text-slate-500 transition-colors"
                             >
-                                ✕
+                                <Cross2Icon className="w-5 h-5" />
                             </button>
                         </div>
 
@@ -741,7 +762,7 @@ function WebClientDashboard() {
                             <div className="grid grid-cols-2 gap-4">
                                 {!newTask.usePricingTiers && (
                                     <div>
-                                        <label className="block text-sm font-medium text-slate-700 mb-2">💰 Бюджет (сом) *</label>
+                                        <label className="block text-sm font-medium text-slate-700 mb-2">Бюджет (сом) *</label>
                                         <input
                                             type="number"
                                             value={newTask.budget}
@@ -754,7 +775,7 @@ function WebClientDashboard() {
                                     </div>
                                 )}
                                 <div className={newTask.usePricingTiers ? "col-span-2" : ""}>
-                                    <label className="block text-sm font-medium text-slate-700 mb-2">📅 Дедлайн *</label>
+                                    <label className="block text-sm font-medium text-slate-700 mb-2">Дедлайн *</label>
                                     <input
                                         type="date"
                                         value={newTask.deadline}
@@ -780,7 +801,7 @@ function WebClientDashboard() {
                                         </div>
                                     </div>
                                     <div>
-                                        <div className="font-semibold text-slate-800">💰 Ценовые диапазоны (лесенка)</div>
+                                        <div className="font-semibold text-slate-800">Ценовые диапазоны (лесенка)</div>
                                         <div className="text-sm text-slate-500">
                                             Оплата зависит от количества метрик
                                         </div>
@@ -793,7 +814,7 @@ function WebClientDashboard() {
                                 <div className="space-y-4 bg-slate-50 rounded-2xl p-5 border border-slate-200">
                                     <div className="flex items-center justify-between">
                                         <h3 className="font-semibold text-slate-800 flex items-center gap-2">
-                                            <span>📊</span> Ценовые диапазоны
+                                            <BarChartIcon className="w-4 h-4" /> Ценовые диапазоны
                                         </h3>
                                         <div className="flex gap-2">
                                             <button
@@ -882,9 +903,9 @@ function WebClientDashboard() {
                                                             onChange={(e) => updatePricingTier(index, 'metric', e.target.value)}
                                                             className="w-full p-2.5 border border-slate-200 rounded-lg bg-white text-gray-900 placeholder-gray-400 focus:border-blue-400 text-sm transition-all outline-none"
                                                         >
-                                                            <option value="views">👁 Просмотры</option>
-                                                            <option value="likes">❤️ Лайки</option>
-                                                            <option value="comments">💬 Комменты</option>
+                                                            <option value="views">Просмотры</option>
+                                                            <option value="likes">Лайки</option>
+                                                            <option value="comments">Комменты</option>
                                                         </select>
                                                     </div>
                                                 </div>
@@ -933,11 +954,11 @@ function WebClientDashboard() {
                             {!newTask.usePricingTiers && (
                                 <div className="bg-slate-50 rounded-2xl p-5 border border-slate-200">
                                     <h3 className="font-semibold text-slate-800 mb-4 flex items-center gap-2">
-                                        <span>🎯</span> Целевые метрики
+                                        <TargetIcon className="w-4 h-4" /> Целевые метрики
                                     </h3>
                                     <div className="grid grid-cols-3 gap-3">
                                         <div>
-                                            <label className="block text-xs text-slate-500 mb-1">👁 Просмотры</label>
+                                            <label className="block text-xs text-slate-500 mb-1">Просмотры</label>
                                             <input
                                                 type="number"
                                                 value={newTask.targetViews}
@@ -947,7 +968,7 @@ function WebClientDashboard() {
                                             />
                                         </div>
                                         <div>
-                                            <label className="block text-xs text-slate-500 mb-1">❤️ Лайки</label>
+                                            <label className="block text-xs text-slate-500 mb-1">Лайки</label>
                                             <input
                                                 type="number"
                                                 value={newTask.targetLikes}
@@ -957,7 +978,7 @@ function WebClientDashboard() {
                                             />
                                         </div>
                                         <div>
-                                            <label className="block text-xs text-slate-500 mb-1">💬 Комментарии</label>
+                                            <label className="block text-xs text-slate-500 mb-1">Комментарии</label>
                                             <input
                                                 type="number"
                                                 value={newTask.targetComments}
@@ -972,7 +993,7 @@ function WebClientDashboard() {
 
                             <div className="grid grid-cols-2 gap-4">
                                 <div>
-                                    <label className="block text-sm font-medium text-slate-700 mb-2">⏱ Дней на метрики</label>
+                                    <label className="block text-sm font-medium text-slate-700 mb-2">Дней на метрики</label>
                                     <input
                                         type="number"
                                         value={newTask.metricDeadlineDays}
@@ -1000,156 +1021,159 @@ function WebClientDashboard() {
                             <button
                                 type="submit"
                                 disabled={loading}
-                                className="w-full bg-gradient-to-r from-green-500 to-emerald-600 text-white py-4 rounded-xl font-semibold hover:shadow-lg hover:scale-[1.02] transition-all disabled:opacity-50 disabled:hover:scale-100"
+                                className="w-full bg-gradient-to-r from-green-500 to-emerald-600 text-white py-4 rounded-xl font-semibold hover:shadow-lg hover:scale-[1.02] transition-all disabled:opacity-50 disabled:hover:scale-100 flex items-center justify-center gap-2"
                             >
                                 {loading ? (
-                                    <span className="flex items-center justify-center gap-2">
+                                    <>
                                         <span className="animate-spin rounded-full h-5 w-5 border-2 border-white border-t-transparent"></span>
                                         Создание...
-                                    </span>
-                                ) : '✅ Создать заказ'}
+                                    </>
+                                ) : <><PlusIcon className="w-5 h-5" /> Создать заказ</>}
                             </button>
                         </form>
                     </div>
                 </div>
-            )}
+            )
+            }
 
             {/* Модальное окно деталей задания */}
-            {selectedTask && (
-                <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-                    <div className="bg-white rounded-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto">
-                        <div className={`px-6 py-4 border-b ${selectedTask.status === 'open' ? 'bg-gradient-to-r from-green-50 to-emerald-50' :
-                            selectedTask.status === 'in_progress' ? 'bg-gradient-to-r from-blue-50 to-indigo-50' :
-                                selectedTask.status === 'completed' ? 'bg-gradient-to-r from-slate-50 to-slate-100' :
-                                    'bg-gradient-to-r from-red-50 to-orange-50'
-                            }`}>
-                            <div className="flex items-center justify-between">
-                                <h2 className="text-xl font-bold text-slate-800">{selectedTask.title}</h2>
-                                <button
-                                    onClick={() => setSelectedTask(null)}
-                                    className="w-8 h-8 flex items-center justify-center rounded-full bg-white/50 hover:bg-white text-slate-500 hover:text-slate-700 transition-colors"
-                                >
-                                    ✕
-                                </button>
-                            </div>
-                            <span className={`inline-block text-xs px-2.5 py-1 rounded-full font-medium mt-2 ${selectedTask.status === 'open' ? 'bg-green-100 text-green-700' :
-                                selectedTask.status === 'in_progress' ? 'bg-blue-100 text-blue-700' :
-                                    selectedTask.status === 'completed' ? 'bg-slate-200 text-slate-600' : 'bg-red-100 text-red-700'
+            {
+                selectedTask && (
+                    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+                        <div className="bg-white rounded-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto">
+                            <div className={`px-6 py-4 border-b ${selectedTask.status === 'open' ? 'bg-gradient-to-r from-green-50 to-emerald-50' :
+                                selectedTask.status === 'in_progress' ? 'bg-gradient-to-r from-blue-50 to-indigo-50' :
+                                    selectedTask.status === 'completed' ? 'bg-gradient-to-r from-slate-50 to-slate-100' :
+                                        'bg-gradient-to-r from-red-50 to-orange-50'
                                 }`}>
-                                {selectedTask.status === 'open' ? '🟢 Открыт' :
-                                    selectedTask.status === 'in_progress' ? '🔵 В работе' :
-                                        selectedTask.status === 'completed' ? '✅ Завершен' : selectedTask.status}
-                            </span>
-                        </div>
-
-                        <div className="p-6 space-y-4">
-                            <div>
-                                <h3 className="text-sm font-medium text-slate-500 mb-1">Описание</h3>
-                                <p className="text-slate-700 whitespace-pre-wrap">{selectedTask.description}</p>
+                                <div className="flex items-center justify-between">
+                                    <h2 className="text-xl font-bold text-slate-800">{selectedTask.title}</h2>
+                                    <button
+                                        onClick={() => setSelectedTask(null)}
+                                        className="w-8 h-8 flex items-center justify-center rounded-full bg-white/50 hover:bg-white text-slate-500 hover:text-slate-700 transition-colors"
+                                    >
+                                        <Cross2Icon className="w-4 h-4" />
+                                    </button>
+                                </div>
+                                <span className={`inline-block text-xs px-2.5 py-1 rounded-full font-medium mt-2 ${selectedTask.status === 'open' ? 'bg-green-100 text-green-700' :
+                                    selectedTask.status === 'in_progress' ? 'bg-blue-100 text-blue-700' :
+                                        selectedTask.status === 'completed' ? 'bg-slate-200 text-slate-600' : 'bg-red-100 text-red-700'
+                                    }`}>
+                                    {selectedTask.status === 'open' ? 'Активен' :
+                                        selectedTask.status === 'in_progress' ? 'В работе' :
+                                            selectedTask.status === 'completed' ? 'Завершен' : selectedTask.status}
+                                </span>
                             </div>
 
-                            <div className="grid grid-cols-2 gap-4">
-                                <div className="bg-purple-50 rounded-xl p-3">
-                                    <span className="text-xs text-purple-600">Бюджет</span>
-                                    <p className="text-lg font-bold text-purple-700">{formatTaskBudget(selectedTask, { prefix: '' })}</p>
-                                </div>
-                                {selectedTask.deadline && (
-                                    <div className="bg-amber-50 rounded-xl p-3">
-                                        <span className="text-xs text-amber-600">Дедлайн</span>
-                                        <p className="text-lg font-bold text-amber-700">{new Date(selectedTask.deadline).toLocaleDateString('ru')}</p>
-                                    </div>
-                                )}
-                            </div>
-
-                            {selectedTask.target_metrics && (
+                            <div className="p-6 space-y-4">
                                 <div>
-                                    <h3 className="text-sm font-medium text-slate-500 mb-2">Целевые метрики</h3>
-                                    <div className="flex flex-wrap gap-2">
-                                        {selectedTask.target_metrics.views && (
-                                            <span className="bg-blue-100 text-blue-700 px-3 py-1.5 rounded-lg text-sm">
-                                                👁 {selectedTask.target_metrics.views.toLocaleString()} просмотров
-                                            </span>
-                                        )}
-                                        {selectedTask.target_metrics.likes && (
-                                            <span className="bg-pink-100 text-pink-700 px-3 py-1.5 rounded-lg text-sm">
-                                                ❤️ {selectedTask.target_metrics.likes.toLocaleString()} лайков
-                                            </span>
-                                        )}
-                                        {selectedTask.target_metrics.comments && (
-                                            <span className="bg-green-100 text-green-700 px-3 py-1.5 rounded-lg text-sm">
-                                                💬 {selectedTask.target_metrics.comments.toLocaleString()} комментов
-                                            </span>
-                                        )}
-                                    </div>
+                                    <h3 className="text-sm font-medium text-slate-500 mb-1">Описание</h3>
+                                    <p className="text-slate-700 whitespace-pre-wrap">{selectedTask.description}</p>
                                 </div>
-                            )}
 
-                            {selectedTask.requirements && (
-                                <div>
-                                    <h3 className="text-sm font-medium text-slate-500 mb-2">Требования</h3>
-                                    <div className="flex flex-wrap gap-2">
-                                        {selectedTask.requirements.minFollowers && (
-                                            <span className="bg-slate-100 text-slate-700 px-3 py-1.5 rounded-lg text-sm">
-                                                👥 от {selectedTask.requirements.minFollowers.toLocaleString()} подписчиков
-                                            </span>
-                                        )}
-                                        {selectedTask.requirements.minEngagement && (
-                                            <span className="bg-slate-100 text-slate-700 px-3 py-1.5 rounded-lg text-sm">
-                                                📈 ER от {selectedTask.requirements.minEngagement}%
-                                            </span>
-                                        )}
+                                <div className="grid grid-cols-2 gap-4">
+                                    <div className="bg-purple-50 rounded-xl p-3">
+                                        <span className="text-xs text-purple-600">Бюджет</span>
+                                        <p className="text-lg font-bold text-purple-700">{formatTaskBudget(selectedTask, { prefix: '' })}</p>
                                     </div>
-                                </div>
-                            )}
-
-                            {selectedTask.influencer && (
-                                <div className="bg-pink-50 rounded-xl p-4">
-                                    <h3 className="text-sm font-medium text-pink-600 mb-2">Исполнитель</h3>
-                                    <div className="flex items-center gap-3">
-                                        <div className="w-10 h-10 bg-pink-200 rounded-full flex items-center justify-center">
-                                            📸
+                                    {selectedTask.deadline && (
+                                        <div className="bg-amber-50 rounded-xl p-3">
+                                            <span className="text-xs text-amber-600">Дедлайн</span>
+                                            <p className="text-lg font-bold text-amber-700">{new Date(selectedTask.deadline).toLocaleDateString('ru')}</p>
                                         </div>
-                                        <div>
-                                            <p className="font-medium text-slate-800">{selectedTask.influencer.first_name} {selectedTask.influencer.last_name || ''}</p>
-                                            {selectedTask.influencer.instagram_username && (
-                                                <a
-                                                    href={`https://instagram.com/${selectedTask.influencer.instagram_username}`}
-                                                    target="_blank"
-                                                    rel="noopener noreferrer"
-                                                    className="text-sm text-pink-600 hover:underline"
-                                                >
-                                                    @{selectedTask.influencer.instagram_username}
-                                                </a>
+                                    )}
+                                </div>
+
+                                {selectedTask.target_metrics && (
+                                    <div>
+                                        <h3 className="text-sm font-medium text-slate-500 mb-2">Целевые метрики</h3>
+                                        <div className="flex flex-wrap gap-2">
+                                            {selectedTask.target_metrics.views && (
+                                                <span className="bg-blue-100 text-blue-700 px-3 py-1.5 rounded-lg text-sm flex items-center gap-1">
+                                                    <EyeOpenIcon className="w-3 h-3" /> {selectedTask.target_metrics.views.toLocaleString()} просмотров
+                                                </span>
+                                            )}
+                                            {selectedTask.target_metrics.likes && (
+                                                <span className="bg-pink-100 text-pink-700 px-3 py-1.5 rounded-lg text-sm flex items-center gap-1">
+                                                    <HeartIcon className="w-3 h-3" /> {selectedTask.target_metrics.likes.toLocaleString()} лайков
+                                                </span>
+                                            )}
+                                            {selectedTask.target_metrics.comments && (
+                                                <span className="bg-green-100 text-green-700 px-3 py-1.5 rounded-lg text-sm flex items-center gap-1">
+                                                    <ChatBubbleIcon className="w-3 h-3" /> {selectedTask.target_metrics.comments.toLocaleString()} комментов
+                                                </span>
                                             )}
                                         </div>
                                     </div>
-                                </div>
-                            )}
-
-                            <div className="flex items-center justify-between text-sm text-slate-400 pt-4 border-t">
-                                <span>Создано: {new Date(selectedTask.created_at).toLocaleDateString('ru')}</span>
-                                {selectedTask.accepted_count > 0 && (
-                                    <span>Откликов: {selectedTask.accepted_count}</span>
                                 )}
+
+                                {selectedTask.requirements && (
+                                    <div>
+                                        <h3 className="text-sm font-medium text-slate-500 mb-2">Требования</h3>
+                                        <div className="flex flex-wrap gap-2">
+                                            {selectedTask.requirements.minFollowers && (
+                                                <span className="bg-slate-100 text-slate-700 px-3 py-1.5 rounded-lg text-sm">
+                                                    👥 от {selectedTask.requirements.minFollowers.toLocaleString()} подписчиков
+                                                </span>
+                                            )}
+                                            {selectedTask.requirements.minEngagement && (
+                                                <span className="bg-slate-100 text-slate-700 px-3 py-1.5 rounded-lg text-sm">
+                                                    📈 ER от {selectedTask.requirements.minEngagement}%
+                                                </span>
+                                            )}
+                                        </div>
+                                    </div>
+                                )}
+
+                                {selectedTask.influencer && (
+                                    <div className="bg-pink-50 rounded-xl p-4">
+                                        <h3 className="text-sm font-medium text-pink-600 mb-2">Исполнитель</h3>
+                                        <div className="flex items-center gap-3">
+                                            <div className="w-10 h-10 bg-pink-200 rounded-full flex items-center justify-center">
+                                                <CameraIcon className="w-5 h-5 text-pink-600" />
+                                            </div>
+                                            <div>
+                                                <p className="font-medium text-slate-800">{selectedTask.influencer.first_name} {selectedTask.influencer.last_name || ''}</p>
+                                                {selectedTask.influencer.instagram_username && (
+                                                    <a
+                                                        href={`https://instagram.com/${selectedTask.influencer.instagram_username}`}
+                                                        target="_blank"
+                                                        rel="noopener noreferrer"
+                                                        className="text-sm text-pink-600 hover:underline"
+                                                    >
+                                                        @{selectedTask.influencer.instagram_username}
+                                                    </a>
+                                                )}
+                                            </div>
+                                        </div>
+                                    </div>
+                                )}
+
+                                <div className="flex items-center justify-between text-sm text-slate-400 pt-4 border-t">
+                                    <span>Создано: {new Date(selectedTask.created_at).toLocaleDateString('ru')}</span>
+                                    {selectedTask.accepted_count > 0 && (
+                                        <span>Откликов: {selectedTask.accepted_count}</span>
+                                    )}
+                                </div>
+                            </div>
+
+                            <div className="px-6 pb-6">
+                                <button
+                                    onClick={() => setSelectedTask(null)}
+                                    className="w-full bg-slate-100 text-slate-700 py-3 rounded-xl font-medium hover:bg-slate-200 transition-colors"
+                                >
+                                    Закрыть
+                                </button>
                             </div>
                         </div>
-
-                        <div className="px-6 pb-6">
-                            <button
-                                onClick={() => setSelectedTask(null)}
-                                className="w-full bg-slate-100 text-slate-700 py-3 rounded-xl font-medium hover:bg-slate-200 transition-colors"
-                            >
-                                Закрыть
-                            </button>
-                        </div>
                     </div>
-                </div>
-            )}
+                )
+            }
 
             <footer className="text-center py-8 text-sm text-slate-400">
                 Telegram Influencer Marketplace • Кабинет заказчика
             </footer>
-        </div>
+        </div >
     )
 }
 

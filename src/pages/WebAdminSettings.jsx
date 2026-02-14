@@ -3,6 +3,36 @@ import { supabase } from '../lib/supabase'
 import Logo from '../components/Logo'
 import { formatTaskBudget } from '../lib/taskBudget'
 import { sendTelegramNotification, formatNewTaskMessage } from '../lib/telegramBot'
+import {
+    GearIcon,
+    PersonIcon,
+    FileTextIcon,
+    CheckCircledIcon,
+    PlusIcon,
+    TrashIcon,
+    Pencil1Icon,
+    ExitIcon,
+    LockClosedIcon,
+    BarChartIcon,
+    ReaderIcon,
+    CameraIcon,
+    BackpackIcon,
+    ArrowRightIcon,
+    UpdateIcon,
+    CrossCircledIcon,
+    ClockIcon,
+    RocketIcon,
+    MixerHorizontalIcon,
+    IdCardIcon,
+    InfoCircledIcon,
+    ExclamationTriangleIcon,
+    Link2Icon,
+    StackIcon,
+    TargetIcon,
+    PlusCircledIcon,
+    ArrowUpIcon,
+    Cross2Icon
+} from '@radix-ui/react-icons'
 
 // Учётные данные для веб-доступа
 const WEB_ADMIN_LOGIN = 'Daison'
@@ -320,11 +350,11 @@ function WebAdminSettings() {
                 ...settings,
                 instagram_metrics_mode: { ...settings.instagram_metrics_mode, value: newMode, updated_at: new Date().toISOString() }
             })
-            setSaveStatus(`✅ Режим изменён на: ${newMode === 'auto' ? 'Автоматический' : 'Ручной'}`)
+            setSaveStatus(`Режим изменён на: ${newMode === 'auto' ? 'Автоматический' : 'Ручной'}`)
             setTimeout(() => setSaveStatus(''), 3000)
         } catch (error) {
             console.error('Ошибка:', error)
-            setSaveStatus('❌ Ошибка сохранения')
+            setSaveStatus('Ошибка сохранения')
         }
     }
 
@@ -712,13 +742,13 @@ function WebAdminSettings() {
     const isManualMode = settings.instagram_metrics_mode?.value === 'manual'
 
     const tabs = [
-        { id: 'settings', icon: '⚙️', label: 'Настройки', badge: null },
-        { id: 'users', icon: '👥', label: 'Пользователи', badge: users.length || null },
-        { id: 'tasks', icon: '📋', label: 'Заказы', badge: tasks.length || null },
-        { id: 'create-task', icon: '➕', label: 'Создать заказ', badge: null },
-        { id: 'submissions', icon: '📝', label: 'Публикации', badge: submissions.filter(s => s.status !== 'completed').length || null },
-        { id: 'withdrawals', icon: '💸', label: 'Выплаты', badge: withdrawals.filter(w => w.status === 'pending').length || null },
-        { id: 'stats', icon: '📊', label: 'Статистика', badge: null },
+        { id: 'settings', icon: GearIcon, label: 'Настройки', badge: null },
+        { id: 'users', icon: PersonIcon, label: 'Пользователи', badge: users.length || null },
+        { id: 'tasks', icon: FileTextIcon, label: 'Заказы', badge: tasks.length || null },
+        { id: 'create-task', icon: PlusIcon, label: 'Создать заказ', badge: null },
+        { id: 'submissions', icon: CheckCircledIcon, label: 'Публикации', badge: submissions.filter(s => s.status !== 'completed').length || null },
+        { id: 'withdrawals', icon: RocketIcon, label: 'Выплаты', badge: withdrawals.filter(w => w.status === 'pending').length || null },
+        { id: 'stats', icon: BarChartIcon, label: 'Статистика', badge: null },
     ]
 
     // Панель админа
@@ -752,25 +782,28 @@ function WebAdminSettings() {
 
                 {/* Navigation */}
                 <nav className="flex-1 p-4 space-y-1 overflow-y-auto">
-                    {tabs.map(tab => (
-                        <button
-                            key={tab.id}
-                            onClick={() => setActiveTab(tab.id)}
-                            className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-left transition-all duration-200 ${activeTab === tab.id
-                                ? 'bg-gradient-to-r from-purple-600 to-pink-600 text-white shadow-lg shadow-purple-500/25'
-                                : 'text-slate-300 hover:bg-white/10 hover:text-white'
-                                }`}
-                        >
-                            <span className="text-xl">{tab.icon}</span>
-                            <span className="font-medium">{tab.label}</span>
-                            {tab.badge > 0 && (
-                                <span className={`ml-auto text-xs px-2 py-0.5 rounded-full font-semibold ${activeTab === tab.id ? 'bg-white/20' : 'bg-slate-600'
-                                    }`}>
-                                    {tab.badge}
-                                </span>
-                            )}
-                        </button>
-                    ))}
+                    {tabs.map(tab => {
+                        const IconComponent = tab.icon;
+                        return (
+                            <button
+                                key={tab.id}
+                                onClick={() => setActiveTab(tab.id)}
+                                className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-left transition-all duration-200 ${activeTab === tab.id
+                                    ? 'bg-gradient-to-r from-purple-600 to-pink-600 text-white shadow-lg shadow-purple-500/25'
+                                    : 'text-slate-300 hover:bg-white/10 hover:text-white'
+                                    }`}
+                            >
+                                <IconComponent className="w-5 h-5" />
+                                <span className="font-medium">{tab.label}</span>
+                                {tab.badge > 0 && (
+                                    <span className={`ml-auto text-xs px-2 py-0.5 rounded-full font-semibold ${activeTab === tab.id ? 'bg-white/20' : 'bg-slate-600'
+                                        }`}>
+                                        {tab.badge}
+                                    </span>
+                                )}
+                            </button>
+                        );
+                    })}
                 </nav>
 
                 {/* Logout */}
@@ -779,7 +812,7 @@ function WebAdminSettings() {
                         onClick={handleLogout}
                         className="w-full flex items-center justify-center gap-2 px-4 py-3 rounded-xl text-slate-400 hover:text-white hover:bg-white/10 transition-colors"
                     >
-                        <span>🚪</span>
+                        <ExitIcon className="w-5 h-5" />
                         <span>Выйти</span>
                     </button>
                 </div>
@@ -800,33 +833,44 @@ function WebAdminSettings() {
                     </div>
                     {/* Mobile Tabs */}
                     <div className="px-2 pb-2 overflow-x-auto flex gap-1">
-                        {tabs.map(tab => (
-                            <button
-                                key={tab.id}
-                                onClick={() => setActiveTab(tab.id)}
-                                className={`flex items-center gap-1.5 px-3 py-2 rounded-lg whitespace-nowrap text-sm font-medium transition-colors ${activeTab === tab.id
-                                    ? 'bg-white text-purple-600'
-                                    : 'text-white/80 hover:bg-white/10'
-                                    }`}
-                            >
-                                <span>{tab.icon}</span>
-                                <span className="hidden sm:inline">{tab.label}</span>
-                                {tab.badge > 0 && (
-                                    <span className={`text-xs px-1.5 py-0.5 rounded-full ${activeTab === tab.id ? 'bg-purple-100' : 'bg-white/20'
-                                        }`}>
-                                        {tab.badge}
-                                    </span>
-                                )}
-                            </button>
-                        ))}
+                        {tabs.map(tab => {
+                            const IconComponent = tab.icon;
+                            return (
+                                <button
+                                    key={tab.id}
+                                    onClick={() => setActiveTab(tab.id)}
+                                    className={`flex items-center gap-1.5 px-3 py-2 rounded-lg whitespace-nowrap text-sm font-medium transition-colors ${activeTab === tab.id
+                                        ? 'bg-white text-purple-600'
+                                        : 'text-white/80 hover:bg-white/10'
+                                        }`}
+                                >
+                                    <IconComponent className="w-4 h-4" />
+                                    <span className="hidden sm:inline">{tab.label}</span>
+                                    {tab.badge > 0 && (
+                                        <span className={`text-xs px-1.5 py-0.5 rounded-full ${activeTab === tab.id ? 'bg-purple-100' : 'bg-white/20'
+                                            }`}>
+                                            {tab.badge}
+                                        </span>
+                                    )}
+                                </button>
+                            );
+                        })}
                     </div>
                 </header>
 
                 {/* Desktop Header */}
                 <header className="hidden lg:block bg-white/50 backdrop-blur-sm border-b border-slate-200/50 sticky top-0 z-10">
                     <div className="px-8 py-6">
-                        <h2 className="text-2xl font-bold text-slate-800">
-                            {tabs.find(t => t.id === activeTab)?.icon} {tabs.find(t => t.id === activeTab)?.label}
+                        <h2 className="text-2xl font-bold text-slate-800 flex items-center gap-2">
+                            {(() => {
+                                const activeTabData = tabs.find(t => t.id === activeTab);
+                                if (activeTabData) {
+                                    const IconComponent = activeTabData.icon;
+                                    return <IconComponent className="w-6 h-6" />;
+                                }
+                                return null;
+                            })()}
+                            {tabs.find(t => t.id === activeTab)?.label}
                         </h2>
                         <p className="text-slate-500 text-sm mt-1">
                             {activeTab === 'settings' && 'Настройки системы и режима работы'}
@@ -855,8 +899,8 @@ function WebAdminSettings() {
                             <div className="bg-white rounded-2xl shadow-sm border border-slate-200/50 overflow-hidden">
                                 <div className="p-6 border-b border-slate-100">
                                     <div className="flex items-center gap-3">
-                                        <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-pink-500 to-purple-600 flex items-center justify-center text-2xl">
-                                            📸
+                                        <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-pink-500 to-purple-600 flex items-center justify-center text-white">
+                                            <CameraIcon className="w-6 h-6" />
                                         </div>
                                         <div>
                                             <h2 className="text-lg font-bold text-slate-800">Instagram метрики</h2>
@@ -868,7 +912,7 @@ function WebAdminSettings() {
                                 <div className="p-6">
                                     <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 mb-6">
                                         <div className="flex gap-3">
-                                            <span className="text-2xl">⚠️</span>
+                                            <ExclamationTriangleIcon className="w-6 h-6 text-amber-600 flex-shrink-0" />
                                             <div>
                                                 <p className="font-semibold text-amber-800">Instagram API на проверке</p>
                                                 <p className="text-sm text-amber-700 mt-1">
@@ -939,8 +983,8 @@ function WebAdminSettings() {
                                     <div className={`p-4 ${user.user_type === 'client' ? 'bg-gradient-to-r from-blue-500 to-indigo-600' : 'bg-gradient-to-r from-purple-500 to-pink-600'} text-white`}>
                                         <div className="flex items-center justify-between">
                                             <div className="flex items-center gap-3">
-                                                <div className="w-12 h-12 rounded-full bg-white/20 flex items-center justify-center text-2xl">
-                                                    {user.user_type === 'client' ? '💼' : '📸'}
+                                                <div className="w-12 h-12 rounded-full bg-white/20 flex items-center justify-center">
+                                                    {user.user_type === 'client' ? <BackpackIcon className="w-6 h-6" /> : <CameraIcon className="w-6 h-6" />}
                                                 </div>
                                                 <div>
                                                     <h3 className="font-bold">{user.first_name} {user.last_name || ''}</h3>
@@ -987,9 +1031,9 @@ function WebAdminSettings() {
                                         {user.user_type === 'client' && (
                                             <a
                                                 href={`/web-client?client_id=${user.id}`}
-                                                className="flex-1 text-xs px-3 py-2 bg-blue-100 text-blue-700 rounded-lg hover:bg-blue-200 transition-colors text-center"
+                                                className="flex-1 text-xs px-3 py-2 bg-blue-100 text-blue-700 rounded-lg hover:bg-blue-200 transition-colors text-center flex items-center justify-center gap-1"
                                             >
-                                                💼 Кабинет
+                                                <BackpackIcon className="w-3 h-3" /> Кабинет
                                             </a>
                                         )}
                                         <button onClick={() => toggleUserType(user.id, user.user_type)}
@@ -997,19 +1041,19 @@ function WebAdminSettings() {
                                             → {user.user_type === 'client' ? 'Инфл.' : 'Заказ.'}
                                         </button>
                                         <button onClick={() => addBalance(user.id)}
-                                            className="flex-1 text-xs px-3 py-2 bg-green-100 text-green-700 rounded-lg hover:bg-green-200 transition-colors">
-                                            💰 Пополнить
+                                            className="flex-1 text-xs px-3 py-2 bg-green-100 text-green-700 rounded-lg hover:bg-green-200 transition-colors flex items-center justify-center gap-1">
+                                            <PlusCircledIcon className="w-3 h-3" /> Пополнить
                                         </button>
                                         <button onClick={() => deleteUser(user.id)}
-                                            className="text-xs px-3 py-2 bg-red-100 text-red-600 rounded-lg hover:bg-red-200 transition-colors">
-                                            🗑️
+                                            className="text-xs px-3 py-2 bg-red-100 text-red-600 rounded-lg hover:bg-red-200 transition-colors flex items-center justify-center">
+                                            <TrashIcon className="w-3 h-3" />
                                         </button>
                                     </div>
                                 </div>
                             ))}
                             {users.length === 0 && (
                                 <div className="col-span-full text-center py-16 text-slate-400">
-                                    <span className="text-4xl">👥</span>
+                                    <PersonIcon className="w-12 h-12 mx-auto text-slate-300" />
                                     <p className="mt-2">Нет пользователей</p>
                                 </div>
                             )}
@@ -1025,9 +1069,9 @@ function WebAdminSettings() {
                                             task.status === 'completed' ? 'bg-slate-100 text-slate-600' : 'bg-red-50 text-red-700'
                                         }`}>
                                         <span>
-                                            {task.status === 'open' ? '🟢 Открыт' :
-                                                task.status === 'in_progress' ? '🔵 В работе' :
-                                                    task.status === 'completed' ? '✅ Завершен' : '❌ ' + task.status}
+                                            {task.status === 'open' ? 'Активен' :
+                                                task.status === 'in_progress' ? 'В работе' :
+                                                    task.status === 'completed' ? 'Завершен' : task.status}
                                         </span>
                                         <span className="text-xs opacity-70">{new Date(task.created_at).toLocaleDateString('ru')}</span>
                                     </div>
@@ -1039,20 +1083,20 @@ function WebAdminSettings() {
 
                                         <div className="space-y-2 text-sm">
                                             <div className="flex items-center justify-between">
-                                                <span className="text-slate-500">💼 Заказчик</span>
+                                                <span className="text-slate-500 flex items-center gap-1"><PersonIcon className="w-3 h-3" /> Заказчик</span>
                                                 <span className="text-slate-700">{task.client?.first_name} {task.client?.last_name || ''}</span>
                                             </div>
                                             <div className="flex items-center justify-between">
-                                                <span className="text-slate-500">💰 Бюджет</span>
+                                                <span className="text-slate-500 flex items-center gap-1"><StackIcon className="w-3 h-3" /> Бюджет</span>
                                                 <span className="font-bold text-green-600">{formatTaskBudget(task, { prefix: '' })}</span>
                                             </div>
                                             {task.target_metrics && (
                                                 <div className="flex items-center justify-between">
-                                                    <span className="text-slate-500">🎯 Цели</span>
+                                                    <span className="text-slate-500 flex items-center gap-1"><TargetIcon className="w-3 h-3" /> Цели</span>
                                                     <span className="text-slate-600">
-                                                        {task.target_metrics.views && `👁${task.target_metrics.views.toLocaleString()} `}
-                                                        {task.target_metrics.likes && `❤️${task.target_metrics.likes.toLocaleString()} `}
-                                                        {task.target_metrics.comments && `💬${task.target_metrics.comments.toLocaleString()}`}
+                                                        {task.target_metrics.views && `${task.target_metrics.views.toLocaleString()} пр. `}
+                                                        {task.target_metrics.likes && `${task.target_metrics.likes.toLocaleString()} л. `}
+                                                        {task.target_metrics.comments && `${task.target_metrics.comments.toLocaleString()} к.`}
                                                     </span>
                                                 </div>
                                             )}
@@ -1062,15 +1106,15 @@ function WebAdminSettings() {
                                     {/* Actions */}
                                     <div className="p-3 bg-slate-50 border-t">
                                         <button onClick={() => deleteTask(task.id)}
-                                            className="w-full text-xs px-3 py-2 bg-red-100 text-red-600 rounded-lg hover:bg-red-200 transition-colors">
-                                            🗑️ Удалить заказ
+                                            className="w-full text-xs px-3 py-2 bg-red-100 text-red-600 rounded-lg hover:bg-red-200 transition-colors flex items-center justify-center gap-1">
+                                            <TrashIcon className="w-3 h-3" /> Удалить заказ
                                         </button>
                                     </div>
                                 </div>
                             ))}
                             {tasks.length === 0 && (
                                 <div className="col-span-full text-center py-16 text-slate-400">
-                                    <span className="text-4xl">📋</span>
+                                    <FileTextIcon className="w-12 h-12 mx-auto text-slate-300" />
                                     <p className="mt-2">Нет заказов</p>
                                 </div>
                             )}
@@ -1081,8 +1125,8 @@ function WebAdminSettings() {
                             <div className="bg-white rounded-2xl border border-slate-200/50 shadow-sm overflow-hidden">
                                 <div className="p-6 border-b border-slate-100 bg-gradient-to-r from-purple-50 to-pink-50">
                                     <div className="flex items-center gap-3">
-                                        <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-purple-500 to-pink-600 flex items-center justify-center text-2xl">
-                                            ➕
+                                        <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-purple-500 to-pink-600 flex items-center justify-center text-white">
+                                            <PlusIcon className="w-6 h-6" />
                                         </div>
                                         <div>
                                             <h2 className="text-lg font-bold text-slate-800">Создать новый заказ</h2>
@@ -1136,7 +1180,7 @@ function WebAdminSettings() {
                                     <div className="grid grid-cols-2 gap-4">
                                         {!newTask.usePricingTiers && (
                                             <div>
-                                                <label className="block text-sm font-semibold text-slate-700 mb-2">💰 Бюджет (сом) *</label>
+                                                <label className="block text-sm font-semibold text-slate-700 mb-2">Бюджет (сом) *</label>
                                                 <input
                                                     type="number"
                                                     value={newTask.budget}
@@ -1170,7 +1214,7 @@ function WebAdminSettings() {
                                                 className="w-5 h-5"
                                             />
                                             <div>
-                                                <div className="font-medium">💰 Ценовые диапазоны (лесенка)</div>
+                                                <div className="font-medium">Ценовые диапазоны (лесенка)</div>
                                                 <div className="text-xs text-gray-600">
                                                     Оплата зависит от количества метрик (рекомендуется для масштабирования)
                                                 </div>
@@ -1182,7 +1226,7 @@ function WebAdminSettings() {
                                     {newTask.usePricingTiers && (
                                         <div className="space-y-3 bg-gray-50 rounded-lg p-4">
                                             <div className="flex items-center justify-between mb-2">
-                                                <h3 className="font-medium">📊 Ценовые диапазоны</h3>
+                                                <h3 className="font-medium">Ценовые диапазоны</h3>
                                                 <div className="flex gap-2">
                                                     <button
                                                         type="button"
@@ -1320,10 +1364,10 @@ function WebAdminSettings() {
 
                                     {!newTask.usePricingTiers && (
                                         <div className="bg-gray-50 rounded-lg p-4">
-                                            <h3 className="font-medium mb-3">🎯 Целевые метрики (опционально)</h3>
+                                            <h3 className="font-medium mb-3">Целевые метрики (опционально)</h3>
                                             <div className="grid grid-cols-3 gap-3">
                                                 <div>
-                                                    <label className="block text-xs mb-1">👁 Просмотры</label>
+                                                    <label className="block text-xs mb-1">Просмотры</label>
                                                     <input
                                                         type="number"
                                                         value={newTask.targetViews}
@@ -1333,7 +1377,7 @@ function WebAdminSettings() {
                                                     />
                                                 </div>
                                                 <div>
-                                                    <label className="block text-xs mb-1">❤️ Лайки</label>
+                                                    <label className="block text-xs mb-1">Лайки</label>
                                                     <input
                                                         type="number"
                                                         value={newTask.targetLikes}
@@ -1343,7 +1387,7 @@ function WebAdminSettings() {
                                                     />
                                                 </div>
                                                 <div>
-                                                    <label className="block text-xs mb-1">💬 Комментарии</label>
+                                                    <label className="block text-xs mb-1">Комментарии</label>
                                                     <input
                                                         type="number"
                                                         value={newTask.targetComments}
@@ -1358,7 +1402,7 @@ function WebAdminSettings() {
 
                                     <div className="grid grid-cols-2 gap-4">
                                         <div>
-                                            <label className="block text-sm font-medium mb-1">⏱ Дней на набор метрик</label>
+                                            <label className="block text-sm font-medium mb-1">Дней на набор метрик</label>
                                             <input
                                                 type="number"
                                                 value={newTask.metricDeadlineDays}
@@ -1386,13 +1430,13 @@ function WebAdminSettings() {
                                     <button
                                         type="submit"
                                         disabled={loading}
-                                        className="w-full bg-gradient-to-r from-purple-600 to-pink-600 text-white py-4 rounded-xl font-bold text-lg hover:from-purple-700 hover:to-pink-700 disabled:opacity-50 transition-all shadow-lg shadow-purple-500/25"
+                                        className="w-full bg-gradient-to-r from-purple-600 to-pink-600 text-white py-4 rounded-xl font-bold text-lg hover:from-purple-700 hover:to-pink-700 disabled:opacity-50 transition-all shadow-lg shadow-purple-500/25 flex items-center justify-center gap-2"
                                     >
                                         {loading ? (
-                                            <span className="flex items-center justify-center gap-2">
-                                                <span className="animate-spin">⏳</span> Создание...
-                                            </span>
-                                        ) : '✅ Создать заказ'}
+                                            <>
+                                                <UpdateIcon className="w-5 h-5 animate-spin" /> Создание...
+                                            </>
+                                        ) : <><PlusIcon className="w-5 h-5" /> Создать заказ</>}
                                     </button>
                                 </form>
                             </div>
@@ -1419,41 +1463,41 @@ function WebAdminSettings() {
                                                     sub.status === 'completed' ? 'bg-green-50 text-green-700' : 'bg-red-50 text-red-700'
                                             }`}>
                                             <span>
-                                                {sub.status === 'pending' ? '⏳ Ожидает' :
-                                                    sub.status === 'pending_approval' ? '🔍 На проверке' :
-                                                        sub.status === 'in_progress' ? '🔵 В работе' :
-                                                            sub.status === 'completed' ? '✅ Завершено' : sub.status}
+                                                {sub.status === 'pending' ? 'Ожидает' :
+                                                    sub.status === 'pending_approval' ? 'На проверке' :
+                                                        sub.status === 'in_progress' ? 'В работе' :
+                                                            sub.status === 'completed' ? 'Завершено' : sub.status}
                                             </span>
                                             {sub.current_metrics?.manual_entry && (
-                                                <span className="text-xs bg-white/50 px-2 py-0.5 rounded-full">✍️ Ручной ввод</span>
+                                                <span className="text-xs bg-white/50 px-2 py-0.5 rounded-full">Ручной ввод</span>
                                             )}
                                         </div>
 
                                         {/* Content */}
                                         <div className="p-4">
                                             <h3 className="font-bold text-slate-800 mb-2">{sub.task?.title || 'Задание удалено'}</h3>
-                                            <p className="text-sm text-slate-500 mb-3">📸 {sub.influencer?.first_name} {sub.influencer?.last_name || ''}</p>
+                                            <p className="text-sm text-slate-500 mb-3 flex items-center gap-1"><CameraIcon className="w-3 h-3" /> {sub.influencer?.first_name} {sub.influencer?.last_name || ''}</p>
 
                                             <a href={sub.post_url} target="_blank" rel="noopener noreferrer"
-                                                className="text-sm text-blue-600 hover:text-blue-800 break-all hover:underline block mb-4">
-                                                🔗 {sub.post_url?.length > 50 ? sub.post_url.slice(0, 50) + '...' : sub.post_url}
+                                                className="text-sm text-blue-600 hover:text-blue-800 break-all hover:underline block mb-4 flex items-center gap-1">
+                                                <Link2Icon className="w-3 h-3 flex-shrink-0" /> {sub.post_url?.length > 50 ? sub.post_url.slice(0, 50) + '...' : sub.post_url}
                                             </a>
 
                                             {/* Метрики */}
                                             <div className="bg-slate-50 rounded-xl p-3">
-                                                <p className="text-xs text-slate-500 mb-2 font-medium">📊 Текущие метрики</p>
+                                                <p className="text-xs text-slate-500 mb-2 font-medium">Текущие метрики</p>
                                                 <div className="grid grid-cols-3 gap-2 text-center">
                                                     <div className="bg-white rounded-lg p-2">
                                                         <div className="text-lg font-bold text-slate-800">{sub.current_metrics?.views?.toLocaleString() || 0}</div>
-                                                        <div className="text-xs text-slate-400">👁 Просмотры</div>
+                                                        <div className="text-xs text-slate-400">Просм.</div>
                                                     </div>
                                                     <div className="bg-white rounded-lg p-2">
                                                         <div className="text-lg font-bold text-slate-800">{sub.current_metrics?.likes?.toLocaleString() || 0}</div>
-                                                        <div className="text-xs text-slate-400">❤️ Лайки</div>
+                                                        <div className="text-xs text-slate-400">Лайки</div>
                                                     </div>
                                                     <div className="bg-white rounded-lg p-2">
                                                         <div className="text-lg font-bold text-slate-800">{sub.current_metrics?.comments?.toLocaleString() || 0}</div>
-                                                        <div className="text-xs text-slate-400">💬 Комменты</div>
+                                                        <div className="text-xs text-slate-400">Комм.</div>
                                                     </div>
                                                 </div>
                                             </div>
@@ -1464,13 +1508,13 @@ function WebAdminSettings() {
                                             {isManualMode && (
                                                 <>
                                                     <button onClick={() => updateSubmissionMetrics(sub.id)}
-                                                        className="flex-1 text-xs px-3 py-2 bg-blue-100 text-blue-700 rounded-lg hover:bg-blue-200 transition-colors">
-                                                        📊 Метрики
+                                                        className="flex-1 text-xs px-3 py-2 bg-blue-100 text-blue-700 rounded-lg hover:bg-blue-200 transition-colors flex items-center justify-center gap-1">
+                                                        <BarChartIcon className="w-3 h-3" /> Метрики
                                                     </button>
                                                     {sub.status !== 'completed' && (
                                                         <button onClick={() => manualCompleteSubmission(sub.id)}
-                                                            className="flex-1 text-xs px-3 py-2 bg-green-100 text-green-700 rounded-lg hover:bg-green-200 transition-colors">
-                                                            ✅ Завершить
+                                                            className="flex-1 text-xs px-3 py-2 bg-green-100 text-green-700 rounded-lg hover:bg-green-200 transition-colors flex items-center justify-center gap-1">
+                                                            <CheckCircledIcon className="w-3 h-3" /> Завершить
                                                         </button>
                                                     )}
                                                 </>
@@ -1497,8 +1541,8 @@ function WebAdminSettings() {
                                         request.status === 'approved' ? 'bg-green-50 text-green-700' : 'bg-red-50 text-red-700'
                                         }`}>
                                         <span>
-                                            {request.status === 'pending' ? '⏳ Ожидает' :
-                                                request.status === 'approved' ? '✅ Одобрено' : '❌ Отклонено'}
+                                            {request.status === 'pending' ? 'Ожидает' :
+                                                request.status === 'approved' ? 'Одобрено' : 'Отклонено'}
                                         </span>
                                         <span className="text-xs opacity-70">{new Date(request.created_at).toLocaleDateString('ru')}</span>
                                     </div>
@@ -1506,8 +1550,8 @@ function WebAdminSettings() {
                                     {/* Content */}
                                     <div className="p-4">
                                         <div className="flex items-center gap-3 mb-4">
-                                            <div className="w-12 h-12 rounded-full bg-gradient-to-br from-green-500 to-emerald-600 flex items-center justify-center text-2xl">
-                                                💸
+                                            <div className="w-12 h-12 rounded-full bg-gradient-to-br from-green-500 to-emerald-600 flex items-center justify-center text-white">
+                                                <ArrowUpIcon className="w-6 h-6" />
                                             </div>
                                             <div>
                                                 <h3 className="font-bold text-slate-800">{request.users?.first_name} {request.users?.last_name || ''}</h3>
@@ -1543,12 +1587,12 @@ function WebAdminSettings() {
                                     {request.status === 'pending' && (
                                         <div className="p-3 bg-slate-50 border-t flex gap-2">
                                             <button onClick={() => processWithdrawal(request.id, 'approved')}
-                                                className="flex-1 text-xs px-3 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600 transition-colors font-medium">
-                                                ✅ Одобрить
+                                                className="flex-1 text-xs px-3 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600 transition-colors font-medium flex items-center justify-center gap-1">
+                                                <CheckCircledIcon className="w-3 h-3" /> Одобрить
                                             </button>
                                             <button onClick={() => processWithdrawal(request.id, 'rejected')}
-                                                className="flex-1 text-xs px-3 py-2 bg-red-100 text-red-600 rounded-lg hover:bg-red-200 transition-colors">
-                                                ❌ Отклонить
+                                                className="flex-1 text-xs px-3 py-2 bg-red-100 text-red-600 rounded-lg hover:bg-red-200 transition-colors flex items-center justify-center gap-1">
+                                                <Cross2Icon className="w-3 h-3" /> Отклонить
                                             </button>
                                         </div>
                                     )}
@@ -1557,7 +1601,7 @@ function WebAdminSettings() {
 
                             {withdrawals.length === 0 && (
                                 <div className="col-span-full text-center py-16 text-slate-400">
-                                    <span className="text-4xl">💸</span>
+                                    <ArrowUpIcon className="w-12 h-12 mx-auto text-slate-300" />
                                     <p className="mt-2">Нет заявок на вывод</p>
                                 </div>
                             )}
@@ -1620,7 +1664,7 @@ function WebAdminSettings() {
                                 <div className="bg-white rounded-2xl border border-slate-200/50 shadow-sm overflow-hidden sm:col-span-2 lg:col-span-1">
                                     <div className="p-4 border-b border-slate-100 bg-gradient-to-r from-green-50 to-emerald-50">
                                         <h3 className="font-bold text-slate-800 flex items-center gap-2">
-                                            <span className="text-xl">💰</span> Финансы
+                                            <StackIcon className="w-5 h-5 text-green-600" /> Финансы
                                         </h3>
                                     </div>
                                     <div className="p-4 space-y-3">
