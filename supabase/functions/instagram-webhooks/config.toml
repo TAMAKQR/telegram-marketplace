@@ -1,0 +1,2 @@
+# Meta platform webhooks do not send JWT — disable verification.
+verify_jwt = false
